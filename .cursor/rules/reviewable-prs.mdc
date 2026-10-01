@@ -44,16 +44,26 @@ read closely and what can be skimmed. "It was faster" is not a reason.
 
 ## PR body
 
-Keep it in this order and no longer than it needs to be:
+`.github/pull_request_template.md` has these sections. Keep them in this order
+and no longer than they need to be. Write `None` in a section that has nothing,
+rather than removing it.
 
-1. What changes and why (2–4 sentences; link the issue or design doc).
+1. What changes and why: 2–4 sentences. Link the issue or design doc. When the
+   work has a Linear issue, include `Fixes <issue ID>` (for example
+   `Fixes ENG-123`), which links the PR to the issue.
 2. How to review: where to start reading, what is mechanical and can be skimmed.
-3. How it was verified (commands run, results).
-4. Diagrams: `updated` (name which ones) or `no structural change`. If the PR
+3. How it was verified: commands run and their results, and which test covers
+   each acceptance criterion.
+4. What was not verified, and known limitations, including deliberate
+   omissions.
+5. Changes from the plan, and problems found outside the scope: how the work
+   differs from the agreed plan. Report problems outside the task's scope as
+   new issues and link them, rather than fixing them in this PR.
+6. Diagrams: `updated` (name which ones) or `no structural change`. If the PR
    changes components, data flow, state, or external dependencies, update
    `docs/architecture.md` in the same PR, following the `architecture-docs` skill.
-5. Risks, deliberate omissions, and follow-ups. A breaking change lists a
-   follow-up `prune-review` of the affected area.
+7. Risks and follow-ups. A breaking change lists a follow-up `prune-review` of
+   the affected area.
 
 Commit history should read as the review narrative: each commit is one
 coherent step with a message stating why, not just what.
