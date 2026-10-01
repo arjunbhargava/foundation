@@ -1,0 +1,16 @@
+---
+description: Code documentation is always compiled from source.
+globs:
+alwaysApply: true
+---
+
+# Docs from source
+
+API reference is generated from docstrings and doc comments, never written by
+hand. `docs/build.sh` compiles every language into one site and fails on any
+undocumented public symbol or docs warning.
+
+Any change to public code, doc comments, or the docs build follows the
+`source-docs` skill, and the PR runs `docs/build.sh`. The first code in a repo,
+and the first file in each new language, add that language to the build in the
+same PR.

@@ -1,0 +1,130 @@
+---
+name: source-docs
+description: >
+  Build code documentation from source, in any language, into one site. Use
+  when adding or changing public code, docstrings or doc comments; when adding
+  a language to a repo; when writing the first code in a repo; or when touching
+  the docs build.
+---
+
+# Docs built from source
+
+Reference documentation is compiled from the source, the way Sphinx autodoc
+does it. It is never written by hand. Docstrings and doc comments are the single
+source of truth for what an API does. The build turns them into one site,
+together with the hand-written explanation pages and architecture diagrams. If
+the code and docs disagree, the build fails.
+
+## Rules
+
+1. **Never hand-write API reference.** Hand-written pages are only
+   explanation, how-to, or tutorial content (see `architecture-docs`), and they
+   link into the generated reference.
+   They link only to other docs pages or absolute URLs, and name other repo
+   files as code paths (`docs/diagrams/`), because the strict build rejects
+   links it can't resolve.
+2. **One command builds everything.** `docs/build.sh` runs every language's
+   generator, then the hub build. Agents, CI, and humans all run the same
+   command.
+3. **Warnings are errors.** An undocumented public symbol, a broken
+   cross-reference, or a malformed docstring fails the build.
+4. **Never commit built output.** `docs/_build/` and `docs/_generated/` are
+   gitignored.
+5. **Every PR that changes public code or docs runs the build.** Its PR body
+   lists the build under verification.
+6. **The first PR that adds code to a repo also adds the docs build.** Any PR
+   that adds a language adds its generator in the same PR.
+
+## Hub and stitching
+
+Use Sphinx as the hub, with MyST for Markdown and the Furo theme, whatever the
+languages. It is the only mature hub that can read several languages natively
+and also take in Markdown and HTML from other generators. Architecture
+diagrams are committed D2 SVGs (see `architecture-docs`), so they appear in the
+site as ordinary images. The build fails if any SVG is stale.
+
+Bring each language in through the first option that works, in this order:
+
+1. **Native.** A Sphinx extension reads the source, giving shared search,
+   theme, and cross-references.
+2. **Markdown.** The language's generator emits Markdown, which MyST renders
+   inside the site theme.
+3. **Embedded HTML.** The canonical generator's HTML is copied under
+   `api/<lang>/` and linked from a stub page. Search and theme are separate,
+   but it still lives in one site.
+
+| Language | Integration | Generator | Coverage gate |
+|---|---|---|---|
+| Python | Native | `sphinx-autoapi` + `napoleon` (parses source, no import) | `ruff` `D` rules, Google convention, ignore `D107`; `nitpicky = True` |
+| TypeScript / JS | Markdown | TypeDoc + `typedoc-plugin-markdown`, `--outputFileStrategy modules` | `--validation.notDocumented --treatWarningsAsErrors` |
+| Rust | Embedded HTML | `cargo doc --no-deps` | `#![deny(missing_docs)]`, `RUSTDOCFLAGS="-D warnings"` |
+| Go | Markdown | `gomarkdoc` | `revive` with the `exported` rule |
+| C / C++ | Native | Doxygen XML → Breathe | `WARN_IF_UNDOCUMENTED=YES`, `WARN_AS_ERROR=YES` |
+| Other | Markdown if the generator can emit it, else embedded HTML | The language's canonical generator | The generator's warnings-as-errors mode |
+
+The Python, TypeScript, and Rust rows, the diagram images, and every gate
+in those rows were verified end to end. The Go and C/C++ rows follow each
+tool's documented flags; confirm them the first time they're used.
+
+## Setup
+
+Copy the templates in `assets/`:
+
+| From | To | Then |
+|---|---|---|
+| `conf.py` | `docs/conf.py` | Set `project`, keep only the extensions for the repo's languages, and point `autoapi_dirs` at the Python source |
+| `build.sh` | `docs/build.sh` | Keep one block per language in the repo, and fix paths such as `web/` and `--manifest-path` |
+
+Then:
+
+- Write `docs/index.md` with two toctrees. The "Explanation" toctree lists
+  `architecture` and other hand-written pages. The "API reference" toctree
+  lists `api/python/<pkg>/index`, `_generated/ts/index`, and `api/rust`, for
+  whichever languages the repo has.
+- For each embedded-HTML language, add a stub page such as `docs/api/rust.md`
+  that links to `rust/<crate>/index.html`.
+- Declare the Python docs dependencies with the repo's other dev dependencies:
+  `sphinx`, `sphinx-autoapi`, `myst-parser`, `furo`, and `ruff`, plus `breathe` if the repo has C or C++. Put the TypeDoc packages
+  in `devDependencies`.
+- Configure `ruff` in `pyproject.toml`:
+
+  ```toml
+  [tool.ruff.lint]
+  extend-select = ["D"]
+  ignore = ["D107"]
+
+  [tool.ruff.lint.pydocstyle]
+  convention = "google"
+  ```
+
+- Add `docs/_build/` and `docs/_generated/` to `.gitignore`.
+
+## What a doc comment contains
+
+Write for someone calling the code who hasn't read its body:
+
+- **Summary line:** what it does, in the imperative mood.
+- **Parameters:** meaning, units, valid range, and what happens outside it.
+  Write `rate_hz: sample rate in Hz, > 0`, not `rate: the rate`.
+- **Return value and errors:** what is returned, what can be raised or
+  returned as an error, and when.
+- **Invariants and side effects:** state it mutates, I/O, thread safety, and
+  cost when it isn't obvious (for example, O(n²) in the history length).
+- **Example:** a short one that runs. Python doctests run under
+  `pytest --doctest-modules`, and Rust doc tests under `cargo test --doc`. In
+  languages without runnable examples, keep the example minimal and cover the
+  same behaviour in a test.
+
+Don't restate the signature or the types, and don't narrate the
+implementation. Private helpers need a comment only when a constraint is
+non-obvious.
+
+## Verify
+
+1. Run `docs/build.sh`; it must exit 0.
+2. Check that each gate still fires: add an undocumented public symbol in one
+   language, confirm the build fails, then revert. Do this whenever the build
+   script or the gates change.
+3. Open `docs/_build/html/index.html`, or screenshot the pages the PR changed,
+   including the architecture page in light and dark mode. Attach the
+   screenshots to the PR.

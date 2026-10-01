@@ -1,0 +1,16 @@
+---
+description: Everything is written for maximum understanding by people.
+globs:
+alwaysApply: true
+---
+
+# Clarity
+
+Every change is judged by how easily a competent engineer new to the code can
+understand it. This covers code structure, layout, naming, comments, error
+messages, documentation, diagrams, visual design, colour, PR descriptions, and
+commit messages. When minimalism and clarity conflict, clarity wins.
+
+Before writing any of these, read the `clarity` skill and apply its review
+checklist before finishing. Write plainly and briefly, with no slogans or
+catchphrases.
