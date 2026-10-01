@@ -1,0 +1,33 @@
+# Secrets; .env.example lists the variable names.
+.env
+.env.*
+!.env.example
+
+# Docs build output
+docs/_build/
+docs/_generated/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# TypeScript
+node_modules/
+*.tsbuildinfo
+
+# Rust
+target/
+
+# C and C++
+build/
+CMakeUserPresets.json
+compile_commands.json
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/

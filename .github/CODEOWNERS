@@ -1,0 +1,5 @@
+# Paths that need a person's review. Enforced when the branch ruleset requires
+# code owner review. Add each public interface file here when it is created.
+/.cursor/                @arjunbhargava
+/docs/architecture.md    @arjunbhargava
+/.github/CODEOWNERS      @arjunbhargava
