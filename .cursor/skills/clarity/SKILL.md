@@ -21,8 +21,8 @@ is harder to follow than a slightly longer version, write the longer version.
 
 ## Code structure
 
-- **Organise by what the code does, not by its kind.** Name a module `turn`
-  or `playback`, not `utils`, `helpers`, `managers`, or `common`.
+- **Organise by what the code does, not by its kind.** Name a module
+  `integrator` or `checkpoint`, not `utils`, `helpers`, `managers`, or `common`.
 - **One responsibility per unit.** A function's name should describe all it
   does. If the name needs "and", split the function.
 - **Read top to bottom.** Put the public entry point first and its helpers
@@ -42,14 +42,14 @@ is harder to follow than a slightly longer version, write the longer version.
 ## Naming
 
 - A name states what the thing means in the domain, not how it is stored:
-  `committed_transcript`, not `text2` or `str_buf`.
+  `converged_solution`, not `arr2` or `float_buf`.
 - Include units in names: `timeout_ms`, `sample_rate_hz`, `size_bytes`.
-- Booleans are predicates (`is_recording`, `has_reply`). Functions are verbs
-  (`commit_transcript`). Values are nouns.
+- Booleans are predicates (`is_converged`, `has_checkpoint`). Functions are
+  verbs (`write_checkpoint`). Values are nouns.
 - One name per concept, used everywhere: code, docs, diagrams, logs, and UI.
   Renaming a concept renames it everywhere in the same PR.
 - Spell words out. Use only abbreviations the reader already knows, such as
-  `id`, `url`, `STT`, and `TTS`, and define domain acronyms in the glossary.
+  `id`, `url`, `CPU`, and `GPU`, and define domain acronyms in the glossary.
 - Name length grows with scope: `i` in a three-line loop, a full phrase for a
   module-level constant.
 - Avoid names that carry no information: `data`, `info`, `item`, `obj`,
@@ -70,7 +70,7 @@ is harder to follow than a slightly longer version, write the longer version.
   and why a simpler approach fails. Never restate what the next line does.
 - Docstrings state the contract: inputs, outputs, errors, and side effects.
 - Error messages say what happened, include the offending value, and say what
-  to do next: `STT_API_KEY is not set; add it to .env`, not `config error`.
+  to do next: `TRACKER_API_KEY is not set; add it to .env`, not `config error`.
 - Log messages follow the same rule and use the same names as the code.
 
 ## Visual design and colour
@@ -104,8 +104,8 @@ This covers docs, docstrings, PR descriptions, commit messages, and replies.
   reader who stops after the first section still has a correct, coarse model.
 - **Explain why.** Code shows what. Writing carries intent, trade-offs,
   rejected alternatives, and when to revisit a decision.
-- **Quantify.** Write "p95 under 800 ms from end of speech to first audio",
-  not "fast". State units and where numbers came from.
+- **Quantify.** Write "p95 under 40 ms per time step for a 512³ grid on one
+  GPU", not "fast". State units and where numbers came from.
 - **Plain, literal language.** Use complete sentences and ordinary words.
   Leave out slogans, catchphrases, aphorisms, jokes, rhetorical questions,
   marketing adjectives, and emoji. They cost attention and teach nothing.

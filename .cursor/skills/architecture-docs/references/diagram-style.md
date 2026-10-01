@@ -25,8 +25,8 @@ visual decision.
    greyscale print loses nothing.
 4. **One accent.** Only core elements and the primary path get orange, so it
    draws the eye to the main story. More accented elements dilute it.
-5. **Say what moves.** Edge labels are nouns for what flows (`committed
-   transcript`), never verbs like `calls` or `uses`.
+5. **Say what moves.** Edge labels are nouns for what flows (`field
+   snapshots`), never verbs like `calls` or `uses`.
 6. **Consistent identity.** An element has the same name, kind, and colour in
    every diagram, so readers can follow it as the diagrams zoom in.
 7. **Small.** At most ~12 nodes, edge labels of at most 4 words, and a node
@@ -34,7 +34,7 @@ visual decision.
    then one component's internals.
 8. **Each diagram shows only what its question needs.** The context diagram
    shows the external services, so the data-flow diagram names them in
-   adapter subtitles (`↔ STT provider`) instead of drawing them again.
+   adapter subtitles (`↔ object storage`) instead of drawing them again.
 
 ## Palette
 
@@ -93,7 +93,7 @@ first.
 | Request and response | `flow` on a `<->` edge, label `request → response` | One edge per relationship; the sequence diagram shows the round trip |
 
 Node labels are a title, then an optional subtitle line for the role:
-`"Conversation agent\nhistory · tutoring policy"`. Separate list items with
+`"Solver\ntime stepping · boundary conditions"`. Separate list items with
 ` · `. Nodes have a fixed size from their class, so grid rows line up.
 
 ## Layout rules
@@ -129,7 +129,7 @@ docs/diagrams/
 ```
 
 Each diagram starts with `...@_style`. Embed a diagram with alt text that states
-its takeaway: `![Data flow: speech goes down through Hear, …](diagrams/dataflow.svg)`.
+its takeaway: `![Data flow: raw data goes down through Ingest, …](diagrams/dataflow.svg)`.
 
 After editing a `.d2` file, run `docs/diagrams/render.sh`, look at the SVG,
 and commit the source and the SVG together. `render.sh --check` runs as part
