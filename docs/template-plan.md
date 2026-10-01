@@ -20,31 +20,33 @@ Every new project starts from one repository that already has:
   separate compute, safely and within a budget.
 - Support for several agents working at once without breaking each other's
   work.
-  Agents write most of the code. People design the structure and review every
-  change. The template is built around that split: its main job is to make each
-  change cheap and reliable for a person to review.
+
+Agents write most of the code. People design the structure and review every
+change. The template is built around that split: its main job is to make each
+change cheap and reliable for a person to review.
 
 ## Terms
 
-| Term                | Meaning                                                                                                                                               |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rule                | A short instruction file in `.cursor/rules/`. "Always applied" rules are loaded into every agent session.                                             |
-| Skill               | A longer how-to file in `.cursor/skills/`, read by an agent only when its task needs it.                                                              |
-| Cloud agent         | A Cursor agent that runs on its own virtual machine and branch, and opens a pull request (PR).                                                        |
-| Template repository | A repository new projects are copied from.                                                                                                            |
-| Copier              | A tool that creates a project from a template and can later pull template updates into it.                                                            |
-| Lockfile            | A generated file that records the exact version of every dependency.                                                                                  |
-| Merge queue         | A GitHub feature that tests each PR combined with everything ahead of it before merging, so two PRs that pass separately can't break `main` together. |
-| Mutation testing    | A check on test quality: a tool makes small deliberate bugs in the code and reports which ones the tests fail to catch.                               |
-| Hermetic test       | A test that depends only on its own inputs: no shared files, ports, databases, or test order.                                                         |
-| Launcher            | The one tool agents use to start compute jobs on other machines.                                                                                      |
-| Run record          | A small file written by every compute job that records the exact code, image, settings, and hardware used.                                            |
-| Handoff             | The PR description, which tells the reviewer what was done, how it was checked, and what was not.                                                     |
+| Term | Meaning |
+|---|---|
+| Rule | A short instruction file in `.cursor/rules/`. "Always applied" rules are loaded into every agent session. |
+| Skill | A longer how-to file in `.cursor/skills/`, read by an agent only when its task needs it. |
+| Cloud agent | A Cursor agent that runs on its own virtual machine and branch, and opens a pull request (PR). |
+| Template repository | A repository new projects are copied from. |
+| Copier | A tool that creates a project from a template and can later pull template updates into it. |
+| Lockfile | A generated file that records the exact version of every dependency. |
+| Merge queue | A GitHub feature that tests each PR combined with everything ahead of it before merging, so two PRs that pass separately can't break `main` together. |
+| Mutation testing | A check on test quality: a tool makes small deliberate bugs in the code and reports which ones the tests fail to catch. |
+| Hermetic test | A test that depends only on its own inputs: no shared files, ports, databases, or test order. |
+| Launcher | The one tool agents use to start compute jobs on other machines. |
+| Run record | A small file written by every compute job that records the exact code, image, settings, and hardware used. |
+| Handoff | The PR description, which tells the reviewer what was done, how it was checked, and what was not. |
 
 ## What the evidence says
 
 These findings shaped the plan. Most are 2026 preprints and some use small
 benchmarks, so treat the numbers as direction rather than precise effects.
+
 | # | Finding | What the plan does about it |
 |---|---|---|
 | F1 | Repository instruction files such as `AGENTS.md` raised cost by about 20% and did not raise success rates. Agents follow every instruction, so unnecessary ones make tasks harder. Repository overviews did not help. [1] | Keep always-applied rules few and short. Put detail in skills. Keep `AGENTS.md` to commands and unusual requirements. |
@@ -61,6 +63,7 @@ benchmarks, so treat the numbers as direction rather than precise effects.
 
 Each decision has a recommended default. Agents proceed with the default unless
 a person has recorded a different choice here.
+
 | # | Decision | Recommended default | Why |
 |---|---|---|---|
 | D1 | How projects are created from the template and receive later updates | Copier | A GitHub template copies files once; later changes to rules and skills never reach existing projects. Copier can pull them in later, and can include only the languages a project needs. Cost: one more tool, and some combinations of languages go untested. |
@@ -80,6 +83,7 @@ Each task below is one PR of at most 500 changed lines, following
 `reviewable-prs`. Each must pass CI on its own. "Needs" lists the tasks that
 must be merged first. Tasks with the same needs can run in parallel, each with
 its own agent.
+
 Some steps are settings in GitHub, Cursor, or Linear rather than files. Agents
 can't change those settings, so they're marked **(person)**.
 
@@ -96,7 +100,9 @@ can't change those settings, so they're marked **(person)**.
 - Write a short `README.md` covering what the template is, how to start a
   project from it, and links to this plan and the skills.
 - Done when: no file mentions slang, and every link in the README works.
-  **T2. Basic repository files.** Needs: T1.
+
+**T2. Basic repository files.** Needs: T1.
+
 - `.editorconfig` (UTF-8, LF line endings, final newline).
 - `.gitattributes`: LF line endings. Mark lockfiles and generated SVGs as
   generated, so GitHub collapses them in diffs.
@@ -106,7 +112,9 @@ can't change those settings, so they're marked **(person)**.
 - `LICENSE` (D5) and `CODEOWNERS`. `CODEOWNERS` requires a person's review for
   `.cursor/`, `docs/architecture.md`, and public interface files.
 - Done when: the files exist and CI (once T4 lands) passes on them.
-  **T3. Tool versions, shared commands, and agent setup.** Needs: T1.
+
+**T3. Tool versions, shared commands, and agent setup.** Needs: T1.
+
 - `mise.toml` pins tool versions and defines the commands `setup`, `fmt`,
   `lint`, `test`, `docs`, and `check`. `check` runs everything CI runs. Each
   command starts as a placeholder that each language task fills in.
@@ -116,7 +124,9 @@ can't change those settings, so they're marked **(person)**.
   wouldn't guess. Add a "Cursor Cloud specific instructions" section. No
   overview of the repository (see F1).
 - Done when: a fresh cloud agent can run `mise run check` with no other setup.
-  **T4. CI skeleton and repository protection.** Needs: T3.
+
+**T4. CI skeleton and repository protection.** Needs: T3.
+
 - `.github/workflows/ci.yml`:
   - One job per language, each running only when files of that language
     change. Language tasks add their jobs; this task adds the structure.
@@ -139,7 +149,9 @@ can't change those settings, so they're marked **(person)**.
   protection.
 - Done when: a test PR above 500 lines fails the size check, and a PR merges
   through the merge queue.
-  **T5. PR template.** Needs: T1. Can run alongside T2–T4.
+
+**T5. PR template.** Needs: T1. Can run alongside T2–T4.
+
 - `.github/pull_request_template.md`, in the order from `reviewable-prs`:
   1. What changes and why, with the Linear issue ID (for example
      `Fixes ENG-123`). This links the PR to the issue.
@@ -165,12 +177,260 @@ Each language task adds:
 - Its block in `docs/build.sh`.
 - Its CI job.
 - A command that tests only that package.
-  The example exists to prove the checks work. A project deletes it when its
-  first real code arrives.
-  Every check must fail when broken. The PR shows this by breaking the check once
-  (for example, adding an undocumented public function), then reverting.
-  **T6. Python, and the documentation build.** Needs: T3, T4.
+
+The example exists to prove the checks work. A project deletes it when its
+first real code arrives.
+
+Every check must fail when broken. The PR shows this by breaking the check once
+(for example, adding an undocumented public function), then reverting.
+
+**T6. Python, and the documentation build.** Needs: T3, T4.
+
 - `uv` for dependencies, Python version, and the lockfile; `ruff` for format and
   lint (including documentation-comment rules); `pyright` for types; `pytest`
   for tests, including the examples inside documentation comments.
 - Tests run in parallel (`pytest -n auto`), so tests that depend on shared
+  state or on order fail early.
+- The documentation build from the `source-docs` skill lands here, because its
+  site generator, Sphinx, is a Python tool: `docs/conf.py`, `docs/index.md`,
+  and `docs/build.sh`.
+- Done when: `mise run check` and `docs/build.sh` pass, and each check fails
+  when broken.
+
+**T7. TypeScript.** Needs: T6.
+
+- `pnpm` workspace, `tsc` in strict mode, Biome for format and lint, `vitest`
+  for tests, TypeDoc for documentation.
+
+**T8. Rust.** Needs: T6.
+
+- `rust-toolchain.toml`, a workspace with one crate, `rustfmt`,
+  `clippy` with warnings as errors, `#![deny(missing_docs)]`, and `cargo-deny`
+  to check dependency licences and known vulnerabilities.
+
+**T9. C and C++.** Needs: T6.
+
+- CMake with `CMakePresets.json`, `clang-format`, `clang-tidy`, `ctest`, and
+  Doxygen with Breathe for documentation.
+- One CI job builds with AddressSanitizer and UndefinedBehaviorSanitizer,
+  which catch memory errors and undefined behaviour at run time.
+- The `source-docs` skill lists the Doxygen settings as not yet tested end to
+  end; confirm them here and update the skill.
+- Leave the choice of C/C++ package manager (vcpkg or CMake `FetchContent`) to
+  each project.
+
+T7, T8, and T9 can run in parallel.
+
+### Stage 3: agent instructions
+
+Write every new rule and skill by hand, or have an agent draft it and a person
+edit it (F2). Keep each skill short and focused.
+
+**T10. Restructure the always-applied rules.** Needs: T1.
+
+- Today, four rules load into every session, and two of them require reading a
+  skill of about 120 lines first; `clarity` does this before writing any text,
+  so almost every task loads it. F1 suggests this costs more than it
+  returns.
+- Keep each always-applied rule to a short checklist. Load the full skill only
+  when the task needs it. Don't change what the rules require.
+- This changes structure only. New content goes in T11 and T12.
+
+**T11. New rules.** Needs: T10.
+
+- `secrets` (always applied, about 10 lines): secrets come from environment
+  variables, set through the Cursor dashboard for agents. Never commit them or
+  write them to logs. `.env.example` lists the names.
+- `dependencies`: a new dependency needs a one-line reason in the PR, a
+  committed lockfile, and a passing licence check. On a lockfile merge
+  conflict, regenerate the lockfile; never edit it by hand.
+- `compute-cost` (always applied): the cost limit (D8), and stop to ask a
+  person above it.
+
+**T12. New skills.** Needs: T10. Split into two PRs if over 500 lines.
+
+- `testing`:
+  - One named test per acceptance criterion.
+  - Tests are hermetic and can run in parallel.
+  - Every external resource a test or job creates (bucket, port, tracker run)
+    has the branch name or run ID in its name.
+  - Paid or live-service tests run only when asked for, never in normal CI.
+  - For numerical code, the checks that catch the most errors: the error
+    shrinks at the expected rate as the step size shrinks; conserved
+    quantities (energy, mass, momentum) stay within a stated bound; results
+    match known exact solutions; results respect the problem's symmetries.
+    Compare floating-point values with stated tolerances, never exact
+    equality.
+- `spec`: for changes that meet the D7 threshold, write a short plan covering
+  the problem, the interface, the files touched, and the acceptance criteria.
+  Then stop until a person approves it.
+- `decompose`: turn an approved plan into Linear sub-issues. Each sub-issue
+  states the interface it builds or uses, the files it owns, acceptance
+  criteria, the command that checks it, and which other sub-issues it waits
+  for. Land shared interfaces first, as their own PR. Keep closely connected
+  work in one task rather than splitting it (F8).
+- `add-language`: the steps from Stage 2 as a checklist, so a project can add
+  a language later.
+
+### Stage 4: review and quality checks
+
+**T13. Independent review before a person reviews.** Needs: T5. See F3 and
+F5.
+
+- `.cursor/BUGBOT.md` tells Cursor's review agent to check the diff against
+  the issue's acceptance criteria and the repository rules.
+- **(person)** Turn on Bugbot for the repository.
+- The agent fixes what the reviewer finds before asking for a person's review.
+
+**T14. Mutation testing.** Needs: T7, T8, T9.
+
+- Run mutation testing on changed code in CI (F4, F9). At first it reports results
+  only; it doesn't block merging. Tools: `cargo-mutants` (Rust), `mutmut`
+  (Python), StrykerJS (TypeScript), Mull (C/C++; the least mature).
+- Decide after a month of data whether to make it blocking.
+
+**T15. Enforce module boundaries.** Needs: T7, T8, T9.
+
+- People own the structure, so check it with tools instead of relying on
+  instructions. Use `import-linter` for Python and `dependency-cruiser` for
+  TypeScript. For Rust, crate dependencies plus `cargo-deny` bans enforce it.
+  For C/C++, use CMake target visibility.
+- The example modules get one boundary rule each, to prove the check works.
+
+### Stage 5: compute jobs
+
+**T16. Compute job support.** Needs: T6, D4, D8.
+
+- A base container image (`Dockerfile`) with pinned CUDA versions. CI builds
+  it, tags it with the commit, and pushes it to GitHub's container registry.
+  Jobs use the image's digest, so the exact image is recorded.
+- A run record helper. Every job writes the commit, whether there were
+  uncommitted changes, the image digest, the full settings, random seeds, the
+  hardware and driver, and start and end times.
+- The `compute-jobs` skill covers:
+  - How to launch a job, check its status, and fetch results with the
+    launcher (D4).
+  - Default limits: maximum run time, automatic shutdown when idle,
+    interruptible machines with checkpoints, and a cap on GPU count.
+  - How to report results in the PR.
+- How agents learn a job finished: a GitHub Actions workflow launches the job
+  and waits for it. A Cursor Automation on "workflow run completed" then
+  starts a follow-up agent to read the results. Use the Cursor API or a webhook
+  only if this doesn't cover a case.
+- Tests that need a GPU are marked and run nightly, or on request, on a
+  self-hosted GPU runner. Ordinary CI uses small CPU-sized settings.
+- Large data and checkpoints go to object storage (S3 or similar), never git.
+- **(person)** Create a separate cloud account or project for agent jobs, with
+  provider-side budget limits and a service account. Add its credentials as
+  Cursor secrets. If using an egress allowlist, add the cloud, registry,
+  tracker, and storage domains.
+
+### Stage 6: Linear
+
+**T17. Linear setup.** Needs: T5. Mostly **(person)**.
+
+- Connect the Cursor and Linear integrations, and the Linear GitHub
+  integration.
+- Create a label group named exactly `repo`, with one label per repository
+  (`owner/name`), and put it on each Linear project. This tells Cursor which
+  repository an issue belongs to.
+- Set the default repository, model, and base branch in the Cursor dashboard.
+- Create a Linear issue template:
+  - Goal (1–2 sentences).
+  - Acceptance criteria, written as checkable behaviour.
+  - The command that verifies it.
+  - Out of scope.
+  - Compute budget.
+  - Links to designs.
+- Add an `agent-ready` label. Assign only those issues to agents.
+- Use one sub-issue per PR for work split into several PRs, so merging the
+  first PR doesn't close the whole issue.
+- In the repository: `docs/linear.md`, listing these conventions in a few
+  lines.
+
+### Stage 7: template mechanics
+
+**T18. Convert to Copier.** Needs: all earlier tasks, D1.
+
+- Turn the repository into a Copier template with one yes/no question per
+  language.
+- CI creates a project with all languages, then one project per single
+  language (five variants), and runs `mise run check` in each.
+- If D1 is "GitHub template", replace this task with documented steps for
+  deleting unused languages.
+
+### Later
+
+**T19. Measure the instructions.** After about 10 real tasks have been done in
+projects that use the template.
+
+- Rerun closed tasks with different instructions (for example, with and without
+  a rule). Score each run by hidden tests and a person's "would merge"
+  judgement.
+- Track: PRs merged without change requests, review rounds per PR, review
+  time, and reverts within 30 days.
+- Repeat after each model upgrade, and remove instructions that no longer
+  help.
+
+## Order and parallel work
+
+```text
+T1 ─┬─ T2
+    ├─ T3 ── T4 ── T6 ─┬─ T7 ─┐
+    │                  ├─ T8 ─┼─ T14, T15
+    │                  ├─ T9 ─┘
+    │                  └─ T16 (also needs D4, D8)
+    ├─ T5 ─┬─ T13
+    │      └─ T17
+    └─ T10 ─┬─ T11
+            └─ T12
+T18 needs everything above.
+```
+
+Right after T1, four tasks (T2, T3, T5, T10) can start at once. Keep the
+number of open agent PRs within the review limit in D9 rather than starting
+everything that is ready. Start a task only when everything it needs has
+merged.
+
+## How agents work on this repository
+
+- One task, one Linear sub-issue, one agent, one branch, one PR.
+- A planner (a person, or an agent using `decompose` once T12 exists) creates
+  the tasks. Workers don't coordinate with each other; they report back
+  through the PR description.
+- Shared state lives in git and Linear only. No shared task files, no shared
+  databases or fixed ports, and every external resource name includes the
+  branch or run ID.
+- An agent that finds a problem outside its task files a Linear issue instead
+  of fixing it.
+- The merge queue tests each PR combined with the ones ahead of it before
+  merging.
+- For a hard task, run several agents on it separately and review only the
+  best result. Parallel agents should not multiply review work.
+
+## Not in scope
+
+- A custom system for coordinating agents. Cursor already provides subagents,
+  an API, automations, and Linear routing.
+- Agents talking to each other directly, or shared memory files.
+- A dedicated agent for merging other agents' work. The merge queue covers it,
+  and Cursor found such a role slowed things down [9].
+- Release automation, deployment, and choices of C/C++ package manager or
+  experiment tracker. These belong to each project.
+- Go. It appears in the `source-docs` skill but isn't a team language; remove
+  it in T1.
+
+## Sources
+
+1. Gloaguen et al., [Evaluating AGENTS.md](https://arxiv.org/abs/2602.11988), ICLR 2026 workshop.
+2. [SkillsBench](https://arxiv.org/abs/2602.12670), 2026.
+3. METR, [Many SWE-bench-passing PRs would not be merged](https://metr.org/notes/2026-03-10-many-swe-bench-passing-prs-would-not-be-merged-into-main/), March 2026.
+4. Fowler, [TDD inside the agent loop](https://martinfowler.com/articles/exploring-gen-ai/tdd-in-the-agent-loop.html).
+5. Luu, [How well do agents use test and verification techniques?](https://danluu.com/agentic-testing/)
+6. [Review beats planning](https://arxiv.org/abs/2603.03406), 2026. Small models on short programming problems; weak evidence for larger work.
+7. [From plan to action: how well do agents follow the plan?](https://arxiv.org/abs/2604.12147), 2026.
+8. [Software delegation contracts](https://arxiv.org/abs/2606.17099), 2026. A pilot study of 64 runs.
+9. Cursor, [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) and [Towards self-driving codebases](https://cursor.com/blog/self-driving-codebases).
+10. [Cohesion-aware task partitioning for multi-agent coding](https://www.alphaxiv.org/overview/2606.00953), 2026.
+11. [CAID: effective strategies for asynchronous software engineering agents](https://www.alphaxiv.org/abs/2603.21489), 2026.
+12. Meta, [Mutation-guided LLM-based test generation](https://arxiv.org/abs/2501.12862), 2025.
