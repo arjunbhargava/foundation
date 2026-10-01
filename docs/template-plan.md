@@ -67,10 +67,10 @@ a person has recorded a different choice here.
 | D2 | Tool version manager and command runner | `mise` | One file (`mise.toml`) pins the versions of Python, Node, `uv`, `d2`, and so on, and defines the shared commands. Works the same locally, in agents, and in CI. |
 | D3 | Python dependency manager | `uv`; switch to `pixi` for projects that need compiled scientific libraries | `uv` is fast and handles normal Python packages. `pixi` uses conda-forge, which also packages MPI, HDF5, CUDA libraries, and compilers. |
 | D4 | Where compute jobs run | SkyPilot | One job description runs on the major clouds, GPU providers, Kubernetes, or a Slurm cluster. Switch to Slurm with Apptainer if the team has a university or lab cluster, since those clusters usually don't allow Docker. |
-| D5 | Licence | Ask the owner | No default. |
+| D5 | Licence | **Decided:** Apache-2.0, copyright the repository owner | Permissive, requires attribution through `NOTICE`, and grants an explicit patent licence. Projects may pick their own. |
 | D6 | Merge method | Merge commits; no squash | The rules ask for commit history that reads as the review story. Squashing erases it. |
 | D7 | Which changes need a person to approve a plan before coding | New module; change to a public interface or data format; new dependency; compute spend above the cost limit | Planning has a cost and only pays off for larger changes. |
-| D8 | Cost limit for one agent-launched compute job before asking a person | Ask the owner | Set it before agents can launch jobs. |
+| D8 | Cost limit for one agent-launched compute job before asking a person | **Decided:** no per-job limit for now; total agent compute spend at most $10,000 per day | Enforce the daily cap with the provider's budget controls (T16), not only the rule. Revisit the per-job limit when T16 lands. |
 | D9 | Open agent PRs allowed per reviewer | Start at 3 | People review everything, so review time, not agent count, limits throughput. Adjust from data. |
 | D10 | Cursor plan | Ask the owner | Team pools of the team's own GPU machines for agents need the Enterprise plan. |
 
