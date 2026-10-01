@@ -28,10 +28,12 @@ commit messages. When minimalism and clarity conflict, clarity wins.
 - Pass inputs as arguments and return results, with no hidden global state,
   mutation of arguments, or action at a distance. Handle errors and edge cases
   with early returns, so the normal case reads straight down. Prefer plain
-  constructs to clever ones.
-- Run the standard formatter. Put one idea on each line, split a long
-  condition into named values, and separate a function's steps with blank
-  lines. Put constants at the top of the file, with units and their source.
+  constructs to clever ones, and use a language feature only when its meaning
+  is obvious to the reader.
+- Run the standard formatter; never format by hand. Put one idea on each
+  line, split a long condition into named values, and separate a function's
+  steps with blank lines. Put constants at the top of the file, with units and
+  their source.
 - Comments state what the code cannot: intent, constraints, invariants, units,
   and why a simpler approach fails, never what the next line does. Docstrings
   state the contract: inputs, outputs, errors, and side effects.
