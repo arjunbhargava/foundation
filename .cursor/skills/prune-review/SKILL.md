@@ -27,7 +27,8 @@ Build evidence before judging anything:
 
 1. Run the language's unused-code tooling if it's available, for example
    `vulture` or `ruff --select F401,F841` (Python), `knip` or `tsc
-   --noUnusedLocals` (TypeScript), or compiler warnings (Rust, C, and C++). Treat the output as candidates, not verdicts.
+   --noUnusedLocals` (TypeScript), or compiler warnings (Rust, C, and
+   C++). Treat the output as candidates, not verdicts.
 2. For each public symbol in scope, count references outside its own
    definition and its own tests, using `rg -w <name>`.
 3. Check for dynamic references before calling anything unused: string
