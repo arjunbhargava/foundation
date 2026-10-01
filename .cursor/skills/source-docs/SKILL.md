@@ -2,10 +2,9 @@
 name: source-docs
 description: >
   Build code documentation from source, in any language, into one site. Use
-  when writing the first code in a repo, adding a language to a repo, changing
-  the docs build or its gates, or writing a hand-written docs page. What a doc
-  comment contains, and the checks every PR runs, are in the always-applied
-  `docs-from-source` rule.
+  when writing the first code in a repo, adding a language to a repo, or
+  changing the docs build or its gates. What a doc comment contains, and the
+  checks every PR runs, are in the always-applied `docs-from-source` rule.
 ---
 
 # Docs built from source
