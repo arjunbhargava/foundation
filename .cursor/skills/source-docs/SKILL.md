@@ -2,9 +2,10 @@
 name: source-docs
 description: >
   Build code documentation from source, in any language, into one site. Use
-  when adding or changing public code, docstrings or doc comments; when adding
-  a language to a repo; when writing the first code in a repo; or when touching
-  the docs build.
+  when writing the first code in a repo, adding a language to a repo, changing
+  the docs build or its gates, or writing a hand-written docs page. What a doc
+  comment contains, and the checks every PR runs, are in the always-applied
+  `docs-from-source` rule.
 ---
 
 # Docs built from source
@@ -98,32 +99,9 @@ Then:
 
 - Add `docs/_build/` and `docs/_generated/` to `.gitignore`.
 
-## What a doc comment contains
-
-Write for someone calling the code who hasn't read its body:
-
-- **Summary line:** what it does, in the imperative mood.
-- **Parameters:** meaning, units, valid range, and what happens outside it.
-  Write `rate_hz: sample rate in Hz, > 0`, not `rate: the rate`.
-- **Return value and errors:** what is returned, what can be raised or
-  returned as an error, and when.
-- **Invariants and side effects:** state it mutates, I/O, thread safety, and
-  cost when it isn't obvious (for example, O(n²) in the history length).
-- **Example:** a short one that runs. Python doctests run under
-  `pytest --doctest-modules`, and Rust doc tests under `cargo test --doc`. In
-  languages without runnable examples, keep the example minimal and cover the
-  same behaviour in a test.
-
-Don't restate the signature or the types, and don't narrate the
-implementation. Private helpers need a comment only when a constraint is
-non-obvious.
-
 ## Verify
 
-1. Run `docs/build.sh`; it must exit 0.
-2. Check that each gate still fires: add an undocumented public symbol in one
-   language, confirm the build fails, then revert. Do this whenever the build
-   script or the gates change.
-3. Open `docs/_build/html/index.html`, or screenshot the pages the PR changed,
-   including the architecture page in light and dark mode. Attach the
-   screenshots to the PR.
+The `docs-from-source` rule lists what a doc comment contains, and the build
+and screenshots every PR needs. When the build script or the gates change,
+also check that each gate still fires: add an undocumented public symbol in
+one language, confirm the build fails, then revert.
