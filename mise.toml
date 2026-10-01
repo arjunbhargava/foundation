@@ -1,0 +1,28 @@
+# Pinned tool versions and the shared commands that people, agents, and CI run,
+# for example `mise run check`. Each language task (Stage 2 of
+# docs/template-plan.md) pins its tools under [tools] and replaces the
+# placeholder in each command below.
+
+[tasks.setup]
+description = "Install project dependencies"
+run = "echo 'setup: placeholder until a language is added'"
+
+[tasks.fmt]
+description = "Format all code in place"
+run = "echo 'fmt: placeholder until a language is added'"
+
+[tasks.lint]
+description = "Check formatting, lint, and types without changing files"
+run = "echo 'lint: placeholder until a language is added'"
+
+[tasks.test]
+description = "Run all tests"
+run = "echo 'test: placeholder until a language is added'"
+
+[tasks.docs]
+description = "Build the documentation site"
+run = "echo 'docs: placeholder until docs/build.sh is added'"
+
+[tasks.check]
+description = "Run everything CI runs; must pass before opening a PR"
+depends = ["lint", "test", "docs"]
