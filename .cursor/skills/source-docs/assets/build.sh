@@ -23,9 +23,6 @@ ruff check --quiet src
 RUSTDOCFLAGS="-D warnings" cargo doc --quiet --no-deps --target-dir "$gen/rust-target"
 cp -r "$gen/rust-target/doc" "$gen/html/api/rust"
 
-# Go: gomarkdoc -> Markdown, rendered inside the site.
-# gomarkdoc --output "$gen/go/{{.Dir}}.md" ./...
-
 # C/C++: Doxygen XML, read by Breathe (Doxyfile: GENERATE_XML=YES, WARN_AS_ERROR=YES).
 # doxygen Doxyfile
 

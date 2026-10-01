@@ -58,13 +58,12 @@ Bring each language in through the first option that works, in this order:
 | Python | Native | `sphinx-autoapi` + `napoleon` (parses source, no import) | `ruff` `D` rules, Google convention, ignore `D107`; `nitpicky = True` |
 | TypeScript / JS | Markdown | TypeDoc + `typedoc-plugin-markdown`, `--outputFileStrategy modules` | `--validation.notDocumented --treatWarningsAsErrors` |
 | Rust | Embedded HTML | `cargo doc --no-deps` | `#![deny(missing_docs)]`, `RUSTDOCFLAGS="-D warnings"` |
-| Go | Markdown | `gomarkdoc` | `revive` with the `exported` rule |
 | C / C++ | Native | Doxygen XML → Breathe | `WARN_IF_UNDOCUMENTED=YES`, `WARN_AS_ERROR=YES` |
 | Other | Markdown if the generator can emit it, else embedded HTML | The language's canonical generator | The generator's warnings-as-errors mode |
 
 The Python, TypeScript, and Rust rows, the diagram images, and every gate
-in those rows were verified end to end. The Go and C/C++ rows follow each
-tool's documented flags; confirm them the first time they're used.
+in those rows were verified end to end. The C/C++ row follows the
+tools' documented flags; confirm them the first time it's used.
 
 ## Setup
 
