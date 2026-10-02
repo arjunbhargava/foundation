@@ -35,6 +35,7 @@ jobs:
       install-script: ${{ steps.diff.outputs.install-script }}
       docs: ${{ steps.diff.outputs.docs }}
       python: ${{ steps.diff.outputs.python }}
+      cpp: ${{ steps.diff.outputs.cpp }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,6 +56,7 @@ jobs:
           echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)" >> "$GITHUB_OUTPUT"
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
           echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
+          echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)" >> "$GITHUB_OUTPUT"
 
   install-script:
     # Sets up a fresh machine of each kind people use, the way a person does,
@@ -112,12 +114,32 @@ jobs:
       - run: mise run lint:python
       - run: mise run test:python
 
+  cpp:
+    # test:cpp builds the tests with AddressSanitizer and
+    # UndefinedBehaviorSanitizer, so this job also catches memory errors and
+    # undefined behaviour at run time.
+    needs: changes
+    if: needs.changes.outputs.cpp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run lint:cpp
+      - run: mise run test:cpp
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
     # a skipped required check as passing, so this job must still run, and
     # fail, when the run is cancelled.
-    needs: [changes, install-script, docs, python]
+    needs:
+      - changes
+      - install-script
+      - docs
+      - python
+      - cpp
     if: always()
     runs-on: ubuntu-latest
     steps:
