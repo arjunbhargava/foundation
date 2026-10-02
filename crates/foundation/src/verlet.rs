@@ -46,3 +46,7 @@ pub fn step(state: State, acceleration: impl Fn(f64) -> f64, time_step: f64) -> 
     let velocity = half_step_velocity + 0.5 * time_step * acceleration(state.position);
     State { position, velocity }
 }
+
+pub fn half_step(time_step: f64) -> f64 {
+    0.5 * time_step
+}
