@@ -2,11 +2,11 @@
  * Estimate the variance of a population from a sample of it.
  *
  * Returns the unbiased sample variance: the sum of squared deviations from
- * the sample mean, divided by one less than the number of values. It is
- * computed with Welford's method, whose rounding error grows with the size of
- * the values' mean relative to their spread, not with its square as the
- * textbook formula's `(Σx² − (Σx)²/n) / (n − 1)` does. Values that share a
- * large offset, such as timestamps, therefore keep their precision.
+ * the sample mean, divided by one less than the number of values. It uses
+ * Welford's method, which stays accurate when the values share a large
+ * offset, such as timestamps: its relative rounding error grows with the
+ * ratio of the values' mean to their standard deviation, while that of the
+ * textbook formula `(Σx² − (Σx)²/n) / (n − 1)` grows with the ratio's square.
  *
  * Takes O(n) time and O(1) memory, and iterates `values` once.
  *
