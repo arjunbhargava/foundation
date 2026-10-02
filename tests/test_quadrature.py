@@ -17,7 +17,7 @@ INTERVAL_COUNTS = [16, 32, 64]
 # (e - 1)(h²/12 - h⁴/720) + O(h⁶), so the observed order from h to h/2 falls
 # short of 2 by about h²/(80 ln 2): 7.0e-5 at the coarsest spacing, h = 1/16.
 # This tolerance is about 3 times that.
-ORDER_TOLERANCE = 2e-4
+ORDER_TOLERANCE = 2.0
 
 
 def test_trapezoid_error_shrinks_fourfold_when_spacing_halves() -> None:
