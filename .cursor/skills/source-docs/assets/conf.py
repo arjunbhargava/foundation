@@ -18,8 +18,9 @@ autoapi_options = ["members", "show-inheritance", "show-module-summary", "import
 autoapi_add_toctree_entry = False
 
 # Python: links standard-library names in signatures, such as
-# collections.abc.Sequence, to the Python docs. nitpicky fails the build on any
-# it can't resolve. Each build downloads this inventory, so it needs network access.
+# collections.abc.Sequence, to the Python docs. nitpicky fails the build on
+# any it can't resolve. Each build downloads this inventory, so it needs
+# network access.
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # C/C++: the Doxygen XML that build.sh writes (uncomment if any).

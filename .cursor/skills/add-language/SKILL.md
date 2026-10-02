@@ -122,8 +122,8 @@ reverting:
    break is the first failure in its run.
 3. Wait for each run to finish before pushing the next commit, because a new
    push cancels the PR's older run. The PR edits `mise.toml`, so every job
-   runs and a break also fails the `install-script` jobs; read the language's
-   own job.
+   runs, and a break can fail several, such as `docs` and `install-script`;
+   read the language's own job.
 4. CI doesn't run while the PR conflicts with `main`, so merge `main` first.
 5. When two checks run in one step, the first can catch a break meant for the
    second. clang-tidy reports compiler warnings, so showing `g++`'s `-Werror`

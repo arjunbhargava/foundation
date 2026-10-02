@@ -65,13 +65,15 @@ The Python, TypeScript, Rust, and C/C++ rows, and every gate in them, were
 verified end to end in this template: its `docs/build.sh` and `docs/conf.py`
 follow the assets below, and the tasks that added each language (T6–T9 in
 `docs/template-plan.md`) broke each gate once to show it fails. The diagram
-check hasn't run here yet, because the template has no diagrams.
+check in `build.sh` hasn't run in the template, which has no diagrams yet.
 
 Doxygen reports undocumented functions and macros only in a header that has a
 `@file` comment, so `build.sh` fails on a header without one.
 `FAIL_ON_WARNINGS` reports every warning before failing; `YES` stops at the
-first. `--hidePageHeader` stops TypeDoc starting each page with a bold copy
-of its title.
+first.
+
+`--hidePageHeader` stops TypeDoc starting each page with a bold copy of its
+title and a horizontal rule.
 
 ## Setup
 
