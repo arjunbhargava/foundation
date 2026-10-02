@@ -9,8 +9,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # The presets make these warnings errors, for development builds only.
 add_compile_options(-Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 
-# clang-tidy otherwise reads the C++ standard library of the newest GCC it
-# finds, which may differ from the compiler's or lack its headers.
+# Point clang-tidy at the compiler's C++ standard library. Left alone, on
+# Linux it reads the newest GCC's, which may differ from the compiler's or lack
+# its headers. On macOS it finds no SDK, because CMake 4 passes none and Apple
+# Clang finds its own.
 if(CMAKE_CXX_CLANG_TIDY AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   execute_process(
     COMMAND ${CMAKE_CXX_COMPILER} -print-libgcc-file-name
@@ -19,6 +21,12 @@ if(CMAKE_CXX_CLANG_TIDY AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   cmake_path(GET libgcc_path PARENT_PATH gcc_install_dir)
   list(APPEND CMAKE_CXX_CLANG_TIDY
        "--extra-arg=--gcc-install-dir=${gcc_install_dir}")
+elseif(CMAKE_CXX_CLANG_TIDY AND APPLE)
+  execute_process(
+    COMMAND xcrun --show-sdk-path
+    OUTPUT_VARIABLE sdk_path OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY)
+  list(APPEND CMAKE_CXX_CLANG_TIDY "--extra-arg=-isysroot${sdk_path}")
 endif()
 
 add_library(interpolation cpp/src/interpolation.cpp)
