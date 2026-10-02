@@ -56,7 +56,7 @@ benchmarks, so treat the numbers as direction rather than precise effects.
 | F5 | A second model reviewing finished code helped more than a model planning before the code was written. Good plans help, but a bad plan is worse than none. [6][7] | People approve plans only for larger changes. Every PR gets a review by a separate agent before a person sees it. |
 | F6 | Asking agents for a structured handoff made their work easier to review, not more correct. Sections such as "known limitations" appeared only when required. [8] | The PR template requires those sections. |
 | F7 | In Cursor's experiments with hundreds of agents, agents coordinating through a shared file with locks collapsed to the speed of 1–3 agents. What worked was a planner that splits the work, workers that each own one task on their own copy of the code, and a handoff back to the planner. [9] | Plans and task lists live in Linear, not in a shared file. Each task becomes one agent, one branch, and one PR. |
-| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Use a merge queue. |
+| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Test each PR combined with `main` before merging: up-to-date branches for now, a merge queue later (T4). |
 | F9 | At Meta, engineers accepted 73% of tests generated to catch specific deliberate bugs. [12] | Use mutation testing to measure whether agent-written tests catch real mistakes. |
 
 ## Decisions
@@ -436,8 +436,9 @@ merged.
   branch or run ID.
 - An agent that finds a problem outside its task files a Linear issue instead
   of fixing it.
-- The merge queue tests each PR combined with the ones ahead of it before
-  merging.
+- Each PR is tested combined with `main` before merging. For now that means
+  requiring up-to-date branches; a merge queue replaces it once the
+  repository moves to an organization (T4).
 - For a hard task, run several agents on it separately and review only the
   best result. Parallel agents should not multiply review work.
 
@@ -446,8 +447,9 @@ merged.
 - A custom system for coordinating agents. Cursor already provides subagents,
   an API, automations, and Linear routing.
 - Agents talking to each other directly, or shared memory files.
-- A dedicated agent for merging other agents' work. The merge queue covers it,
-  and Cursor found such a role slowed things down [9].
+- A dedicated agent for merging other agents' work. Required up-to-date
+  branches, and later a merge queue, cover it, and Cursor found such a role
+  slowed things down [9].
 - Release automation, deployment, and choices of C/C++ package manager or
   experiment tracker. These belong to each project.
 - Go. It appears in the `source-docs` skill but isn't a team language; remove

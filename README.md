@@ -54,7 +54,7 @@ repository settings, also needs the [GitHub CLI](https://cli.github.com/),
 
 [mise](https://mise.jdx.dev/) installs the tool versions pinned in
 [`mise.toml`](mise.toml) and runs the shared commands, so people, agents, and
-CI (once task T4 in the plan adds it) all run the same `mise run <command>`.
+CI all run the same `mise run <command>`.
 [`AGENTS.md`](AGENTS.md) lists the commands.
 
 ## Agent instructions

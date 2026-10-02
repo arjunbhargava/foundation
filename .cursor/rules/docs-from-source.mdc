@@ -30,7 +30,8 @@ implementation. Private helpers need a comment only when a constraint is
 non-obvious.
 
 A PR that changes public code, doc comments, or the docs build runs
-`docs/build.sh`, which must exit 0, and lists it under verification. Open
+`mise run docs`, which runs `docs/build.sh` with the pinned tools. It must
+exit 0, and the PR lists it under verification. Open
 `docs/_build/html/index.html`, or screenshot the pages the PR changed,
 including the architecture page in light and dark mode, and attach the
 screenshots to the PR. Never commit `docs/_build/` or `docs/_generated/`.
