@@ -24,9 +24,8 @@ dependencies. A PR that adds one includes all of these:
    | Rust | `cargo deny check licenses` passes. Task T8 in `docs/template-plan.md` adds cargo-deny; until then, the reviewer checks the licence in the reason line. |
    | Python, TypeScript, C and C++ | None exists. The reviewer checks the licence in the reason line. |
 
-   Never widen the list of allowed licences to make a check pass. If a
-   dependency's licence isn't allowed, say so in the PR and let a person
-   decide.
+   Never widen cargo-deny's list of allowed licences to make a dependency
+   pass. Say in the PR which licence it needs, and let a person decide.
 
 Never edit a lockfile by hand. On a lockfile merge conflict, first check out
 the base branch's lockfile, for example `git checkout origin/main -- uv.lock`,
