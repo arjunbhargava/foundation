@@ -35,5 +35,7 @@ html_theme_options = {
     "light_css_variables": {"color-brand-primary": "#b4532f", "color-brand-content": "#b4532f"},
     "dark_css_variables": {"color-brand-primary": "#d97757", "color-brand-content": "#d97757"},
 }
+# Rust: build.sh copies rustdoc's HTML into _generated/html, and Sphinx
+# publishes it unchanged, without reading it as sources (remove if no Rust).
 html_extra_path = ["_generated/html"]
-exclude_patterns = ["_build", "_generated/html", "_generated/*-target"]
+exclude_patterns = ["_build"]

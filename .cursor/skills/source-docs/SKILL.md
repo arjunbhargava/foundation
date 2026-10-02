@@ -57,7 +57,7 @@ Bring each language in through the first option that works, in this order:
 |---|---|---|---|
 | Python | Native | `sphinx-autoapi` + `napoleon` (parses source, no import) | `ruff` `D` rules, Google convention, ignore `D107`; `nitpicky = True` |
 | TypeScript / JS | Markdown | TypeDoc + `typedoc-plugin-markdown`, `--outputFileStrategy modules` | `--validation.notDocumented --treatWarningsAsErrors` |
-| Rust | Embedded HTML | `cargo doc --no-deps` | `#![deny(missing_docs)]`, `RUSTDOCFLAGS="-D warnings"` |
+| Rust | Embedded HTML | `cargo doc --no-deps` | `#![deny(missing_docs)]`, `RUSTDOCFLAGS="-D warnings -D missing_docs"` |
 | C / C++ | Native | Doxygen XML → Breathe | `EXTRACT_ALL=NO`, `WARN_IF_UNDOCUMENTED=YES`, `WARN_NO_PARAMDOC=YES`, `WARN_AS_ERROR=FAIL_ON_WARNINGS`; a `@file` comment in every header |
 | Other | Markdown if the generator can emit it, else embedded HTML | The language's canonical generator | The generator's warnings-as-errors mode |
 
@@ -84,7 +84,10 @@ Then:
   lists `api/python/<pkg>/index`, `_generated/ts/index`, `api/rust`, and
   `api/cpp`, for whichever languages the repo has.
 - For each embedded-HTML language, add a stub page such as `docs/api/rust.md`
-  that links to `rust/<crate>/index.html`.
+  that links to each crate with an HTML link,
+  `<a href="rust/<crate>/index.html">`. A Markdown link fails the build
+  (`myst.xref_missing`), because MyST resolves it only to pages Sphinx
+  builds, so `build.sh` checks that each linked page exists instead.
 - For C and C++, add `docs/api/cpp.md` with a Breathe `doxygennamespace`
   directive for each top-level namespace. `doxygenindex` would also list
   every source directory.
