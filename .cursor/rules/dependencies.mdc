@@ -18,14 +18,14 @@ dependencies. A PR that adds one includes all of these:
    the same commit as the manifest. C and C++ have no lockfile, so pin an
    exact version instead: a vcpkg `builtin-baseline`, or a FetchContent
    `GIT_TAG` set to a full commit hash, or a `URL` with `URL_HASH`.
-3. **An allowed licence:** Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, ISC,
-   Zlib, BSL-1.0, Unicode-3.0, or PSF-2.0. For any other licence, including
-   GPL, LGPL, AGPL, MPL, a custom licence, or none, stop and ask a person in
-   the PR before adding the dependency.
+3. **An allowed licence:** one on the allow-list in `deny.toml` (`allow`
+   under `[licenses]`), which covers every language. For any other licence,
+   including GPL, LGPL, AGPL, MPL, a custom licence, or none, stop and ask a
+   person in the PR before adding the dependency.
 
    | Language | Licence check |
    |---|---|
-   | Rust | `cargo deny check licenses` passes, with the list above as its allow-list. Task T8 in `docs/template-plan.md` adds cargo-deny; until then, check by hand. |
+   | Rust | `mise run lint:rust` runs `cargo deny check licenses`, which fails on any crate, including a development dependency, whose licence isn't on the allow-list. |
    | Python, TypeScript, C and C++ | None exists. Check the licence by hand. |
 
    Never add to the allow-list to make a dependency pass.

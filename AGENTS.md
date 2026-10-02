@@ -11,14 +11,16 @@ thing:
 | `mise run fmt` | Format all code in place. |
 | `mise run lint` | Check formatting, lint, and types without changing files. |
 | `mise run lint:python` | Run only the Python checks. |
+| `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory and licence checks. |
 | `mise run test` | Run all tests. |
 | `mise run test:python` | Run only the Python tests and docstring examples. Arguments after `--` go to pytest: `mise run test:python -- -k trapezoid`. |
+| `mise run test:rust` | Run only the Rust tests and doc-comment examples. Arguments after `--` go to `cargo test`: `mise run test:rust -- energy`. |
 | `mise run docs` | Build the documentation site. |
 | `mise run check` | Run everything CI runs. |
 
-Run `mise run check` before opening a PR; it must pass. Python is the only
-language so far; the other language tasks in `docs/template-plan.md` add
-theirs.
+Run `mise run check` before opening a PR; it must pass. Python and Rust are
+the only languages so far; the other language tasks in
+`docs/template-plan.md` add theirs.
 
 ## Where code lives
 
@@ -27,6 +29,12 @@ theirs.
   the first real Python code arrives.
 - `pyproject.toml`: Python dependencies and tool settings. `uv.lock` locks
   the dependencies, and `.python-version` pins Python.
+- `crates/foundation/`: the Rust crate, tested in its `tests/`. It is the
+  template's example, there to prove the checks work; delete it when the
+  first real Rust crate arrives, and give that crate `#![deny(missing_docs)]`.
+- `Cargo.toml`: the Rust workspace, which lists each crate. `Cargo.lock`
+  locks the dependencies, `rust-toolchain.toml` pins Rust, and `deny.toml`
+  holds the licence allow-list for every language.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
   generated from doc comments.
 
@@ -37,7 +45,8 @@ Each language task adds its directory and lists it here.
 - Pin every tool in `mise.toml`, at an exact version. Don't install tools
   another way. Python packages, including ruff and pyright, are the
   exception: add them with `mise exec -- uv add --dev <package>`, which pins
-  them in `uv.lock`.
+  them in `uv.lock`. The Rust toolchain is the other: `rust-toolchain.toml`
+  pins it, so that Dependabot can update it, and mise installs it from there.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
   them. People write those files (finding F2 in the plan).
 - The PR body follows the `reviewable-prs` rule.

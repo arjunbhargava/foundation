@@ -3,20 +3,32 @@
 # docs/template-plan.md) pins its tools under [tools], adds `lint:<language>`
 # and `test:<language>` tasks, which `lint` and `test` pick up, and adds its
 # commands to `setup` and `fmt`. Python packages, including ruff and pyright,
-# are pinned in uv.lock rather than here.
+# are pinned in uv.lock rather than here, and the Rust toolchain in
+# rust-toolchain.toml.
+
+[settings]
+# Installs the Rust toolchain that rust-toolchain.toml names, with rustup.
+idiomatic_version_file_enable_tools = ["rust"]
 
 [tools]
+cargo-deny = "0.20.2"
 jq = "1.8.2" # .github/rulesets/apply.sh
 uv = "0.12.21"
 
 [tasks.setup]
 description = "Install project dependencies"
-# --locked fails if uv.lock is out of date with pyproject.toml.
-run = "uv sync --locked"
+run = [
+  # --locked fails if uv.lock is out of date with pyproject.toml.
+  "uv sync --locked",
+  "cargo fetch --locked",
+]
 
 [tasks.fmt]
 description = "Format all code in place"
-run = "uv run ruff format"
+run = [
+  "uv run ruff format",
+  "cargo fmt",
+]
 
 [tasks.lint]
 description = "Check formatting, lint, and types without changing files"
@@ -30,6 +42,14 @@ run = [
   "uv run pyright --warnings",
 ]
 
+[tasks."lint:rust"]
+description = "Check Rust formatting, lint including doc comments, and dependencies' advisories and licences"
+run = [
+  "cargo fmt --check",
+  "cargo clippy --locked --all-targets -- -D warnings",
+  "cargo deny --locked check advisories licenses",
+]
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -37,6 +57,10 @@ depends = ["test:*"]
 [tasks."test:python"]
 description = "Run the Python tests and docstring examples; arguments after -- go to pytest"
 run = "uv run pytest"
+
+[tasks."test:rust"]
+description = "Run the Rust tests and doc-comment examples; arguments after -- go to cargo test"
+run = "cargo test --locked"
 
 [tasks.docs]
 description = "Build the documentation site"
