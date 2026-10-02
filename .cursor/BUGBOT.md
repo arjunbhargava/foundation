@@ -13,6 +13,7 @@ so each file is linked here:
 - [AGENTS.md](../AGENTS.md)
 - [.cursor/rules/clarity.mdc](rules/clarity.mdc)
 - [.cursor/rules/compute-cost.mdc](rules/compute-cost.mdc)
+- [.cursor/rules/dependencies.mdc](rules/dependencies.mdc)
 - [.cursor/rules/docs-from-source.mdc](rules/docs-from-source.mdc)
 - [.cursor/rules/ponytail.mdc](rules/ponytail.mdc)
 - [.cursor/rules/reviewable-prs.mdc](rules/reviewable-prs.mdc)

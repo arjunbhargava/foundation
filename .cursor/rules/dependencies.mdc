@@ -1,0 +1,36 @@
+---
+description: Adding a dependency, and resolving a lockfile merge conflict.
+globs: **/pyproject.toml, **/uv.lock, **/pixi.toml, **/pixi.lock, **/package.json, **/pnpm-lock.yaml, **/Cargo.toml, **/Cargo.lock, **/deny.toml, **/CMakeLists.txt, **/vcpkg.json
+alwaysApply: false
+---
+
+# Dependencies
+
+A dependency is new when a manifest gains it, including development and build
+dependencies. A PR that adds one includes all of these:
+
+1. **A reason.** Under "What changes and why", one line per new dependency
+   giving its name, its licence, and why it's needed, for example
+   `h5py (BSD-3-Clause): reads HDF5 checkpoint files, which the standard library can't`.
+2. **A committed lockfile.** Add the dependency with the package manager
+   (`uv add`, `pnpm add`, `cargo add`), and commit the lockfile it writes in
+   the same commit as the manifest. C and C++ have no lockfile, so pin an
+   exact version instead: a vcpkg `builtin-baseline`, or a FetchContent
+   `GIT_TAG` set to a full commit hash, or a `URL` with `URL_HASH`.
+3. **A passing licence check**, where one exists:
+
+   | Language | Licence check |
+   |---|---|
+   | Rust | `cargo deny check licenses` passes. Task T8 in `docs/template-plan.md` adds cargo-deny; until then, the reviewer checks the licence in the reason line. |
+   | Python, TypeScript, C and C++ | None exists. The reviewer checks the licence in the reason line. |
+
+   Never widen the list of allowed licences to make a check pass. If a
+   dependency's licence isn't allowed, say so in the PR and let a person
+   decide.
+
+Never edit a lockfile by hand. On a lockfile merge conflict, resolve the
+manifest first, then check out the base branch's lockfile and rerun the lock
+command (`uv lock`, `pnpm install`, or `cargo update --workspace`). This keeps
+the base branch's versions and adds only what the merged manifest needs.
+Deleting the lockfile and locking from scratch would instead upgrade every
+dependency.
