@@ -28,3 +28,10 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+  # Dependabot's npm ecosystem also updates pnpm-lock.yaml.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

@@ -3,7 +3,8 @@
 # docs/template-plan.md) pins its tools under [tools], adds `lint:<language>`
 # and `test:<language>` tasks, which `lint` and `test` pick up, and adds its
 # commands to `setup` and `fmt`. Python packages, including ruff and pyright,
-# are pinned in uv.lock rather than here, and the Rust toolchain in
+# are pinned in uv.lock rather than here, TypeScript packages, including tsc,
+# Biome, and vitest, in pnpm-lock.yaml, and the Rust toolchain in
 # rust-toolchain.toml.
 
 [settings]
@@ -13,6 +14,8 @@ idiomatic_version_file_enable_tools = ["rust"]
 [tools]
 cargo-deny = "0.20.2"
 jq = "1.8.2" # .github/rulesets/apply.sh
+node = "24.21.0"
+pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
 uv = "0.12.21"
 # C and C++. The compiler, g++, comes from the OS; see AGENTS.md.
 cmake = "4.4.3"
@@ -30,6 +33,8 @@ run = [
   # --locked fails if uv.lock is out of date with pyproject.toml.
   "uv sync --locked",
   "cargo fetch --locked",
+  # --frozen-lockfile fails if pnpm-lock.yaml is out of date with a package.json.
+  "pnpm install --frozen-lockfile",
 ]
 
 [tasks.fmt]
@@ -37,6 +42,9 @@ description = "Format all code in place"
 run = [
   "uv run ruff format",
   "cargo fmt",
+  # check rather than format, so imports are sorted too, as lint:typescript
+  # requires. Lint fixes are left to the author.
+  "pnpm exec biome check --write --linter-enabled=false",
   'find cpp -name "*.[ch]" -o -name "*.[ch]pp" | xargs clang-format -i',
 ]
 
@@ -60,6 +68,13 @@ run = [
   "cargo deny --locked check advisories licenses",
 ]
 
+[tasks."lint:typescript"]
+description = "Check TypeScript formatting, lint, and types"
+run = [
+  "pnpm exec biome ci --error-on-warnings",
+  "pnpm exec tsc",
+]
+
 [tasks."lint:cpp"]
 description = "Check C and C++ formatting, and build with clang-tidy and compiler warnings as errors"
 run = [
@@ -79,6 +94,10 @@ run = "uv run pytest"
 [tasks."test:rust"]
 description = "Run the Rust tests and doc-comment examples; arguments after -- go to cargo test"
 run = "cargo test --locked"
+
+[tasks."test:typescript"]
+description = "Run the TypeScript tests; arguments after -- go to vitest"
+run = "pnpm exec vitest run"
 
 [tasks."test:cpp"]
 description = "Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them; arguments after -- go to ctest"

@@ -20,5 +20,6 @@ template-plan
 
 Python <api/python/foundation/index>
 api/rust
+TypeScript <_generated/ts/index>
 api/cpp
 ```
