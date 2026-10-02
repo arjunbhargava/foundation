@@ -2,6 +2,6 @@
 # file is the only pin of the Rust version: rustup reads it, mise reads it
 # (idiomatic_version_file_enable_tools in mise.toml), and Dependabot updates it.
 [toolchain]
-channel = "1.98.1"
+channel = "1.99.0"
 components = ["clippy", "rustfmt"]
 profile = "minimal"
