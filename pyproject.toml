@@ -13,6 +13,7 @@ build-backend = "uv_build"
 dev = [
     "breathe>=5.0.0",
     "furo>=2025.12.19",
+    "mutmut>=3.8.0",
     "myst-parser>=5.1.0",
     "pyright[nodejs]>=1.1.414",
     "pytest>=9.1.1",
@@ -39,6 +40,9 @@ convention = "google"
 
 [tool.pyright]
 typeCheckingMode = "strict"
+# mutants/ is mutmut's generated copy of src/. Setting exclude replaces
+# pyright's defaults, so the other three entries restore them.
+exclude = ["mutants", "**/node_modules", "**/__pycache__", "**/.*"]
 
 [tool.pytest]
 # -n auto runs tests in parallel, so a test that depends on shared state or on
@@ -47,3 +51,8 @@ addopts = ["-n", "auto", "--doctest-modules"]
 testpaths = ["src", "tests"]
 strict = true
 filterwarnings = ["error"]
+
+[tool.mutmut]
+# mutmut records which tests call each function, and can't see calls made in
+# pytest-xdist's worker processes, so it runs the tests in one process.
+pytest_add_cli_args = ["-n", "0"]
