@@ -17,7 +17,7 @@ pub struct State {
 ///
 /// The method is second order and symplectic: for a conservative force, the
 /// energy error stays bounded, of order `time_step²`, over any number of steps
-/// rather than drifting, unlike [`step_forward_euler`].
+/// rather than drifting.
 ///
 /// - `state`: the position and velocity at the start of the step.
 /// - `acceleration`: the acceleration at a position, in length per time²,
@@ -38,16 +38,11 @@ pub struct State {
 ///
 /// let thrown_up = State { position: 0.0, velocity: 2.0 };
 /// let one_time_unit_later = verlet::step(thrown_up, |_| -2.0, 1.0);
-/// assert_eq!(one_time_unit_later, State { position: 1.0, velocity: 1.0 });
+/// assert_eq!(one_time_unit_later, State { position: 1.0, velocity: 0.0 });
 /// ```
 pub fn step(state: State, acceleration: impl Fn(f64) -> f64, time_step: f64) -> State {
     let half_step_velocity = state.velocity + 0.5 * time_step * acceleration(state.position);
-    let half_time_step = 0.5 * time_step;
-    let position = state.position+time_step*half_step_velocity;
-    let velocity = half_step_velocity + 0.5 * time_step * acceleration(state.position);
-    return State { position, velocity };
-}
-
-pub fn half_step(time_step: f64) -> f64 {
-    0.5 * time_step
+    let position = state.position + time_step * half_step_velocity;
+    let velocity = half_step_velocity + 0.5 * time_step * acceleration(position);
+    State { position, velocity }
 }
