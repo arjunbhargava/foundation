@@ -62,11 +62,11 @@ run = [
 ]
 
 [tasks."lint:rust"]
-description = "Check Rust formatting, lint including doc comments, and dependencies' advisories and licences"
+description = "Check Rust formatting, lint including doc comments, and dependencies' advisories, bans, licences, and sources"
 run = [
   "cargo fmt --check",
   "cargo clippy --locked --all-targets -- -D warnings",
-  "cargo deny --locked check advisories licenses",
+  "cargo deny --locked check advisories bans licenses sources",
 ]
 
 [tasks."lint:typescript"]

@@ -11,7 +11,7 @@ thing:
 | `mise run fmt` | Format all code in place. |
 | `mise run lint` | Check formatting, lint, and types without changing files. |
 | `mise run lint:python` | Run only the Python checks. |
-| `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory and licence checks. |
+| `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory, ban, licence, and source checks. |
 | `mise run lint:typescript` | Run only the TypeScript checks. |
 | `mise run lint:cpp` | Run only the C and C++ checks: clang-format, and a build with clang-tidy and compiler warnings as errors. |
 | `mise run test` | Run all tests. |
