@@ -34,6 +34,7 @@ jobs:
     outputs:
       docs: ${{ steps.diff.outputs.docs }}
       python: ${{ steps.diff.outputs.python }}
+      rust: ${{ steps.diff.outputs.rust }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,6 +54,7 @@ jobs:
           }
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
           echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
+          echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)" >> "$GITHUB_OUTPUT"
 
   docs:
     # The docs are built from every language's source, so this job runs when
@@ -79,12 +81,28 @@ jobs:
       - run: mise run lint:python
       - run: mise run test:python
 
+  rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run lint:rust
+      - run: mise run test:rust
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
     # a skipped required check as passing, so this job must still run, and
     # fail, when the run is cancelled.
-    needs: [changes, docs, python]
+    needs:
+      - changes
+      - docs
+      - python
+      - rust
     if: always()
     runs-on: ubuntu-latest
     steps:
