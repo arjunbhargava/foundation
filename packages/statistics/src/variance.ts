@@ -1,5 +1,3 @@
-import { expect } from "vitest";
-
 /**
  * Estimate the variance of a population from a sample of it.
  *
@@ -34,6 +32,10 @@ export function estimateVariance(values: Iterable<number>): number {
 		sumOfSquaredDeviations += deviationFromPreviousMean * (value - mean);
 	}
 
-	expect(count, "estimateVariance needs at least 2 values").toBeGreaterThan(1);
+	if (count < 2) {
+		throw new RangeError(
+			`estimateVariance needs at least 2 values, got ${count}`,
+		);
+	}
 	return sumOfSquaredDeviations / (count - 1);
 }

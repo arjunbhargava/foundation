@@ -46,9 +46,3 @@ pub fn step(state: State, acceleration: impl Fn(f64) -> f64, time_step: f64) -> 
     let velocity = half_step_velocity + 0.5 * time_step * acceleration(position);
     State { position, velocity }
 }
-
-/// Whether two states agree to within `tolerance` in position and velocity.
-pub fn states_agree(first: State, second: State, tolerance: f64) -> bool {
-    approx::abs_diff_eq!(first.position, second.position, epsilon = tolerance)
-        && approx::abs_diff_eq!(first.velocity, second.velocity, epsilon = tolerance)
-}

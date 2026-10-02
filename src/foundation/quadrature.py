@@ -2,8 +2,6 @@
 
 from collections.abc import Sequence
 
-import pytest
-
 
 def integrate_trapezoid(samples: Sequence[float], spacing: float) -> float:
     """Integrate uniformly spaced samples of a function with the trapezoid rule.
@@ -30,7 +28,7 @@ def integrate_trapezoid(samples: Sequence[float], spacing: float) -> float:
         1.0
     """
     if len(samples) < 2:
-        pytest.fail(f"need at least 2 samples, got {len(samples)}")
+        raise ValueError(f"need at least 2 samples, got {len(samples)}")
     # `not >` rather than `<=`, so that NaN is rejected too.
     if not spacing > 0:
         raise ValueError(f"spacing must be > 0, got {spacing}")
