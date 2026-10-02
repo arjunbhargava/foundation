@@ -19,4 +19,5 @@ template-plan
 :maxdepth: 1
 
 api/python/foundation/index
+api/rust
 ```
