@@ -41,3 +41,6 @@ them:
 Changes to rules and skills are written or edited by a person, not generated
 by an agent for itself, because only the former have been shown to help
 (finding F2 in the plan).
+
+Bugbot, Cursor's review agent, reviews every PR before a person does, using
+the checks in [`.cursor/BUGBOT.md`](.cursor/BUGBOT.md).

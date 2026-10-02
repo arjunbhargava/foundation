@@ -29,6 +29,9 @@ No code yet. Each language task adds its directory and lists it here.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
   them. People write those files (finding F2 in the plan).
 - The PR body follows the `reviewable-prs` rule.
+- Before asking a person to review a PR, fix each finding in Bugbot's review
+  of the latest push (the `Cursor Bugbot` check), or reply saying why it is
+  wrong. If Bugbot doesn't run, say so under "What was not verified".
 
 ## Cursor Cloud specific instructions
 
