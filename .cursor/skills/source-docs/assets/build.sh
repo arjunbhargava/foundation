@@ -8,16 +8,18 @@ cd "$(dirname "$0")/.."
 # warnings of unchanged ones. Generated pages are rebuilt each time too.
 rm -rf docs/_build docs/_generated
 
-# Diagrams: committed SVGs must match their D2 sources.
+# Diagrams, once docs/diagrams/ exists: committed SVGs must match their D2
+# sources.
 docs/diagrams/render.sh --check
 
 # Python: sphinx-autoapi reads it during sphinx-build; enforce docstrings first.
-ruff check --quiet src
+uv run ruff check --quiet src
 
-# TypeScript: TypeDoc -> Markdown, rendered inside the site.
-(cd web && npx typedoc src/index.ts --plugin typedoc-plugin-markdown \
-  --out ../docs/_generated/ts --entryFileName index --readme none --outputFileStrategy modules \
-  --validation.notDocumented --treatWarningsAsErrors)
+# TypeScript: TypeDoc writes Markdown, which MyST renders inside the site.
+# Name each package's entry point.
+pnpm exec typedoc packages/PACKAGE/src/index.ts --plugin typedoc-plugin-markdown \
+  --out docs/_generated/ts --entryFileName index --readme none --outputFileStrategy modules \
+  --hidePageHeader --validation.notDocumented --treatWarningsAsErrors
 
 # Rust: rustdoc's HTML, published under api/rust/ and linked from
 # docs/api/rust.md. -D missing_docs also covers a crate that lacks
@@ -34,13 +36,15 @@ for linked_page in $(grep -o 'href="rust/[^"]*"' docs/api/rust.md | cut -d '"' -
   fi
 done
 
-# C/C++: Doxygen XML, read by Breathe. Doxygen skips undocumented functions and
-# macros in a header with no @file comment, so require one in every header.
-missing_file_comment=$(grep -rL '[@\]file' include || true)
-if [[ -n $missing_file_comment ]]; then
-  echo "error: add a @file doc comment to: $missing_file_comment" >&2
+# C and C++: Doxygen writes XML, which Breathe reads during sphinx-build.
+# Doxygen skips undocumented functions and macros in a header that has no
+# @file comment, so the build requires one in every header.
+headers_without_file_comment=$(grep -rL '[@\]file' include || true)
+if [[ -n $headers_without_file_comment ]]; then
+  echo "error: add a @file doc comment to these headers, so that Doxygen reports their undocumented symbols:" >&2
+  echo "$headers_without_file_comment" >&2
   exit 1
 fi
 doxygen Doxyfile
 
-sphinx-build -W --keep-going -q -b html docs docs/_build/html
+uv run sphinx-build -W --keep-going -q -b html docs docs/_build/html
