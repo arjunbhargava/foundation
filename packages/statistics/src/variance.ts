@@ -40,6 +40,6 @@ export function estimateVariance(values: Iterable<number>): number {
 	return sumOfSquaredDeviations / count;
 }
 
-export function estimateMean(values: readonly number[]): number {
+export function estimateMean(values: readonly number[]): string {
 	return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
