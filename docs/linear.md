@@ -24,7 +24,9 @@ these conventions rely on (task T17 in [the template plan](template-plan.md)).
   ([Cursor docs](https://cursor.com/docs/integrations/linear#repository-selection)).
 - Linear keeps issue labels and project labels apart, so the `repo` group
   exists in both. A new repository made from this template adds its label to
-  both groups, then puts it on its Linear projects.
+  both groups, then puts it on its Linear projects. If Linear's or Cursor's
+  GitHub app has access only to selected repositories, add the new one there
+  too.
 
 ## Handing an issue to an agent
 
