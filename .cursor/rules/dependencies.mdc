@@ -12,6 +12,7 @@ dependencies. A PR that adds one includes all of these:
 1. **A reason.** Under "What changes and why", one line per new dependency
    giving its name, its licence, and why it's needed, for example
    `h5py (BSD-3-Clause): reads HDF5 checkpoint files, which the standard library can't`.
+   If the approved plan doesn't name it, also list it under "Changes from the plan".
 2. **A committed lockfile.** Add the dependency with the package manager
    (`uv add`, `pnpm add`, `cargo add`), and commit the lockfile it writes in
    the same commit as the manifest. C and C++ have no lockfile, so pin an
