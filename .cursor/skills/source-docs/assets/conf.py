@@ -6,6 +6,7 @@ extensions = [
     "myst_parser",
     # Python sources (remove if none):
     "autoapi.extension",
+    "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     # C/C++ sources via Doxygen XML (add if any): "breathe",
 ]
@@ -15,6 +16,12 @@ autoapi_dirs = ["../src"]  # edit
 autoapi_root = "api/python"
 autoapi_options = ["members", "show-inheritance", "show-module-summary", "imported-members"]
 autoapi_add_toctree_entry = False
+
+# Python: links standard-library names in signatures, such as
+# collections.abc.Sequence, to the Python docs. nitpicky fails the build on
+# any it can't resolve. Each build downloads this inventory, so it needs
+# network access.
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # C/C++: the Doxygen XML that build.sh writes (uncomment if any).
 # breathe_projects = {project: "_generated/doxygen"}
@@ -29,5 +36,7 @@ html_theme_options = {
     "light_css_variables": {"color-brand-primary": "#b4532f", "color-brand-content": "#b4532f"},
     "dark_css_variables": {"color-brand-primary": "#d97757", "color-brand-content": "#d97757"},
 }
+# Rust: build.sh copies rustdoc's HTML into _generated/html, and Sphinx
+# publishes it unchanged, without reading it as sources (remove if no Rust).
 html_extra_path = ["_generated/html"]
-exclude_patterns = ["_build", "_generated/html", "_generated/*-target"]
+exclude_patterns = ["_build"]

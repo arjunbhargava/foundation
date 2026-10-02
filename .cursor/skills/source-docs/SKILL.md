@@ -23,9 +23,9 @@ the code and docs disagree, the build fails.
    They link only to other docs pages or absolute URLs, and name other repo
    files as code paths (`docs/diagrams/`), because the strict build rejects
    links it can't resolve.
-2. **One command builds everything.** `docs/build.sh` runs every language's
-   generator, then the hub build. Agents, CI, and humans all run the same
-   command.
+2. **One command builds everything.** `mise run docs` runs `docs/build.sh`
+   with the pinned tools, and the script runs every language's generator, then
+   the hub build. Agents, CI, and humans all run the same command.
 3. **Warnings are errors.** An undocumented public symbol, a broken
    cross-reference, or a malformed docstring fails the build.
 4. **Never commit built output.** `docs/_build/` and `docs/_generated/` are
@@ -56,16 +56,24 @@ Bring each language in through the first option that works, in this order:
 | Language | Integration | Generator | Coverage gate |
 |---|---|---|---|
 | Python | Native | `sphinx-autoapi` + `napoleon` (parses source, no import) | `ruff` `D` rules, Google convention, ignore `D107`; `nitpicky = True` |
-| TypeScript / JS | Markdown | TypeDoc + `typedoc-plugin-markdown`, `--outputFileStrategy modules` | `--validation.notDocumented --treatWarningsAsErrors` |
-| Rust | Embedded HTML | `cargo doc --no-deps` | `#![deny(missing_docs)]`, `RUSTDOCFLAGS="-D warnings"` |
+| TypeScript / JS | Markdown | TypeDoc + `typedoc-plugin-markdown`, `--outputFileStrategy modules --hidePageHeader` | `--validation.notDocumented --treatWarningsAsErrors` |
+| Rust | Embedded HTML | `cargo doc --no-deps` | `#![deny(missing_docs)]`, `RUSTDOCFLAGS="-D warnings -D missing_docs"` |
 | C / C++ | Native | Doxygen XML → Breathe | `EXTRACT_ALL=NO`, `WARN_IF_UNDOCUMENTED=YES`, `WARN_NO_PARAMDOC=YES`, `WARN_AS_ERROR=FAIL_ON_WARNINGS`; a `@file` comment in every header |
 | Other | Markdown if the generator can emit it, else embedded HTML | The language's canonical generator | The generator's warnings-as-errors mode |
 
-The Python, TypeScript, Rust, and C/C++ rows, the diagram images, and every
-gate in those rows were verified end to end. Doxygen reports undocumented functions and macros only in a header that has
-a `@file` comment, so `build.sh` fails on a header without one.
+The Python, TypeScript, Rust, and C/C++ rows, and every gate in them, were
+verified end to end in this template: its `docs/build.sh` and `docs/conf.py`
+follow the assets below, and the tasks that added each language (T6–T9 in
+`docs/template-plan.md`) broke each gate once to show it fails. The diagram
+check in `build.sh` hasn't run in the template, which has no diagrams yet.
+
+Doxygen reports undocumented functions and macros only in a header that has a
+`@file` comment, so `build.sh` fails on a header without one.
 `FAIL_ON_WARNINGS` reports every warning before failing; `YES` stops at the
 first.
+
+`--hidePageHeader` stops TypeDoc starting each page with a bold copy of its
+title and a horizontal rule.
 
 ## Setup
 
@@ -74,17 +82,22 @@ Copy the templates in `assets/`:
 | From | To | Then |
 |---|---|---|
 | `conf.py` | `docs/conf.py` | Set `project`, keep only the extensions for the repo's languages, and point `autoapi_dirs` at the Python source |
-| `build.sh` | `docs/build.sh` | Keep one block per language in the repo, and fix paths such as `web/` and `--manifest-path` |
+| `build.sh` | `docs/build.sh` | Keep one block per language in the repo, and fix its paths, such as TypeDoc's entry point `packages/PACKAGE/src/index.ts` |
 | `Doxyfile` | `Doxyfile` | C and C++ only: point `INPUT` at the public headers |
 
 Then:
 
 - Write `docs/index.md` with two toctrees. The "Explanation" toctree lists
   `architecture` and other hand-written pages. The "API reference" toctree
-  lists `api/python/<pkg>/index`, `_generated/ts/index`, `api/rust`, and
-  `api/cpp`, for whichever languages the repo has.
+  lists `Python <api/python/<pkg>/index>`, `api/rust`,
+  `TypeScript <_generated/ts/index>`, and `api/cpp`, for whichever languages
+  the repo has. The labels name the language, because those two pages are
+  titled with the package's name.
 - For each embedded-HTML language, add a stub page such as `docs/api/rust.md`
-  that links to `rust/<crate>/index.html`.
+  that links to each crate with an HTML link,
+  `<a href="rust/<crate>/index.html">`. A Markdown link fails the build
+  (`myst.xref_missing`), because MyST resolves it only to pages Sphinx
+  builds, so `build.sh` checks that each linked page exists instead.
 - For C and C++, add `docs/api/cpp.md` with a Breathe `doxygennamespace`
   directive for each top-level namespace. `doxygenindex` would also list
   every source directory.
@@ -97,6 +110,10 @@ Then:
   [tool.ruff.lint]
   extend-select = ["D"]
   ignore = ["D107"]
+
+  [tool.ruff.lint.per-file-ignores]
+  # Tests aren't API reference; their names state the behaviour they check.
+  "tests/**" = ["D"]
 
   [tool.ruff.lint.pydocstyle]
   convention = "google"
