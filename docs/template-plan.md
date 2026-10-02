@@ -74,7 +74,7 @@ a person has recorded a different choice here.
 | D6 | Merge method | Merge commits; no squash | The rules ask for commit history that reads as the review story. Squashing erases it. |
 | D7 | Which changes need a person to approve a plan before coding | New module; change to a public interface or data format; new dependency; compute spend above the cost limit | Planning has a cost and only pays off for larger changes. |
 | D8 | Cost limit for one agent-launched compute job before asking a person | **Decided:** no per-job limit for now; total agent compute spend at most $10,000 per day | Enforce the daily cap with the provider's budget controls (T16), not only the rule. Revisit the per-job limit when T16 lands. |
-| D9 | Open agent PRs allowed per reviewer | Start at 3 | People review everything, so review time, not agent count, limits throughput. Adjust from data. |
+| D9 | Open agent PRs allowed per reviewer | **Decided:** 5, raised from 3 on 2026-10-02 | People review everything, so review time, not agent count, limits throughput. The owner raised it to 5 after Stage 2, because 3 made progress too slow. Adjust from data. |
 | D10 | Cursor plan | Ask the owner | Team pools of the team's own GPU machines for agents need the Enterprise plan. |
 
 ## The work
@@ -292,7 +292,7 @@ edit it (F2). Keep each skill short and focused.
     match known exact solutions; results respect the problem's symmetries.
     Compare floating-point values with stated tolerances, never exact
     equality.
-- `spec`: for changes that meet the D7 threshold, write a short plan covering
+- `plan`: for changes that meet the D7 threshold, write a short plan covering
   the problem, the interface, the files touched, and the acceptance criteria.
   Then stop until a person approves it.
 - `decompose`: turn an approved plan into Linear sub-issues. Each sub-issue
@@ -365,6 +365,10 @@ skills and one for CI.
 
 **T16. Compute job support.** Needs: T6, D4, D8.
 
+**Deferred** (owner, 2026-10-02): the owner will run compute jobs on their own
+cloud, so D4's choice of launcher waits until that setup is known. T18 doesn't
+wait for this task.
+
 - A base container image (`Dockerfile`) with pinned CUDA versions. CI builds
   it, tags it with the commit, and pushes it to GitHub's container registry.
   Jobs use the image's digest, so the exact image is recorded.
@@ -436,7 +440,7 @@ alongside `prune-review`.
 
 ### Stage 7: template mechanics
 
-**T18. Convert to Copier.** Needs: all earlier tasks, D1.
+**T18. Convert to Copier.** Needs: all earlier tasks except T16, D1.
 
 - Turn the repository into a Copier template with one yes/no question per
   language.
@@ -483,7 +487,7 @@ T1 ─┬─ T2
     │      └─ T17 ─┴─ T22 ── T23
     └─ T10 ─┬─ T11
             └─ T12 ── T20
-T18 needs everything above except T22 and T23.
+T18 needs everything above except T16, T22, and T23.
 ```
 
 Right after T1, four tasks (T2, T3, T5, T10) can start at once. Keep the
