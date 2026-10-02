@@ -9,7 +9,7 @@ agent-launched compute jobs.
 
 Status: under construction. So far it has the agent rules, skills, and Bugbot
 review instructions described below, the shared `mise run` commands, Python
-with its checks and an example module, the documentation build
+and Rust, each with its checks and an example module, the documentation build
 ([`docs/build.sh`](docs/build.sh)), cloud agent setup in
 [`.cursor/environment.json`](.cursor/environment.json), and the
 [PR template](.github/pull_request_template.md).
