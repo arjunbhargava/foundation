@@ -1,0 +1,25 @@
+# Settings for cargo-deny, which `mise run lint:rust` runs as
+# `cargo deny check advisories licenses`. It fails on a crate with a known
+# vulnerability in the RustSec advisory database, or with a licence not
+# allowed below. Other settings keep cargo-deny's defaults:
+# https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+
+[licenses]
+# The licences that a dependency in any language may have without asking a
+# person first (.cursor/rules/dependencies.mdc). This is the only copy of the
+# list. Never add to it to make a dependency pass.
+allow = [
+  "Apache-2.0",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "BSL-1.0",
+  "Unicode-3.0",
+  "PSF-2.0",
+]
+# The rule covers development dependencies, which cargo-deny skips by default.
+include-dev = true
+# The list serves every language, so most entries match no Rust crate.
+unused-allowed-license = "allow"
