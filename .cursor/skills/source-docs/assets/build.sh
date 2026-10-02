@@ -23,7 +23,13 @@ ruff check --quiet src
 RUSTDOCFLAGS="-D warnings" cargo doc --quiet --no-deps --target-dir "$gen/rust-target"
 cp -r "$gen/rust-target/doc" "$gen/html/api/rust"
 
-# C/C++: Doxygen XML, read by Breathe (Doxyfile: GENERATE_XML=YES, WARN_AS_ERROR=YES).
-# doxygen Doxyfile
+# C/C++: Doxygen XML, read by Breathe. Doxygen skips undocumented functions and
+# macros in a header with no @file comment, so require one in every header.
+missing_file_comment=$(grep -rL '[@\]file' include || true)
+if [[ -n $missing_file_comment ]]; then
+  echo "error: add a @file doc comment to: $missing_file_comment" >&2
+  exit 1
+fi
+doxygen Doxyfile
 
 sphinx-build -W --keep-going -q -b html docs docs/_build/html

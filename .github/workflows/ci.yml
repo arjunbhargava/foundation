@@ -37,6 +37,7 @@ jobs:
       python: ${{ steps.diff.outputs.python }}
       rust: ${{ steps.diff.outputs.rust }}
       typescript: ${{ steps.diff.outputs.typescript }}
+      cpp: ${{ steps.diff.outputs.cpp }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -59,6 +60,7 @@ jobs:
           echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
           echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)" >> "$GITHUB_OUTPUT"
           echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json)" >> "$GITHUB_OUTPUT"
+          echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)" >> "$GITHUB_OUTPUT"
 
   install-script:
     # Sets up a fresh machine of each kind people use, the way a person does,
@@ -140,6 +142,21 @@ jobs:
       - run: mise run lint:typescript
       - run: mise run test:typescript
 
+  cpp:
+    # test:cpp builds the tests with AddressSanitizer and
+    # UndefinedBehaviorSanitizer, so this job also catches memory errors and
+    # undefined behaviour at run time.
+    needs: changes
+    if: needs.changes.outputs.cpp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run lint:cpp
+      - run: mise run test:cpp
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
@@ -152,6 +169,7 @@ jobs:
       - python
       - rust
       - typescript
+      - cpp
     if: always()
     runs-on: ubuntu-latest
     steps:

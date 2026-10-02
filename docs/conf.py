@@ -5,6 +5,7 @@ project = "foundation"
 extensions = [
     "myst_parser",
     "autoapi.extension",
+    "breathe",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
 ]
@@ -23,6 +24,10 @@ autoapi_add_toctree_entry = False
 # Rust: docs/build.sh copies rustdoc's HTML into _generated/html, and Sphinx
 # publishes it unchanged, without reading it as sources.
 html_extra_path = ["_generated/html"]
+
+# C and C++: docs/build.sh runs Doxygen, whose XML Breathe reads.
+breathe_projects = {"foundation": "_generated/doxygen"}
+breathe_default_project = "foundation"
 
 # Links standard-library names in signatures, such as collections.abc.Sequence,
 # to the Python docs. nitpicky fails the build on any it can't resolve. Each

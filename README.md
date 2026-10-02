@@ -9,9 +9,8 @@ agent-launched compute jobs.
 
 Status: under construction. So far it has the agent rules, skills, and Bugbot
 review instructions described below, the shared `mise run` commands, Python,
-Rust, and TypeScript, each with its checks and an example module, the
-documentation build
-([`docs/build.sh`](docs/build.sh)), cloud agent setup in
+Rust, TypeScript, and C++, each with its checks and an example module, the
+documentation build ([`docs/build.sh`](docs/build.sh)), cloud agent setup in
 [`.cursor/environment.json`](.cursor/environment.json), and the
 [PR template](.github/pull_request_template.md).
 [`docs/template-plan.md`](docs/template-plan.md) lists the remaining work and
@@ -37,7 +36,9 @@ downloads the mise version it pins, checks the download's sha256, and
 installs it to `~/.local/bin` without sudo, unless that version is already on
 your PATH. It then runs `mise install` for the tools pinned in `mise.toml`
 and `mise run setup` for the project's dependencies. It supports macOS and
-Linux on x86-64 or arm64, and a second run changes nothing.
+Linux on x86-64 or arm64, and a second run changes nothing. C and C++ also
+need `g++` from the OS: on Ubuntu, `sudo apt-get install g++`; on macOS, the
+Xcode Command Line Tools, which git already needs.
 
 If `~/.local/bin` isn't on your PATH, the script ends by saying so. Add this
 line to `~/.zshrc` for zsh, `~/.bashrc` for bash on Linux, or
