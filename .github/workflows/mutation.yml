@@ -1,0 +1,45 @@
+# Mutation-tests the code each pull request changes, with `mise run
+# mutate:<language>`, and lists in the job summary each surviving mutant: a
+# small deliberate bug, such as `<` replaced by `<=`, that every test still
+# passes. For now it only reports (T14 in docs/template-plan.md): the rulesets
+# don't require it and ci-ok doesn't need it, so surviving mutants never block
+# merging. It fails only when a mutation tool fails.
+name: Mutation testing
+
+on:
+  pull_request:
+    # The code it mutates, the tests that check that code, and its own
+    # definition.
+    paths:
+      - src/**
+      - tests/**
+      - crates/**
+      - scripts/mutate.sh
+      - .github/workflows/mutation.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Naming bash explicitly adds -o pipefail, which the default shell lacks.
+    shell: bash
+
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The base branch's history too, to find where the PR branched off.
+          fetch-depth: 0
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run mutate:python -- "origin/$GITHUB_BASE_REF"
+      # Runs after a Python failure too, so that it doesn't hide Rust's results.
+      - if: ${{ !cancelled() }}
+        run: mise run mutate:rust -- "origin/$GITHUB_BASE_REF"
