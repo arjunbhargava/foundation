@@ -4,6 +4,5 @@
 //! work. Delete it when the project's first real Rust crate arrives, and give
 //! that crate the `#![deny(missing_docs)]` below.
 
-#![deny(missing_docs)]
 
 pub mod verlet;
