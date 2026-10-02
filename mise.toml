@@ -8,6 +8,15 @@
 [tools]
 jq = "1.8.2" # .github/rulesets/apply.sh
 uv = "0.12.21"
+# C and C++. The compiler, g++, comes from the OS; see AGENTS.md.
+cmake = "4.4.3"
+ninja = "1.13.2"
+# The PyPI wheels: self-contained, with clang's built-in headers, which
+# clang-tidy needs. Keep both on one LLVM version.
+"pipx:clang-format" = "22.1.8"
+"pipx:clang-tidy" = "22.1.8"
+# From conda-forge, the only source with builds for Linux arm64 and macOS.
+"conda:doxygen" = "1.18.0"
 
 [tasks.setup]
 description = "Install project dependencies"
@@ -16,7 +25,10 @@ run = "uv sync --locked"
 
 [tasks.fmt]
 description = "Format all code in place"
-run = "uv run ruff format"
+run = [
+  "uv run ruff format",
+  'find cpp -name "*.[ch]" -o -name "*.[ch]pp" | xargs clang-format -i',
+]
 
 [tasks.lint]
 description = "Check formatting, lint, and types without changing files"
@@ -30,6 +42,14 @@ run = [
   "uv run pyright --warnings",
 ]
 
+[tasks."lint:cpp"]
+description = "Check C and C++ formatting, and build with clang-tidy and compiler warnings as errors"
+run = [
+  'find cpp -name "*.[ch]" -o -name "*.[ch]pp" | xargs clang-format --dry-run --Werror',
+  "cmake --preset clang-tidy",
+  "cmake --build --preset clang-tidy",
+]
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -37,6 +57,14 @@ depends = ["test:*"]
 [tasks."test:python"]
 description = "Run the Python tests and docstring examples; arguments after -- go to pytest"
 run = "uv run pytest"
+
+[tasks."test:cpp"]
+description = "Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them; arguments after -- go to ctest"
+run = [
+  "cmake --preset sanitizers",
+  "cmake --build --preset sanitizers",
+  "ctest --preset sanitizers",
+]
 
 [tasks.docs]
 description = "Build the documentation site"
