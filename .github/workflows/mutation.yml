@@ -15,6 +15,7 @@ on:
       - tests/**
       - crates/**
       - scripts/mutate.sh
+      - scripts/mutate_test.sh
       - .github/workflows/mutation.yml
 
 permissions:
@@ -39,6 +40,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: mise run test:mutate-script
       - run: mise run mutate:python -- "origin/$GITHUB_BASE_REF"
       # Runs after a Python failure too, so that it doesn't hide Rust's results.
       - if: ${{ !cancelled() }}

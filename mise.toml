@@ -124,6 +124,10 @@ description = "Mutation-test the changed Rust code with cargo-mutants; an argume
 tools = { "cargo:cargo-mutants" = "27.1.0" }
 run = "scripts/mutate.sh rust"
 
+[tasks."test:mutate-script"]
+description = "Check which files scripts/mutate.sh mutates and what it reports, with fake mutation tools"
+run = "scripts/mutate_test.sh"
+
 [tasks.docs]
 description = "Build the documentation site"
 run = "docs/build.sh"
