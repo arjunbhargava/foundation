@@ -15,6 +15,7 @@ so each file is linked here:
 - [.cursor/rules/docs-from-source.mdc](rules/docs-from-source.mdc)
 - [.cursor/rules/ponytail.mdc](rules/ponytail.mdc)
 - [.cursor/rules/reviewable-prs.mdc](rules/reviewable-prs.mdc)
+- [.cursor/skills/large-changes/SKILL.md](skills/large-changes/SKILL.md)
 - [.github/pull_request_template.md](../.github/pull_request_template.md)
 
 In each finding, name the acceptance criterion, or the file and rule, that the
@@ -54,7 +55,7 @@ PR breaks.
 Check against `reviewable-prs.mdc` and the PR template:
 
 - One logical change within the line budget, or an `Oversize:` first line
-  whose category and reason the rule allows.
+  whose category and reason the `large-changes` skill allows.
 - No refactor mixed with a behaviour change, and no drive-by edits. Problems
   outside the task are reported as issues, not fixed in the PR.
 - The body has every section of the template, in order.
