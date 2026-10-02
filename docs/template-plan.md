@@ -353,6 +353,8 @@ F5.
   provider-side budget limits and a service account. Add its credentials as
   Cursor secrets. If using an egress allowlist, add the cloud, registry,
   tracker, and storage domains.
+- Replace the `compute-cost` rule's "the `compute-jobs` skill doesn't exist
+  yet" clause with one tied to the provider-side budget being set.
 
 ### Stage 6: Linear
 
