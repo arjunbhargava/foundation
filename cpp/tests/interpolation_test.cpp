@@ -49,7 +49,7 @@ int main() {
   int failure_count = 0;
   for (std::size_t left = 0; left + 1 < sample_count; ++left) {
     for (int step = 0; step <= steps_per_interval; ++step) {
-      const double fraction = static_cast<double>(step) / steps_per_interval;
+      const double fraction = step / steps_per_interval;
       const double fractional_index = static_cast<double>(left) + fraction;
       const double position = first_position + (fractional_index * spacing);
       const double chord_gap =
