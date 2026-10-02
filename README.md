@@ -22,6 +22,33 @@ can later pull template updates into them (decision D1 in the plan). Until
 that lands, copy this repository and delete what the project doesn't use.
 Then add the repository to Linear as [`docs/linear.md`](docs/linear.md) says.
 
+## Set up a local machine
+
+From the repository root, run:
+
+```sh
+bash .cursor/install.sh
+```
+
+This gives the machine the same tools as CI and cloud agents. The script
+downloads the mise version it pins, checks the download's sha256, and
+installs it to `~/.local/bin` without sudo, unless that version is already on
+your PATH. It then runs `mise install` for the tools pinned in `mise.toml`
+and `mise run setup` for the project's dependencies. It supports macOS and
+Linux on x86-64 or arm64, and a second run changes nothing.
+
+If `~/.local/bin` isn't on your PATH, the script ends by saying so. Add this
+line to `~/.zshrc` for zsh, `~/.bashrc` for bash on Linux, or
+`~/.bash_profile` for bash on macOS, then open a new terminal:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+[`.github/rulesets/apply.sh`](.github/rulesets/apply.sh), which applies the
+repository settings, also needs the [GitHub CLI](https://cli.github.com/),
+`gh`. The setup script doesn't install it.
+
 ## Commands
 
 [mise](https://mise.jdx.dev/) installs the tool versions pinned in
