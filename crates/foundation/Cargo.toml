@@ -7,3 +7,6 @@ license = "Apache-2.0"
 
 [dev-dependencies]
 option-ext = "0.2.0"
+
+[dependencies]
+smallvec = "=1.6.0"
