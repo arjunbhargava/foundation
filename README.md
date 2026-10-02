@@ -20,6 +20,7 @@ the order it lands in.
 Projects will be created with [Copier](https://copier.readthedocs.io/), which
 can later pull template updates into them (decision D1 in the plan). Until
 that lands, copy this repository and delete what the project doesn't use.
+Then add the repository to Linear as [`docs/linear.md`](docs/linear.md) says.
 
 ## Commands
 
