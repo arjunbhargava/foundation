@@ -11,4 +11,9 @@ rm -rf docs/_build
 # Python: sphinx-autoapi reads it during sphinx-build; enforce docstrings first.
 uv run ruff check --quiet src
 
+# TypeScript: TypeDoc writes Markdown, which MyST renders inside the site.
+pnpm exec typedoc packages/statistics/src/variance.ts --plugin typedoc-plugin-markdown \
+  --out docs/_generated/ts --entryFileName index --readme none --outputFileStrategy modules \
+  --hidePageHeader --validation.notDocumented --treatWarningsAsErrors
+
 uv run sphinx-build -W --keep-going -q -b html docs docs/_build/html
