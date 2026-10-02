@@ -11,12 +11,15 @@ namespace foundation {
 
 double interpolate_linear(std::span<const double> samples,
                           double fractional_index) {
+  const auto is_nan = [](double fractional_index) {
+    return std::isnan(fractional_index);
+  };
   if (samples.size() < 2) {
     throw std::invalid_argument(
         std::format("need at least 2 samples, got {}", samples.size()));
   }
   const std::size_t last_index = samples.size() - 1;
-  if (std::isnan(fractional_index) || fractional_index < 0 ||
+  if (is_nan(fractional_index) || fractional_index < 0 ||
       fractional_index > static_cast<double>(last_index)) {
     throw std::out_of_range(
         std::format("fractional_index must be within [0, {}], got {}",
