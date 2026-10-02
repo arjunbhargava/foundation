@@ -26,7 +26,7 @@ double interpolate_linear(std::span<const double> samples,
   // At fractional_index == last_index, truncation gives last_index; clamping
   // keeps samples[left + 1] in range.
   const std::size_t left =
-      std::min(static_cast<std::size_t>(fractional_index), last_index - 1);
+      std::min(static_cast<std::size_t>(fractional_index), last_index);
   const double right_weight = fractional_index - static_cast<double>(left);
   return ((1 - right_weight) * samples[left]) +
          (right_weight * samples[left + 1]);
