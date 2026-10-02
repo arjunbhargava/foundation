@@ -137,7 +137,8 @@ mutate_rust() {
 # Prints the source files to mutate in one package: all of them if any of its
 # tests changed, and otherwise those that changed. A change to this script or
 # its workflow counts as a change to every package's tests, so that the PR
-# making it runs every step here in CI.
+# making it runs every step here in CI. In a git pathspec, * also matches /,
+# so src/*.py includes src/foundation/quadrature.py.
 files_to_mutate() {
   local sources=$1 tests=$2
   if git diff --quiet "$merge_base" -- "$tests" scripts/mutate.sh .github/workflows/mutation.yml; then
