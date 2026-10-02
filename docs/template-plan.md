@@ -365,6 +365,10 @@ skills and one for CI.
 
 **T16. Compute job support.** Needs: T6, D4, D8.
 
+**Deferred** (owner, 2026-10-02): the owner will run compute jobs on their own
+cloud, so D4's choice of launcher waits until that setup is known. T18 doesn't
+wait for this task.
+
 - A base container image (`Dockerfile`) with pinned CUDA versions. CI builds
   it, tags it with the commit, and pushes it to GitHub's container registry.
   Jobs use the image's digest, so the exact image is recorded.
@@ -436,7 +440,7 @@ alongside `prune-review`.
 
 ### Stage 7: template mechanics
 
-**T18. Convert to Copier.** Needs: all earlier tasks, D1.
+**T18. Convert to Copier.** Needs: all earlier tasks except T16, D1.
 
 - Turn the repository into a Copier template with one yes/no question per
   language.
@@ -483,7 +487,7 @@ T1 ─┬─ T2
     │      └─ T17 ─┴─ T22 ── T23
     └─ T10 ─┬─ T11
             └─ T12 ── T20
-T18 needs everything above except T22 and T23.
+T18 needs everything above except T16, T22, and T23.
 ```
 
 Right after T1, four tasks (T2, T3, T5, T10) can start at once. Keep the
