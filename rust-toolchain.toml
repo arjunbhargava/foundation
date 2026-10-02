@@ -1,0 +1,7 @@
+# The Rust toolchain that every cargo command in this repository uses. This
+# file is the only pin of the Rust version: rustup reads it, mise reads it
+# (idiomatic_version_file_enable_tools in mise.toml), and Dependabot updates it.
+[toolchain]
+channel = "1.98.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

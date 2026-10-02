@@ -18,6 +18,7 @@ template-plan
 :caption: API reference
 :maxdepth: 1
 
-api/python/foundation/index
-_generated/ts/index
+Python <api/python/foundation/index>
+api/rust
+TypeScript <_generated/ts/index>
 ```

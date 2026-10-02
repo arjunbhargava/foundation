@@ -20,6 +20,10 @@ autoapi_options = [
 ]
 autoapi_add_toctree_entry = False
 
+# Rust: docs/build.sh copies rustdoc's HTML into _generated/html, and Sphinx
+# publishes it unchanged, without reading it as sources.
+html_extra_path = ["_generated/html"]
+
 # Links standard-library names in signatures, such as collections.abc.Sequence,
 # to the Python docs. nitpicky fails the build on any it can't resolve. Each
 # build downloads this inventory, so it needs network access.

@@ -8,9 +8,9 @@ checks for Python, TypeScript, Rust, and C/C++, CI, and support for
 agent-launched compute jobs.
 
 Status: under construction. So far it has the agent rules, skills, and Bugbot
-review instructions described below, the shared `mise run` commands, Python
-and TypeScript, each with its checks and an example module, the documentation
-build
+review instructions described below, the shared `mise run` commands, Python,
+Rust, and TypeScript, each with its checks and an example module, the
+documentation build
 ([`docs/build.sh`](docs/build.sh)), cloud agent setup in
 [`.cursor/environment.json`](.cursor/environment.json), and the
 [PR template](.github/pull_request_template.md).
@@ -55,7 +55,7 @@ repository settings, also needs the [GitHub CLI](https://cli.github.com/),
 
 [mise](https://mise.jdx.dev/) installs the tool versions pinned in
 [`mise.toml`](mise.toml) and runs the shared commands, so people, agents, and
-CI (once task T4 in the plan adds it) all run the same `mise run <command>`.
+CI all run the same `mise run <command>`.
 [`AGENTS.md`](AGENTS.md) lists the commands.
 
 ## Agent instructions
