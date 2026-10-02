@@ -1,8 +1,8 @@
 # Settings for cargo-deny, which `mise run lint:rust` runs as
 # `cargo deny check advisories bans licenses sources`. It fails on a crate
-# with a known vulnerability in the RustSec advisory database, or one that is
-# banned, has a licence, or comes from a source not allowed below. Other
-# settings keep cargo-deny's defaults:
+# that has a known vulnerability in the RustSec advisory database, is banned
+# below, or has a licence or source not allowed below. Other settings keep
+# cargo-deny's defaults:
 # https://embarkstudios.github.io/cargo-deny/checks/cfg.html
 
 [licenses]
