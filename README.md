@@ -21,6 +21,13 @@ Projects will be created with [Copier](https://copier.readthedocs.io/), which
 can later pull template updates into them (decision D1 in the plan). Until
 that lands, copy this repository and delete what the project doesn't use.
 
+## Commands
+
+[mise](https://mise.jdx.dev/) installs the tool versions pinned in
+[`mise.toml`](mise.toml) and runs the shared commands, so people, agents, and
+CI (once task T4 in the plan adds it) all run the same `mise run <command>`.
+[`AGENTS.md`](AGENTS.md) lists the commands.
+
 ## Agent instructions
 
 Rules in [`.cursor/rules/`](.cursor/rules/) load into every agent session:
