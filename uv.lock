@@ -55,6 +55,18 @@ wheels = [
 ]
 
 [[package]]
+name = "breathe"
+version = "5.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/40/1b/4d9c360eef294ebefa1a601c79e4247e8f93781e9e0019434ef5722c7e4f/breathe-5.0.0.tar.gz", hash = "sha256:9e5c4b2538a3eef9fbcfe9dd966f8f3171d4fd6cbe4976d84578d05f48e09fc3", size = 200601, upload-time = "2026-09-21T18:50:12.89Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/bd/5ea942775ba2e3ab47437f75f7953cdc6f55026c4c2941d523cc490f4272/breathe-5.0.0-py3-none-any.whl", hash = "sha256:b6b8d617f8c481c62971afdf8f01af0c865acd29058235dd6e9d241ed2a2f6ae", size = 100621, upload-time = "2026-09-21T18:50:11.088Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.7.22"
 source = { registry = "https://pypi.org/simple" }
@@ -159,6 +171,7 @@ source = { editable = "." }
 
 [package.dev-dependencies]
 dev = [
+    { name = "breathe" },
     { name = "furo" },
     { name = "myst-parser" },
     { name = "pyright", extra = ["nodejs"] },
@@ -173,6 +186,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "breathe", specifier = ">=5.0.0" },
     { name = "furo", specifier = ">=2025.12.19" },
     { name = "myst-parser", specifier = ">=5.1.0" },
     { name = "pyright", extras = ["nodejs"], specifier = ">=1.1.414" },

@@ -5,6 +5,7 @@ project = "foundation"
 extensions = [
     "myst_parser",
     "autoapi.extension",
+    "breathe",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
 ]
@@ -19,6 +20,10 @@ autoapi_options = [
     "imported-members",
 ]
 autoapi_add_toctree_entry = False
+
+# C and C++: docs/build.sh runs Doxygen, whose XML Breathe reads.
+breathe_projects = {"foundation": "_generated/doxygen"}
+breathe_default_project = "foundation"
 
 # Links standard-library names in signatures, such as collections.abc.Sequence,
 # to the Python docs. nitpicky fails the build on any it can't resolve. Each
