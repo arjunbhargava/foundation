@@ -6,3 +6,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Waits a week after a release before proposing it, so a compromised
+    # release is more likely to be caught first. Security updates don't wait.
+    cooldown:
+      default-days: 7
