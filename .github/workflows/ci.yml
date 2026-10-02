@@ -59,7 +59,7 @@ jobs:
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
           echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
           echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)" >> "$GITHUB_OUTPUT"
-          echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json)" >> "$GITHUB_OUTPUT"
+          echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)" >> "$GITHUB_OUTPUT"
           echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)" >> "$GITHUB_OUTPUT"
 
   install-script:

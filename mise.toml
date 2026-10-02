@@ -70,10 +70,12 @@ run = [
 ]
 
 [tasks."lint:typescript"]
-description = "Check TypeScript formatting, lint, and types"
+description = "Check TypeScript formatting, lint, types, and module boundaries"
 run = [
   "pnpm exec biome ci --error-on-warnings",
   "pnpm exec tsc",
+  # err-long prints each broken rule's comment, which says what to do.
+  "pnpm exec depcruise packages --output-type err-long",
 ]
 
 [tasks."lint:cpp"]

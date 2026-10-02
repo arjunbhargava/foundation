@@ -43,8 +43,8 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   template's example, there to prove the checks work; delete it when the
   first real TypeScript code arrives.
 - `package.json`: the TypeScript tools, locked in `pnpm-lock.yaml`. Their
-  settings are in `tsconfig.json` and `biome.json`, and
-  `pnpm-workspace.yaml` lists the packages.
+  settings are in `tsconfig.json`, `biome.json`, and
+  `.dependency-cruiser.cjs`, and `pnpm-workspace.yaml` lists the packages.
 - `cpp/`: the C and C++ code, with public headers in `include/foundation/`,
   sources in `src/`, and tests in `tests/`. `interpolation` is the template's
   example, there to prove the checks work; delete it when the first real C or
