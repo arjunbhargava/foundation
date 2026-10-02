@@ -47,6 +47,7 @@ them:
 |---|---|
 | [`architecture-docs`](.cursor/skills/architecture-docs/SKILL.md) | Designing module or system boundaries, or writing READMEs, design docs, ADRs, and architecture diagrams. |
 | [`clarity`](.cursor/skills/clarity/SKILL.md) | Creating or reorganising a module or file, writing a document, or designing a diagram, docs site, terminal output, or user interface. |
+| [`decompose`](.cursor/skills/decompose/SKILL.md) | Splitting an approved plan into Linear sub-issues, one per PR, for agents to work on in parallel. |
 | [`large-changes`](.cursor/skills/large-changes/SKILL.md) | Planning a change likely to exceed 500 changed lines: splitting it into stacked PRs, or justifying one oversize PR. |
 | [`prune-review`](.cursor/skills/prune-review/SKILL.md) | Finding and removing dead code, speculative abstractions, and stale docs, on request or after a breaking change. |
 | [`source-docs`](.cursor/skills/source-docs/SKILL.md) | Writing the first code in the repository, adding a language, or changing the docs build or its gates. |
