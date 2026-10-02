@@ -34,20 +34,21 @@ Rules in [`.cursor/rules/`](.cursor/rules/) load into every agent session:
 
 | Rule | Requires |
 |---|---|
-| [`clarity`](.cursor/rules/clarity.mdc) | Everything is written for a competent engineer new to the code. |
-| [`docs-from-source`](.cursor/rules/docs-from-source.mdc) | API reference is generated from doc comments; `docs/build.sh` fails on undocumented public symbols. |
+| [`clarity`](.cursor/rules/clarity.mdc) | Code, docs, and PRs are written for a competent engineer new to the code, and checked against the rule's review checklist before finishing. |
+| [`docs-from-source`](.cursor/rules/docs-from-source.mdc) | API reference is generated from doc comments, never written by hand, and each doc comment states the contract a caller needs. |
 | [`ponytail`](.cursor/rules/ponytail.mdc) | The simplest solution that works, once the problem is understood. |
-| [`reviewable-prs`](.cursor/rules/reviewable-prs.mdc) | At most 500 changed lines per PR, one logical change each, and a fixed PR body. |
+| [`reviewable-prs`](.cursor/rules/reviewable-prs.mdc) | At most 500 changed lines per PR, one logical change each, and a body that follows the PR template. |
 
 Skills in [`.cursor/skills/`](.cursor/skills/) are read only when a task needs
 them:
 
 | Skill | Use when |
 |---|---|
-| [`architecture-docs`](.cursor/skills/architecture-docs/SKILL.md) | Designing module boundaries, or writing design docs, ADRs, and diagrams. |
-| [`clarity`](.cursor/skills/clarity/SKILL.md) | Writing anything a person will read. Holds the review checklist. |
-| [`prune-review`](.cursor/skills/prune-review/SKILL.md) | Removing dead code, speculative abstractions, and stale docs. |
-| [`source-docs`](.cursor/skills/source-docs/SKILL.md) | Changing public code or doc comments, or adding a language to the docs build. |
+| [`architecture-docs`](.cursor/skills/architecture-docs/SKILL.md) | Designing module or system boundaries, or writing READMEs, design docs, ADRs, and architecture diagrams. |
+| [`clarity`](.cursor/skills/clarity/SKILL.md) | Creating or reorganising a module or file, writing a document, or designing a diagram, docs site, terminal output, or user interface. |
+| [`large-changes`](.cursor/skills/large-changes/SKILL.md) | Planning a change likely to exceed 500 changed lines: splitting it into stacked PRs, or justifying one oversize PR. |
+| [`prune-review`](.cursor/skills/prune-review/SKILL.md) | Finding and removing dead code, speculative abstractions, and stale docs, on request or after a breaking change. |
+| [`source-docs`](.cursor/skills/source-docs/SKILL.md) | Writing the first code in the repository, adding a language, or changing the docs build or its gates. |
 
 Changes to rules and skills are written or edited by a person, not generated
 by an agent for itself, because only the former have been shown to help
