@@ -57,6 +57,12 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   first C or C++ dependency picks vcpkg or CMake `FetchContent`, and pins it
   as the `dependencies` rule says. With vcpkg, also add a `vcpkg` entry to
   `.github/dependabot.yml`; Dependabot can't update `FetchContent` pins.
+- Module boundaries, which `mise run lint` checks. Add a project's own:
+  - Python: a contract under `[tool.importlinter]` in `pyproject.toml`.
+  - TypeScript: a rule under `forbidden` in `.dependency-cruiser.cjs`.
+  - Rust: a `deny` entry with `wrappers` under `[bans]` in `deny.toml`.
+  - C and C++: in `CMakeLists.txt`, make a target's include directories and
+    links `PRIVATE` unless its public headers need them.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
   generated from doc comments.
 
