@@ -36,6 +36,7 @@ Rules in [`.cursor/rules/`](.cursor/rules/) load into every agent session:
 | Rule | Requires |
 |---|---|
 | [`clarity`](.cursor/rules/clarity.mdc) | Code, docs, and PRs are written for a competent engineer new to the code, and checked against the rule's review checklist before finishing. |
+| [`compute-cost`](.cursor/rules/compute-cost.mdc) | Agent compute jobs share a cap of $10,000 a day. An agent asks a person before a job that would take its task over the task's compute budget, and before every job until the `compute-jobs` skill exists. |
 | [`docs-from-source`](.cursor/rules/docs-from-source.mdc) | API reference is generated from doc comments, never written by hand, and each doc comment states the contract a caller needs. |
 | [`ponytail`](.cursor/rules/ponytail.mdc) | The simplest solution that works, once the problem is understood. |
 | [`reviewable-prs`](.cursor/rules/reviewable-prs.mdc) | At most 500 changed lines per PR, one logical change each, and a body that follows the PR template. |
