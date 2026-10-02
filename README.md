@@ -7,13 +7,13 @@ that Cursor agents follow, pinned tools and shared commands, example code and
 checks for Python, TypeScript, Rust, and C/C++, CI, and support for
 agent-launched compute jobs.
 
-Status: under construction. So far it has the agent rules and skills listed
-below, the shared `mise run` commands (placeholders until the language tasks
-add tools and checks), cloud agent setup in
-[`.cursor/environment.json`](.cursor/environment.json), the
-[PR template](.github/pull_request_template.md), and the Bugbot review
-instructions. [`docs/template-plan.md`](docs/template-plan.md) lists the
-remaining work and the order it lands in.
+Status: under construction. So far it has the agent rules, skills, and Bugbot
+review instructions described below, the shared `mise run` commands
+(placeholders until the language tasks add tools and checks), cloud agent
+setup in [`.cursor/environment.json`](.cursor/environment.json), and the
+[PR template](.github/pull_request_template.md).
+[`docs/template-plan.md`](docs/template-plan.md) lists the remaining work and
+the order it lands in.
 
 ## Start a project
 
