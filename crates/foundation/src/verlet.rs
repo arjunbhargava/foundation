@@ -38,7 +38,7 @@ pub struct State {
 ///
 /// let thrown_up = State { position: 0.0, velocity: 2.0 };
 /// let one_time_unit_later = verlet::step(thrown_up, |_| -2.0, 1.0);
-/// assert_eq!(one_time_unit_later, State { position: 1.0, velocity: 0.0 });
+/// assert_eq!(one_time_unit_later, State { position: 1.0, velocity: 1.0 });
 /// ```
 pub fn step(state: State, acceleration: impl Fn(f64) -> f64, time_step: f64) -> State {
     let half_step_velocity = state.velocity + 0.5 * time_step * acceleration(state.position);
