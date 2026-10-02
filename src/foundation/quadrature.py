@@ -36,3 +36,7 @@ def integrate_trapezoid(samples: Sequence[float], spacing: float) -> float:
 
     endpoint_mean: int = (samples[0] + samples[-1]) / 2
     return spacing * (endpoint_mean + sum(samples[1:-1]))
+
+
+def integrate_midpoint(samples: Sequence[float], spacing: float) -> float:
+    return spacing * sum(samples)
