@@ -4,19 +4,32 @@
 # and `test:<language>` tasks, which `lint` and `test` pick up, and adds its
 # commands to `setup` and `fmt`. Python packages, including ruff and pyright,
 # are pinned in uv.lock rather than here.
+# TypeScript packages, including tsc, Biome, and vitest, are pinned in
+# pnpm-lock.yaml.
 
 [tools]
 jq = "1.8.2" # .github/rulesets/apply.sh
+node = "24.21.0"
+pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
 uv = "0.12.21"
 
 [tasks.setup]
 description = "Install project dependencies"
-# --locked fails if uv.lock is out of date with pyproject.toml.
-run = "uv sync --locked"
+run = [
+  # --locked fails if uv.lock is out of date with pyproject.toml.
+  "uv sync --locked",
+  # --frozen-lockfile fails if pnpm-lock.yaml is out of date with a package.json.
+  "pnpm install --frozen-lockfile",
+]
 
 [tasks.fmt]
 description = "Format all code in place"
-run = "uv run ruff format"
+run = [
+  "uv run ruff format",
+  # check rather than format, so imports are sorted too, as lint:typescript
+  # requires. Lint fixes are left to the author.
+  "pnpm exec biome check --write --linter-enabled=false",
+]
 
 [tasks.lint]
 description = "Check formatting, lint, and types without changing files"
@@ -30,6 +43,13 @@ run = [
   "uv run pyright --warnings",
 ]
 
+[tasks."lint:typescript"]
+description = "Check TypeScript formatting, lint, and types"
+run = [
+  "pnpm exec biome ci --error-on-warnings",
+  "pnpm exec tsc",
+]
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -37,6 +57,10 @@ depends = ["test:*"]
 [tasks."test:python"]
 description = "Run the Python tests and docstring examples; arguments after -- go to pytest"
 run = "uv run pytest"
+
+[tasks."test:typescript"]
+description = "Run the TypeScript tests; arguments after -- go to vitest"
+run = "pnpm exec vitest run"
 
 [tasks.docs]
 description = "Build the documentation site"
