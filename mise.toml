@@ -107,6 +107,23 @@ run = [
   "ctest --preset sanitizers",
 ]
 
+[tasks.mutate]
+description = "Mutation-test the code changed since the merge base with origin/main, and report each mutant no test caught; check doesn't run it, because it's slow"
+depends = ["mutate:*"]
+
+[tasks."mutate:python"]
+description = "Mutation-test the changed Python code with mutmut; an argument after -- replaces origin/main as the base"
+run = "scripts/mutate.sh python"
+
+[tasks."mutate:rust"]
+description = "Mutation-test the changed Rust code with cargo-mutants; an argument after -- replaces origin/main as the base"
+# Pinned on this task rather than under [tools], so that only this task
+# installs it. cargo-mutants publishes no binary for arm64 Linux or macOS, so
+# mise builds it from source with `cargo install --locked`, which takes about
+# a minute.
+tools = { "cargo:cargo-mutants" = "27.1.0" }
+run = "scripts/mutate.sh rust"
+
 [tasks.docs]
 description = "Build the documentation site"
 run = "docs/build.sh"
