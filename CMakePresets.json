@@ -1,44 +1,44 @@
 {
-  "version": 6,
-  "configurePresets": [
-    {
-      "name": "base",
-      "hidden": true,
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": {
-        "CMAKE_CXX_COMPILER": "g++",
-        "CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
-      }
-    },
-    {
-      "name": "clang-tidy",
-      "displayName": "Run clang-tidy on each file as it compiles",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_CXX_CLANG_TIDY": "clang-tidy"
-      }
-    },
-    {
-      "name": "sanitizers",
-      "displayName": "Debug build with AddressSanitizer and UndefinedBehaviorSanitizer",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
-      }
-    }
-  ],
-  "buildPresets": [
-    { "name": "clang-tidy", "configurePreset": "clang-tidy" },
-    { "name": "sanitizers", "configurePreset": "sanitizers" }
-  ],
-  "testPresets": [
-    {
-      "name": "sanitizers",
-      "configurePreset": "sanitizers",
-      "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error" }
-    }
-  ]
+	"version": 6,
+	"configurePresets": [
+		{
+			"name": "base",
+			"hidden": true,
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "g++",
+				"CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
+			}
+		},
+		{
+			"name": "clang-tidy",
+			"displayName": "Run clang-tidy on each file as it compiles",
+			"inherits": "base",
+			"cacheVariables": {
+				"CMAKE_CXX_CLANG_TIDY": "clang-tidy"
+			}
+		},
+		{
+			"name": "sanitizers",
+			"displayName": "Debug build with AddressSanitizer and UndefinedBehaviorSanitizer",
+			"inherits": "base",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug",
+				"CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+			}
+		}
+	],
+	"buildPresets": [
+		{ "name": "clang-tidy", "configurePreset": "clang-tidy" },
+		{ "name": "sanitizers", "configurePreset": "sanitizers" }
+	],
+	"testPresets": [
+		{
+			"name": "sanitizers",
+			"configurePreset": "sanitizers",
+			"output": { "outputOnFailure": true },
+			"execution": { "noTestsAction": "error" }
+		}
+	]
 }
