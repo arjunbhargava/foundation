@@ -5,11 +5,3 @@ version = 4
 [[package]]
 name = "foundation"
 version = "0.1.0"
-dependencies = [
- "itoa",
-]
-
-[[package]]
-name = "itoa"
-version = "1.0.15"
-source = "git+https://github.com/dtolnay/itoa?tag=1.0.15#e2766b868e4ac1ae2bf5bea1ac43d4c0da23b899"
