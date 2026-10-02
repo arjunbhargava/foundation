@@ -4,3 +4,6 @@ version = "0.1.0"
 description = "The template's example Rust crate."
 edition = "2024"
 license = "Apache-2.0"
+
+[dependencies]
+itoa = "1"

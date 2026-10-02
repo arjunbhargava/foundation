@@ -1,5 +1,8 @@
 {
 	"name": "@foundation/statistics",
 	"private": true,
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"ms": "2.1.3"
+	}
 }
