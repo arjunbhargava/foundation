@@ -18,8 +18,10 @@ jobs:
   agent-label:
     runs-on: ubuntu-latest
     permissions:
-      issues: write # create the label and add it to the PR
-      pull-requests: read # list the PR's commits
+      issues: write # create the label
+      # List the PR's commits and add the label. Adding a label to a PR goes
+      # through the issues API, but the token needs pull-requests: write for it.
+      pull-requests: write
     steps:
       - env:
           GH_TOKEN: ${{ github.token }}
