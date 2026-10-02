@@ -32,6 +32,7 @@ jobs:
     # as a change, so an error runs jobs rather than skipping them.
     runs-on: ubuntu-latest
     outputs:
+      install-script: ${{ steps.diff.outputs.install-script }}
       docs: ${{ steps.diff.outputs.docs }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -50,7 +51,27 @@ jobs:
               echo true
             fi
           }
+          echo "install-script=$(changed .cursor/install.sh)" >> "$GITHUB_OUTPUT"
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
+
+  install-script:
+    # Sets up a fresh machine of each kind people use, the way a person does,
+    # then runs every check, then reruns the script, which must download
+    # nothing. /bin/bash is used because a fresh Mac's is bash 3.2.
+    needs: changes
+    if: needs.changes.outputs.install-script == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: /bin/bash .cursor/install.sh
+      - run: mise run check
+      - run: /bin/bash .cursor/install.sh | tee rerun.log && grep -q 'nothing to download' rerun.log
 
   docs:
     # The docs are built from every language's source, so this job runs when
@@ -70,7 +91,7 @@ jobs:
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
     # a skipped required check as passing, so this job must still run, and
     # fail, when the run is cancelled.
-    needs: [changes, docs]
+    needs: [changes, install-script, docs]
     if: always()
     runs-on: ubuntu-latest
     steps:
