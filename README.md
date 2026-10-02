@@ -31,14 +31,19 @@ CI (once task T4 in the plan adds it) all run the same `mise run <command>`.
 
 ## Agent instructions
 
-Rules in [`.cursor/rules/`](.cursor/rules/) load into every agent session:
+Rules in [`.cursor/rules/`](.cursor/rules/) load into every agent session,
+except `dependencies`, which loads when an agent reads or edits a dependency
+manifest or lockfile:
 
 | Rule | Requires |
 |---|---|
 | [`clarity`](.cursor/rules/clarity.mdc) | Code, docs, and PRs are written for a competent engineer new to the code, and checked against the rule's review checklist before finishing. |
+| [`compute-cost`](.cursor/rules/compute-cost.mdc) | Agent compute jobs share a cap of $10,000 a day. An agent asks a person before a job that would take its task over the task's compute budget, and before every job until the `compute-jobs` skill exists. |
+| [`dependencies`](.cursor/rules/dependencies.mdc) | A new dependency comes with a one-line reason, an allowed licence, and a committed lockfile. A lockfile merge conflict is resolved by relocking, never by hand. |
 | [`docs-from-source`](.cursor/rules/docs-from-source.mdc) | API reference is generated from doc comments, never written by hand, and each doc comment states the contract a caller needs. |
 | [`ponytail`](.cursor/rules/ponytail.mdc) | The simplest solution that works, once the problem is understood. |
 | [`reviewable-prs`](.cursor/rules/reviewable-prs.mdc) | At most 500 changed lines per PR, one logical change each, and a body that follows the PR template. |
+| [`secrets`](.cursor/rules/secrets.mdc) | Secrets come from environment variables, are listed by name in `.env.example`, and never appear in commits or logs. |
 
 Skills in [`.cursor/skills/`](.cursor/skills/) are read only when a task needs
 them:

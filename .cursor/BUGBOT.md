@@ -12,9 +12,12 @@ so each file is linked here:
 
 - [AGENTS.md](../AGENTS.md)
 - [.cursor/rules/clarity.mdc](rules/clarity.mdc)
+- [.cursor/rules/compute-cost.mdc](rules/compute-cost.mdc)
+- [.cursor/rules/dependencies.mdc](rules/dependencies.mdc)
 - [.cursor/rules/docs-from-source.mdc](rules/docs-from-source.mdc)
 - [.cursor/rules/ponytail.mdc](rules/ponytail.mdc)
 - [.cursor/rules/reviewable-prs.mdc](rules/reviewable-prs.mdc)
+- [.cursor/rules/secrets.mdc](rules/secrets.mdc)
 - [.cursor/skills/large-changes/SKILL.md](skills/large-changes/SKILL.md)
 - [.github/pull_request_template.md](../.github/pull_request_template.md)
 
