@@ -39,3 +39,7 @@ export function estimateVariance(values: Iterable<number>): number {
 	}
 	return sumOfSquaredDeviations / count;
 }
+
+export function estimateMean(values: readonly number[]): number {
+	return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
