@@ -17,7 +17,7 @@ pub struct State {
 ///
 /// The method is second order and symplectic: for a conservative force, the
 /// energy error stays bounded, of order `time_step²`, over any number of steps
-/// rather than drifting.
+/// rather than drifting, unlike [`step_forward_euler`].
 ///
 /// - `state`: the position and velocity at the start of the step.
 /// - `acceleration`: the acceleration at a position, in length per time²,
