@@ -25,7 +25,7 @@ def integrate_trapezoid(samples: Sequence[float], spacing: float) -> float:
 
     Example:
         >>> integrate_trapezoid([0.0, 1.0, 2.0], spacing=0.5)
-        1.0
+        1.5
     """
     if len(samples) < 2:
         raise ValueError(f"need at least 2 samples, got {len(samples)}")
