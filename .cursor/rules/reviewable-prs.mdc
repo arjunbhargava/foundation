@@ -20,7 +20,7 @@ generated code, and vendored files: **≤ 500 changed lines**. Smaller is better
 - No drive-by edits (formatting, unrelated fixes, dependency bumps). Note them
   in the PR body as follow-ups instead.
 - A change that decision D7 in `docs/template-plan.md` says needs an approved
-  plan gets one before coding. Read the `spec` skill.
+  plan gets one before coding. Read the `plan` skill.
 
 When a task looks likely to exceed the budget, read the `large-changes` skill
 before starting it. It covers splitting the work into stacked PRs, and the

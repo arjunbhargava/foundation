@@ -1,5 +1,5 @@
 ---
-name: spec
+name: plan
 description: >
   Write a short plan covering the problem, the interface, the files touched,
   and the acceptance criteria, then stop until a person approves it. Use when
@@ -8,7 +8,7 @@ description: >
   dependency.
 ---
 
-# Spec
+# Plan
 
 Some changes need a plan that a person approves before any code is written:
 those that meet decision D7 in `docs/template-plan.md`. Check a task against
