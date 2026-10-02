@@ -292,7 +292,7 @@ edit it (F2). Keep each skill short and focused.
     match known exact solutions; results respect the problem's symmetries.
     Compare floating-point values with stated tolerances, never exact
     equality.
-- `spec`: for changes that meet the D7 threshold, write a short plan covering
+- `plan`: for changes that meet the D7 threshold, write a short plan covering
   the problem, the interface, the files touched, and the acceptance criteria.
   Then stop until a person approves it.
 - `decompose`: turn an approved plan into Linear sub-issues. Each sub-issue
