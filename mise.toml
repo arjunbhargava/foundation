@@ -12,6 +12,12 @@
 # Installs the Rust toolchain that rust-toolchain.toml names, with rustup.
 idiomatic_version_file_enable_tools = ["rust"]
 
+# Dependabot can't read this file, so bump these pins by hand, to a version
+# that `mise ls-remote <tool>` lists. Only versions are pinned here: mise
+# checks the tools it downloads from GitHub releases against GitHub's digest
+# for the asset, and Node against its signed SHASUMS256.txt. mise's own
+# version and checksums are pinned in .cursor/install.sh.
+#
 # Each CI job installs only the tools its MISE_ENABLE_TOOLS names in
 # .github/workflows/ci.yml, so add a new tool to every job that runs it.
 [tools]
@@ -19,6 +25,8 @@ cargo-deny = "0.20.2"
 jq = "1.8.2" # .github/rulesets/apply.sh
 node = "24.21.0"
 pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
+# Move pyproject.toml's uv_build range with this pin. Outside that range, uv
+# fetches uv_build from PyPI instead of building with its built-in copy.
 uv = "0.12.21"
 # C and C++. The compiler, g++, comes from the OS; see AGENTS.md.
 cmake = "4.4.3"
