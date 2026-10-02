@@ -16,6 +16,10 @@ autoapi_root = "api/python"
 autoapi_options = ["members", "show-inheritance", "show-module-summary", "imported-members"]
 autoapi_add_toctree_entry = False
 
+# C/C++: the Doxygen XML that build.sh writes (uncomment if any).
+# breathe_projects = {project: "_generated/doxygen"}
+# breathe_default_project = project
+
 nitpicky = True
 myst_heading_anchors = 3
 

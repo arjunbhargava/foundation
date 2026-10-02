@@ -58,12 +58,14 @@ Bring each language in through the first option that works, in this order:
 | Python | Native | `sphinx-autoapi` + `napoleon` (parses source, no import) | `ruff` `D` rules, Google convention, ignore `D107`; `nitpicky = True` |
 | TypeScript / JS | Markdown | TypeDoc + `typedoc-plugin-markdown`, `--outputFileStrategy modules` | `--validation.notDocumented --treatWarningsAsErrors` |
 | Rust | Embedded HTML | `cargo doc --no-deps` | `#![deny(missing_docs)]`, `RUSTDOCFLAGS="-D warnings"` |
-| C / C++ | Native | Doxygen XML → Breathe | `WARN_IF_UNDOCUMENTED=YES`, `WARN_AS_ERROR=YES` |
+| C / C++ | Native | Doxygen XML → Breathe | `EXTRACT_ALL=NO`, `WARN_IF_UNDOCUMENTED=YES`, `WARN_NO_PARAMDOC=YES`, `WARN_AS_ERROR=FAIL_ON_WARNINGS`; a `@file` comment in every header |
 | Other | Markdown if the generator can emit it, else embedded HTML | The language's canonical generator | The generator's warnings-as-errors mode |
 
-The Python, TypeScript, and Rust rows, the diagram images, and every gate
-in those rows were verified end to end. The C/C++ row follows the
-tools' documented flags; confirm them the first time it's used.
+The Python, TypeScript, Rust, and C/C++ rows, the diagram images, and every
+gate in those rows were verified end to end. Doxygen reports undocumented functions and macros only in a header that has
+a `@file` comment, so `build.sh` fails on a header without one.
+`FAIL_ON_WARNINGS` reports every warning before failing; `YES` stops at the
+first.
 
 ## Setup
 
@@ -73,15 +75,19 @@ Copy the templates in `assets/`:
 |---|---|---|
 | `conf.py` | `docs/conf.py` | Set `project`, keep only the extensions for the repo's languages, and point `autoapi_dirs` at the Python source |
 | `build.sh` | `docs/build.sh` | Keep one block per language in the repo, and fix paths such as `web/` and `--manifest-path` |
+| `Doxyfile` | `Doxyfile` | C and C++ only: point `INPUT` at the public headers |
 
 Then:
 
 - Write `docs/index.md` with two toctrees. The "Explanation" toctree lists
   `architecture` and other hand-written pages. The "API reference" toctree
-  lists `api/python/<pkg>/index`, `_generated/ts/index`, and `api/rust`, for
-  whichever languages the repo has.
+  lists `api/python/<pkg>/index`, `_generated/ts/index`, `api/rust`, and
+  `api/cpp`, for whichever languages the repo has.
 - For each embedded-HTML language, add a stub page such as `docs/api/rust.md`
   that links to `rust/<crate>/index.html`.
+- For C and C++, add `docs/api/cpp.md` with a Breathe `doxygennamespace`
+  directive for each top-level namespace. `doxygenindex` would also list
+  every source directory.
 - Declare the Python docs dependencies with the repo's other dev dependencies:
   `sphinx`, `sphinx-autoapi`, `myst-parser`, `furo`, and `ruff`, plus `breathe` if the repo has C or C++. Put the TypeDoc packages
   in `devDependencies`.
