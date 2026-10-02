@@ -236,6 +236,8 @@ Every check must fail when broken. The PR shows this by breaking the check once
 - `rust-toolchain.toml`, a workspace with one crate, `rustfmt`,
   `clippy` with warnings as errors, `#![deny(missing_docs)]`, and `cargo-deny`
   to check dependency licences and known vulnerabilities.
+- Rewrite the Rust row of the `dependencies` rule, and make `deny.toml`'s
+  allow-list the single list of allowed licences, with the rule pointing at it.
 
 **T9. C and C++.** Needs: T6.
 
