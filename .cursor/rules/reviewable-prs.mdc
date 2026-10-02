@@ -20,27 +20,9 @@ generated code, and vendored files: **≤ 500 changed lines**. Smaller is better
 - No drive-by edits (formatting, unrelated fixes, dependency bumps). Note them
   in the PR body as follow-ups instead.
 
-When a task exceeds the budget, stack it: plan the sequence of PRs first,
-make each one build and pass tests on its own, and base each branch on the
-previous one. Prefer landing an unused-but-tested piece before the change that
-wires it in.
-
-## Oversize overrides
-
-Exceeding 500 lines is allowed only when splitting would leave an intermediate
-state that doesn't build, is incorrect, or is harder to review than the whole.
-Allowed categories:
-
-- **Mechanical**: rename, move, format, or codemod. State the exact command
-  that produced it, so review means rerunning it and checking the diff matches.
-  It contains no hand edits; put any fix-ups in a separate commit.
-- **Deletion-only**: removal of dead code with no behaviour change.
-- **Atomic**: a change that must land together, such as an interface change
-  and all its callers, or a schema migration and the code that reads it.
-
-An oversize PR starts its body with
-`Oversize: <category> — <why it can't be split>`. It must also list what to
-read closely and what can be skimmed. "It was faster" is not a reason.
+When a task looks likely to exceed the budget, read the `large-changes` skill
+before starting it. It covers splitting the work into stacked PRs, and the
+only cases in which one PR may exceed 500 lines.
 
 ## PR body
 

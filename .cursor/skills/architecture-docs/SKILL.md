@@ -54,7 +54,7 @@ the four kinds in one section:
 | Reference | Look something up | Complete, consistent, terse; generated where possible |
 | Explanation | Understand why | Context, trade-offs, alternatives, history |
 
-Write every document by the writing rules in the `clarity` skill. For
+Write every document by the writing rules in the `clarity` rule and skill. For
 architecture docs in particular, a single end-to-end trace (request, then each
 component, then response) teaches more than a list of components.
 
