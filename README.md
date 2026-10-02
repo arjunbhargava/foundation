@@ -50,6 +50,7 @@ them:
 | [`large-changes`](.cursor/skills/large-changes/SKILL.md) | Planning a change likely to exceed 500 changed lines: splitting it into stacked PRs, or justifying one oversize PR. |
 | [`prune-review`](.cursor/skills/prune-review/SKILL.md) | Finding and removing dead code, speculative abstractions, and stale docs, on request or after a breaking change. |
 | [`source-docs`](.cursor/skills/source-docs/SKILL.md) | Writing the first code in the repository, adding a language, or changing the docs build or its gates. |
+| [`testing`](.cursor/skills/testing/SKILL.md) | Writing or changing tests, including the checks and tolerances numerical code needs. |
 
 Changes to rules and skills are written or edited by a person, not generated
 by an agent for itself, because only the former have been shown to help
