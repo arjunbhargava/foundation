@@ -40,7 +40,7 @@ run = "uv run pytest"
 
 [tasks.docs]
 description = "Build the documentation site"
-run = "echo 'docs: placeholder until docs/build.sh is added'"
+run = "docs/build.sh"
 
 [tasks.check]
 description = "Run everything CI runs; must pass before opening a PR"
