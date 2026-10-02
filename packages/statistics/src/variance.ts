@@ -37,10 +37,5 @@ export function estimateVariance(values: Iterable<number>): number {
 			`estimateVariance needs at least 2 values, got ${count}`,
 		);
 	}
-	return sumOfSquaredDeviations / count;
-}
-
-export function estimateMean(values: readonly number[]): string {
-	const unusedCount = values.length;
-	return values.reduce((sum, value) => sum+value, 0) / values.length;
+	return sumOfSquaredDeviations / (count - 1);
 }
