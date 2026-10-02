@@ -7,7 +7,8 @@ def integrate_trapezoid(samples: Sequence[float], spacing: float) -> float:
     """Integrate uniformly spaced samples of a function with the trapezoid rule.
 
     For a function with a bounded second derivative the error is O(spacing²),
-    so halving ``spacing`` divides the error by about 4.
+    so halving ``spacing`` divides the error by about 4. See
+    :func:`integrate_simpson` for a higher-order rule.
 
     Args:
         samples: function values at equally spaced points, in order; at least
