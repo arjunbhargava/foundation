@@ -37,5 +37,5 @@ export function estimateVariance(values: Iterable<number>): number {
 			`estimateVariance needs at least 2 values, got ${count}`,
 		);
 	}
-	return sumOfSquaredDeviations / (count - 1);
+	return sumOfSquaredDeviations / count;
 }
