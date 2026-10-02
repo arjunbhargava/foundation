@@ -41,5 +41,6 @@ export function estimateVariance(values: Iterable<number>): number {
 }
 
 export function estimateMean(values: readonly number[]): string {
+	const unusedCount = values.length;
 	return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
