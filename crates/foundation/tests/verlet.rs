@@ -15,7 +15,7 @@ const STEP_COUNT: usize = 10_000;
 // one lands within hω/2 of it, where the error is at least 1 - (hω/2)² =
 // 99.75% of that bound. Round-off adds about 1e-13. A first-order method
 // misses the bound by a factor of about 20.
-const RELATIVE_TOLERANCE: f64 = 1e3;
+const RELATIVE_TOLERANCE: f64 = 1e-2;
 
 #[test]
 fn harmonic_oscillator_energy_error_peaks_at_the_shadow_energy_bound() {
