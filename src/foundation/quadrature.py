@@ -34,5 +34,5 @@ def integrate_trapezoid(samples: Sequence[float], spacing: float) -> float:
     if not spacing > 0:
         raise ValueError(f"spacing must be > 0, got {spacing}")
 
-    endpoint_mean = (samples[0] + samples[-1]) / 2
+    endpoint_mean: int = (samples[0] + samples[-1]) / 2
     return spacing * (endpoint_mean + sum(samples[1:-1]))
