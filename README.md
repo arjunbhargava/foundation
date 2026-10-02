@@ -87,7 +87,7 @@ them:
 | [`large-changes`](.cursor/skills/large-changes/SKILL.md) | Planning a change likely to exceed 500 changed lines: splitting it into stacked PRs, or justifying one oversize PR. |
 | [`prune-review`](.cursor/skills/prune-review/SKILL.md) | Finding and removing dead code, speculative abstractions, and stale docs, on request or after a breaking change. |
 | [`source-docs`](.cursor/skills/source-docs/SKILL.md) | Writing the first code in the repository, adding a language, or changing the docs build or its gates. |
-| [`spec`](.cursor/skills/spec/SKILL.md) | Before coding a change that decision D7 in the plan says needs an approved plan: a new module, a public interface or data format change, a new dependency, or compute spend above the cost limit. |
+| [`plan`](.cursor/skills/plan/SKILL.md) | Before coding a change that decision D7 in the plan says needs an approved plan: a new module, a public interface or data format change, a new dependency, or compute spend above the cost limit. |
 | [`testing`](.cursor/skills/testing/SKILL.md) | Writing or changing tests, including the checks and tolerances numerical code needs. |
 
 Changes to rules and skills are written or edited by a person, not generated
