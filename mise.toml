@@ -1,30 +1,46 @@
 # Pinned tool versions and the shared commands that people, agents, and CI run,
 # for example `mise run check`. Each language task (Stage 2 of
-# docs/template-plan.md) pins its tools under [tools] and replaces the
-# placeholder in each command below.
+# docs/template-plan.md) pins its tools under [tools], adds `lint:<language>`
+# and `test:<language>` tasks, which `lint` and `test` pick up, and adds its
+# commands to `setup` and `fmt`. Python packages, including ruff and pyright,
+# are pinned in uv.lock rather than here.
 
 [tools]
 jq = "1.8.2" # .github/rulesets/apply.sh
+uv = "0.12.21"
 
 [tasks.setup]
 description = "Install project dependencies"
-run = "echo 'setup: placeholder until a language is added'"
+# --locked fails if uv.lock is out of date with pyproject.toml.
+run = "uv sync --locked"
 
 [tasks.fmt]
 description = "Format all code in place"
-run = "echo 'fmt: placeholder until a language is added'"
+run = "uv run ruff format"
 
 [tasks.lint]
 description = "Check formatting, lint, and types without changing files"
-run = "echo 'lint: placeholder until a language is added'"
+depends = ["lint:*"]
+
+[tasks."lint:python"]
+description = "Check Python formatting, lint including docstrings, and types"
+run = [
+  "uv run ruff format --check",
+  "uv run ruff check",
+  "uv run pyright --warnings",
+]
 
 [tasks.test]
 description = "Run all tests"
-run = "echo 'test: placeholder until a language is added'"
+depends = ["test:*"]
+
+[tasks."test:python"]
+description = "Run the Python tests and docstring examples; arguments after -- go to pytest"
+run = "uv run pytest"
 
 [tasks.docs]
 description = "Build the documentation site"
-run = "echo 'docs: placeholder until docs/build.sh is added'"
+run = "docs/build.sh"
 
 [tasks.check]
 description = "Run everything CI runs; must pass before opening a PR"

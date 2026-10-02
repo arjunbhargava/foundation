@@ -10,3 +10,9 @@ updates:
     # release is more likely to be caught first. Security updates don't wait.
     cooldown:
       default-days: 7
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
