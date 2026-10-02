@@ -66,7 +66,7 @@ Check for a reason before removing them.
   reference count or the tool output), and action.
 - Put removals in their own PRs, never mixed with behaviour changes. Group
   them by area so each PR can be reviewed as one argument. Deletion-only PRs
-  may use the oversize override in `reviewable-prs`.
+  may use the oversize override in the `large-changes` skill.
 - Put inlining and simplification refactors in separate PRs from pure
   deletions.
 - Verify each PR: the build, the full test suite, and the unused-code tooling
