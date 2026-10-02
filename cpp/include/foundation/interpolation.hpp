@@ -31,4 +31,7 @@ namespace foundation {
 [[nodiscard]] double interpolate_linear(std::span<const double> samples,
                                         double fractional_index);
 
+[[nodiscard]] double interpolate_nearest(std::span<const double> samples,
+                                         double fractional_index);
+
 } // namespace foundation
