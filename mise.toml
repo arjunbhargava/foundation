@@ -3,6 +3,9 @@
 # docs/template-plan.md) pins its tools under [tools] and replaces the
 # placeholder in each command below.
 
+[tools]
+jq = "1.8.2" # .github/rulesets/apply.sh
+
 [tasks.setup]
 description = "Install project dependencies"
 run = "echo 'setup: placeholder until a language is added'"
