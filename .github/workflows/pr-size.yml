@@ -57,5 +57,5 @@ jobs:
             echo "More than $limit lines, allowed because the description starts with Oversize:."
             exit 0
           fi
-          echo "::error::This PR changes $changed_lines lines, more than the limit of $limit. Split it as .cursor/rules/reviewable-prs.mdc describes, or, if it fits an oversize category there, start the description with 'Oversize: <category> — <why it can't be split>'."
+          echo "::error::This PR changes $changed_lines lines, more than the limit of $limit. Split it into stacked PRs as .cursor/skills/large-changes/SKILL.md describes. If it fits an oversize category listed there, start the description with 'Oversize: <category> — <why it can't be split>'."
           exit 1
