@@ -24,7 +24,7 @@ PR.
 
 - Land shared interfaces first, as their own PR: the types, function
   signatures, and data formats that more than one sub-issue uses. Every
-  sub-issue that uses them waits for it.
+  sub-issue that uses them waits for that one.
 - Keep closely connected work in one sub-issue rather than splitting it. Work
   is closely connected when its parts can't be built against an interface
   fixed in advance, or when they change the same functions.
@@ -46,7 +46,7 @@ sections, so that it states:
 - **Waits for** (added): the sub-issues that must merge first. Also add each
   as a Linear "blocked by" relation, so Linear shows the sub-issue as blocked.
 
-Designs links the approved plan. Don't add `agent-ready`; a person adds it
+The Designs section links the approved plan. Don't add `agent-ready`; a person adds it
 once everything a sub-issue waits for has merged (`docs/linear.md`). If you
 can't create Linear issues, write them out in this form for a person to
 create.

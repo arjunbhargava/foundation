@@ -67,7 +67,7 @@ These checks catch the most errors in numerical code. Use each that applies.
   `e(h) ≈ C h^p`, so the observed order `log2(e(h) / e(h/2))` matches `p`
   within a stated tolerance over at least three step sizes. Without an exact
   solution, use differences between successive refinements:
-  `log2(|u(h) - u(h/2)| / |u(h/2) - u(h/4)|)`. Choose step sizes small enough
+  `log2(‖u(h) - u(h/2)‖ / ‖u(h/2) - u(h/4)‖)`. Choose step sizes small enough
   that higher-order terms are negligible, and large enough that round-off
   doesn't dominate.
 - **Conserved quantities.** Energy, mass, momentum, and any other quantity the

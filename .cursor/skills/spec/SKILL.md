@@ -2,10 +2,10 @@
 name: spec
 description: >
   Write a short plan covering the problem, the interface, the files touched,
-  and the acceptance criteria, then stop until a person approves it. Use
-  before writing code for a change that meets decision D7 in
-  `docs/template-plan.md`: a new module, a change to a public interface or
-  data format, a new dependency, or compute spend above the cost limit.
+  and the acceptance criteria, then stop until a person approves it. Use when
+  a change meets decision D7 in `docs/template-plan.md`, before writing its
+  code: a new module, a change to a public interface or data format, a new
+  dependency, or compute spend above the cost limit.
 ---
 
 # Spec
