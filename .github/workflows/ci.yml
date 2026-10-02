@@ -58,18 +58,18 @@ jobs:
     # Sets up a fresh machine of each kind people use, the way a person does,
     # and one the way a cloud agent does, with the install command in
     # .cursor/environment.json. Then runs every check, then reruns the
-    # script, which must download nothing. /bin/bash is used because a fresh
-    # Mac's is bash 3.2.
+    # script, which must find mise at that caller's mise-path and download
+    # nothing. /bin/bash is used because a fresh Mac's is bash 3.2.
     needs: changes
     if: needs.changes.outputs.install-script == 'true'
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { runner: ubuntu-latest, caller: person }
-          - { runner: ubuntu-24.04-arm, caller: person }
-          - { runner: macos-latest, caller: person }
-          - { runner: ubuntu-latest, caller: cloud agent }
+          - { runner: ubuntu-latest, caller: person, mise-path: $HOME/.local/bin/mise }
+          - { runner: ubuntu-24.04-arm, caller: person, mise-path: $HOME/.local/bin/mise }
+          - { runner: macos-latest, caller: person, mise-path: $HOME/.local/bin/mise }
+          - { runner: ubuntu-latest, caller: cloud agent, mise-path: /usr/local/bin/mise }
     name: install-script (${{ matrix.runner }}, ${{ matrix.caller }})
     runs-on: ${{ matrix.runner }}
     steps:
@@ -81,7 +81,9 @@ jobs:
       - if: matrix.caller == 'cloud agent'
         run: sh -c "$(jq -r .install .cursor/environment.json)"
       - run: mise run check
-      - run: /bin/bash .cursor/install.sh | tee rerun.log && grep -q 'nothing to download' rerun.log
+      - run: |
+          /bin/bash .cursor/install.sh | tee rerun.log
+          grep -qF "already installed at ${{ matrix.mise-path }}; nothing to download" rerun.log
 
   docs:
     # The docs are built from every language's source, so this job runs when
