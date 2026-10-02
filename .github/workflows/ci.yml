@@ -56,20 +56,30 @@ jobs:
 
   install-script:
     # Sets up a fresh machine of each kind people use, the way a person does,
-    # then runs every check, then reruns the script, which must download
-    # nothing. /bin/bash is used because a fresh Mac's is bash 3.2.
+    # and one the way a cloud agent does, with the install command in
+    # .cursor/environment.json. Then runs every check, then reruns the
+    # script, which must download nothing. /bin/bash is used because a fresh
+    # Mac's is bash 3.2.
     needs: changes
     if: needs.changes.outputs.install-script == 'true'
     strategy:
       fail-fast: false
       matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+        include:
+          - { runner: ubuntu-latest, caller: person }
+          - { runner: ubuntu-24.04-arm, caller: person }
+          - { runner: macos-latest, caller: person }
+          - { runner: ubuntu-latest, caller: cloud agent }
+    name: install-script (${{ matrix.runner }}, ${{ matrix.caller }})
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: /bin/bash .cursor/install.sh
+      - if: matrix.caller == 'person'
+        run: /bin/bash .cursor/install.sh
+      - if: matrix.caller == 'cloud agent'
+        run: sh -c "$(jq -r .install .cursor/environment.json)"
       - run: mise run check
       - run: /bin/bash .cursor/install.sh | tee rerun.log && grep -q 'nothing to download' rerun.log
 
