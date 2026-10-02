@@ -21,14 +21,18 @@ Everything lands in one PR: the one that adds the first code in the language.
 - [ ] Format, lint, and type checks, with warnings treated as errors.
 - [ ] The language's block in `docs/build.sh` and its coverage gate,
       following the `source-docs` skill.
-- [ ] Its CI job, which runs only when the language's files change (task T4
-      in the plan).
+- [ ] Its CI job, which runs only when the language's files change, added as
+      the "To add a language" comment in `.github/workflows/ci.yml` says.
+- [ ] Its language in the matrix in `.github/workflows/codeql.yml`, and its
+      package ecosystem in `.github/dependabot.yml`.
 - [ ] A `mise` task that tests only that package.
 - [ ] Its tools pinned at exact versions in `mise.toml`, and its commands
       added to the `setup`, `fmt`, `lint`, and `test` tasks there.
 - [ ] Its directory listed under "Where code lives" in `AGENTS.md`.
-- [ ] Its build output in `.gitignore`, and its lockfile marked
-      `linguist-generated` in `.gitattributes`, if they aren't there already.
+- [ ] Its build output in `.gitignore`, its lockfile marked
+      `linguist-generated` in `.gitattributes`, and its manifest and lockfile
+      in the `globs` of the `dependencies` rule, if they aren't there
+      already. A person makes the rule change, since people edit rules.
 
 Every check must fail when broken. The PR shows this by breaking each check
 once, for example by adding an undocumented public function, then reverting.
