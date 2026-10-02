@@ -38,4 +38,5 @@ screenshots to the PR. Never commit `docs/_build/` or `docs/_generated/`.
 The first code in a repo, and the first file in each new language, add that
 language to the build in the same PR. Read the `source-docs` skill before
 doing that, and before changing `docs/build.sh`, `docs/conf.py`, or a
-documentation gate.
+documentation gate. For a new language, also read the `add-language` skill,
+which covers its checks, CI job, and test command as well as its docs.
