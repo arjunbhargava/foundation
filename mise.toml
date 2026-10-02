@@ -53,11 +53,12 @@ description = "Check formatting, lint, and types without changing files"
 depends = ["lint:*"]
 
 [tasks."lint:python"]
-description = "Check Python formatting, lint including docstrings, and types"
+description = "Check Python formatting, lint including docstrings, types, and module boundaries"
 run = [
   "uv run ruff format --check",
   "uv run ruff check",
   "uv run pyright --warnings",
+  "uv run lint-imports",
 ]
 
 [tasks."lint:rust"]

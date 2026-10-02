@@ -14,6 +14,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+.import_linter_cache/
 
 # TypeScript
 node_modules/
