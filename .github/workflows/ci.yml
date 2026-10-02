@@ -36,6 +36,7 @@ jobs:
       docs: ${{ steps.diff.outputs.docs }}
       python: ${{ steps.diff.outputs.python }}
       rust: ${{ steps.diff.outputs.rust }}
+      typescript: ${{ steps.diff.outputs.typescript }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -57,6 +58,7 @@ jobs:
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
           echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
           echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)" >> "$GITHUB_OUTPUT"
+          echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json)" >> "$GITHUB_OUTPUT"
 
   install-script:
     # Sets up a fresh machine of each kind people use, the way a person does,
@@ -126,6 +128,18 @@ jobs:
       - run: mise run lint:rust
       - run: mise run test:rust
 
+  typescript:
+    needs: changes
+    if: needs.changes.outputs.typescript == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run lint:typescript
+      - run: mise run test:typescript
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
@@ -137,6 +151,7 @@ jobs:
       - docs
       - python
       - rust
+      - typescript
     if: always()
     runs-on: ubuntu-latest
     steps:

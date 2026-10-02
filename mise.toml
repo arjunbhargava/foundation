@@ -3,7 +3,8 @@
 # docs/template-plan.md) pins its tools under [tools], adds `lint:<language>`
 # and `test:<language>` tasks, which `lint` and `test` pick up, and adds its
 # commands to `setup` and `fmt`. Python packages, including ruff and pyright,
-# are pinned in uv.lock rather than here, and the Rust toolchain in
+# are pinned in uv.lock rather than here, TypeScript packages, including tsc,
+# Biome, and vitest, in pnpm-lock.yaml, and the Rust toolchain in
 # rust-toolchain.toml.
 
 [settings]
@@ -13,6 +14,8 @@ idiomatic_version_file_enable_tools = ["rust"]
 [tools]
 cargo-deny = "0.20.2"
 jq = "1.8.2" # .github/rulesets/apply.sh
+node = "24.21.0"
+pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
 uv = "0.12.21"
 
 [tasks.setup]
@@ -21,6 +24,8 @@ run = [
   # --locked fails if uv.lock is out of date with pyproject.toml.
   "uv sync --locked",
   "cargo fetch --locked",
+  # --frozen-lockfile fails if pnpm-lock.yaml is out of date with a package.json.
+  "pnpm install --frozen-lockfile",
 ]
 
 [tasks.fmt]
@@ -28,6 +33,9 @@ description = "Format all code in place"
 run = [
   "uv run ruff format",
   "cargo fmt",
+  # check rather than format, so imports are sorted too, as lint:typescript
+  # requires. Lint fixes are left to the author.
+  "pnpm exec biome check --write --linter-enabled=false",
 ]
 
 [tasks.lint]
@@ -50,6 +58,13 @@ run = [
   "cargo deny --locked check advisories licenses",
 ]
 
+[tasks."lint:typescript"]
+description = "Check TypeScript formatting, lint, and types"
+run = [
+  "pnpm exec biome ci --error-on-warnings",
+  "pnpm exec tsc",
+]
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -61,6 +76,10 @@ run = "uv run pytest"
 [tasks."test:rust"]
 description = "Run the Rust tests and doc-comment examples; arguments after -- go to cargo test"
 run = "cargo test --locked"
+
+[tasks."test:typescript"]
+description = "Run the TypeScript tests; arguments after -- go to vitest"
+run = "pnpm exec vitest run"
 
 [tasks.docs]
 description = "Build the documentation site"

@@ -12,15 +12,17 @@ thing:
 | `mise run lint` | Check formatting, lint, and types without changing files. |
 | `mise run lint:python` | Run only the Python checks. |
 | `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory and licence checks. |
+| `mise run lint:typescript` | Run only the TypeScript checks. |
 | `mise run test` | Run all tests. |
 | `mise run test:python` | Run only the Python tests and docstring examples. Arguments after `--` go to pytest: `mise run test:python -- -k trapezoid`. |
 | `mise run test:rust` | Run only the Rust tests and doc-comment examples. Arguments after `--` go to `cargo test`: `mise run test:rust -- energy`. |
+| `mise run test:typescript` | Run only the TypeScript tests. Arguments after `--` go to vitest: `mise run test:typescript -- -t precision`. |
 | `mise run docs` | Build the documentation site. |
 | `mise run check` | Run everything CI runs. |
 
-Run `mise run check` before opening a PR; it must pass. Python and Rust are
-the only languages so far; the other language tasks in
-`docs/template-plan.md` add theirs.
+Run `mise run check` before opening a PR; it must pass. Python, Rust, and
+TypeScript are the only languages so far; task T9 in `docs/template-plan.md`
+adds C and C++.
 
 ## Where code lives
 
@@ -35,6 +37,13 @@ the only languages so far; the other language tasks in
 - `Cargo.toml`: the Rust workspace, which lists each crate. `Cargo.lock`
   locks the dependencies, `rust-toolchain.toml` pins Rust, and `deny.toml`
   holds the licence allow-list for shipped dependencies in every language.
+- `packages/`: the pnpm workspace's TypeScript packages, each tested by
+  `*.test.ts` files next to its source. `statistics/src/variance.ts` is the
+  template's example, there to prove the checks work; delete it when the
+  first real TypeScript code arrives.
+- `package.json`: the TypeScript tools, locked in `pnpm-lock.yaml`. Their
+  settings are in `tsconfig.json` and `biome.json`, and
+  `pnpm-workspace.yaml` lists the packages.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
   generated from doc comments.
 
@@ -43,10 +52,13 @@ Each language task adds its directory and lists it here.
 ## Requirements
 
 - Pin every tool in `mise.toml`, at an exact version. Don't install tools
-  another way. Python packages, including ruff and pyright, are the
-  exception: add them with `mise exec -- uv add --dev <package>`, which pins
-  them in `uv.lock`. The Rust toolchain is the other: `rust-toolchain.toml`
-  pins it, so that Dependabot can update it, and mise installs it from there.
+  another way. There are three exceptions. Add a Python package, such as
+  ruff or pyright, with `mise exec -- uv add --dev <package>`, which pins it
+  in `uv.lock`. Add a TypeScript package, such as typescript (tsc), Biome, or
+  vitest, with `mise exec -- pnpm add -D -w --save-exact <package>`, which
+  pins it in `package.json` and `pnpm-lock.yaml`. The Rust toolchain is
+  pinned in `rust-toolchain.toml`, so that Dependabot can update it, and mise
+  installs it from there.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
   them. People write those files (finding F2 in the plan).
 - The PR body follows the `reviewable-prs` rule.
