@@ -1,0 +1,40 @@
+---
+description: Adding a dependency, and resolving a lockfile merge conflict.
+globs: **/pyproject.toml, **/uv.lock, **/pixi.toml, **/pixi.lock, **/package.json, **/pnpm-lock.yaml, **/Cargo.toml, **/Cargo.lock, **/deny.toml, **/CMakeLists.txt, **/vcpkg.json
+alwaysApply: false
+---
+
+# Dependencies
+
+A dependency is new when a manifest gains it, including development and build
+dependencies. A PR that adds one includes all of these:
+
+1. **A reason.** Under "What changes and why", one line per new dependency
+   giving its name, its licence, and why it's needed, for example
+   `h5py (BSD-3-Clause): reads HDF5 checkpoint files, which the standard library can't`.
+   If the approved plan doesn't name it, also list it under "Changes from the plan".
+2. **A committed lockfile.** Add the dependency with the package manager
+   (`uv add`, `pnpm add`, `cargo add`), and commit the lockfile it writes in
+   the same commit as the manifest. C and C++ have no lockfile, so pin an
+   exact version instead: a vcpkg `builtin-baseline`, or a FetchContent
+   `GIT_TAG` set to a full commit hash, or a `URL` with `URL_HASH`.
+3. **An allowed licence:** Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, ISC,
+   Zlib, BSL-1.0, Unicode-3.0, or PSF-2.0. For any other licence, including
+   GPL, LGPL, AGPL, MPL, a custom licence, or none, stop and ask a person in
+   the PR before adding the dependency.
+
+   | Language | Licence check |
+   |---|---|
+   | Rust | `cargo deny check licenses` passes, with the list above as its allow-list. Task T8 in `docs/template-plan.md` adds cargo-deny; until then, check by hand. |
+   | Python, TypeScript, C and C++ | None exists. Check the licence by hand. |
+
+   Never add to the allow-list to make a dependency pass.
+
+Never edit a lockfile by hand. On a lockfile merge conflict, first check out
+the base branch's lockfile, for example `git checkout origin/main -- uv.lock`,
+because uv and Cargo refuse to read one with conflict markers. Then resolve
+the manifest and rerun the lock command (`uv lock`, `pnpm install`, or
+`cargo update --workspace`). This keeps the base branch's versions and adds
+only what the merged manifest needs. Deleting the lockfile and locking from
+scratch would instead move every dependency to the newest version its
+manifest allows.
