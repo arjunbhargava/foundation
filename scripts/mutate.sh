@@ -10,6 +10,7 @@
 # origin/main), including uncommitted changes. The mutated files are the
 # changed source files, plus every source file of a package whose tests
 # changed, because a changed test can stop checking any code in its package.
+# A change to this script or its workflow mutates every package.
 #
 # The report goes to stdout and, in GitHub Actions, to the job summary.
 # Surviving mutants don't fail the script: for now, mutation testing reports
@@ -130,10 +131,12 @@ mutate_rust() {
 }
 
 # Prints the source files to mutate in one package: all of them if any of its
-# tests changed, and otherwise those that changed.
+# tests changed, and otherwise those that changed. A change to this script or
+# its workflow counts as a change to every package's tests, so that the PR
+# making it runs every step here in CI.
 files_to_mutate() {
   local sources=$1 tests=$2
-  if git diff --quiet "$merge_base" -- "$tests"; then
+  if git diff --quiet "$merge_base" -- "$tests" scripts/mutate.sh .github/workflows/mutation.yml; then
     git diff --name-only --diff-filter=d "$merge_base" -- "$sources"
   else
     git ls-files -- "$sources"
