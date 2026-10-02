@@ -27,7 +27,8 @@ Use these headings, and keep each to a few lines:
 - **Problem**: what is wrong or missing, and why it matters. Link the issue.
 - **Interface**: what callers will see: public functions and types, data
   formats, and commands, with units, valid ranges, and errors. For a new
-  dependency, name it and say why nothing already installed covers it.
+  dependency, give its name, its licence, and why nothing already installed
+  covers it.
 - **Files touched**: each file to be created or changed, with one line on
   what changes in it.
 - **Acceptance criteria**: behaviour someone can check. Each becomes a named
