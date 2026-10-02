@@ -35,6 +35,7 @@ jobs:
       install-script: ${{ steps.diff.outputs.install-script }}
       docs: ${{ steps.diff.outputs.docs }}
       python: ${{ steps.diff.outputs.python }}
+      rust: ${{ steps.diff.outputs.rust }}
       cpp: ${{ steps.diff.outputs.cpp }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -56,6 +57,7 @@ jobs:
           echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)" >> "$GITHUB_OUTPUT"
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
           echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
+          echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)" >> "$GITHUB_OUTPUT"
           echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)" >> "$GITHUB_OUTPUT"
 
   install-script:
@@ -114,6 +116,18 @@ jobs:
       - run: mise run lint:python
       - run: mise run test:python
 
+  rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run lint:rust
+      - run: mise run test:rust
+
   cpp:
     # test:cpp builds the tests with AddressSanitizer and
     # UndefinedBehaviorSanitizer, so this job also catches memory errors and
@@ -139,6 +153,7 @@ jobs:
       - install-script
       - docs
       - python
+      - rust
       - cpp
     if: always()
     runs-on: ubuntu-latest

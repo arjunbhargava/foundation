@@ -22,7 +22,7 @@ jobs:
       matrix:
         # CodeQL fails on a language with no code, so each language task adds
         # its own: javascript-typescript, rust, or c-cpp.
-        language: [actions, python, c-cpp]
+        language: [actions, python, rust, c-cpp]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

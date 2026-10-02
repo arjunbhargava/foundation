@@ -19,6 +19,7 @@ so each file is linked here:
 - [.cursor/rules/reviewable-prs.mdc](rules/reviewable-prs.mdc)
 - [.cursor/rules/secrets.mdc](rules/secrets.mdc)
 - [.cursor/skills/large-changes/SKILL.md](skills/large-changes/SKILL.md)
+- [.cursor/skills/testing/SKILL.md](skills/testing/SKILL.md)
 - [.github/pull_request_template.md](../.github/pull_request_template.md)
 
 In each finding, name the acceptance criterion, or the file and rule, that the

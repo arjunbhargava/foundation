@@ -11,15 +11,17 @@ thing:
 | `mise run fmt` | Format all code in place. |
 | `mise run lint` | Check formatting, lint, and types without changing files. |
 | `mise run lint:python` | Run only the Python checks. |
+| `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory and licence checks. |
 | `mise run lint:cpp` | Run only the C and C++ checks: clang-format, and a build with clang-tidy and compiler warnings as errors. |
 | `mise run test` | Run all tests. |
 | `mise run test:python` | Run only the Python tests and docstring examples. Arguments after `--` go to pytest: `mise run test:python -- -k trapezoid`. |
+| `mise run test:rust` | Run only the Rust tests and doc-comment examples. Arguments after `--` go to `cargo test`: `mise run test:rust -- energy`. |
 | `mise run test:cpp` | Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them. Arguments after `--` go to ctest: `mise run test:cpp -- -R chord`. |
 | `mise run docs` | Build the documentation site. |
 | `mise run check` | Run everything CI runs. |
 
-Run `mise run check` before opening a PR; it must pass. Python and C++ are
-the only languages so far; the other language tasks in
+Run `mise run check` before opening a PR; it must pass. Python, Rust, and
+C++ are the only languages so far; the other language tasks in
 `docs/template-plan.md` add theirs.
 
 ## Where code lives
@@ -29,6 +31,12 @@ the only languages so far; the other language tasks in
   the first real Python code arrives.
 - `pyproject.toml`: Python dependencies and tool settings. `uv.lock` locks
   the dependencies, and `.python-version` pins Python.
+- `crates/foundation/`: the Rust crate, tested in its `tests/`. It is the
+  template's example, there to prove the checks work; delete it when the
+  first real Rust crate arrives, and give that crate `#![deny(missing_docs)]`.
+- `Cargo.toml`: the Rust workspace, which lists each crate. `Cargo.lock`
+  locks the dependencies, `rust-toolchain.toml` pins Rust, and `deny.toml`
+  holds the licence allow-list for shipped dependencies in every language.
 - `cpp/`: the C and C++ code, with public headers in `include/foundation/`,
   sources in `src/`, and tests in `tests/`. `interpolation` is the template's
   example, there to prove the checks work; delete it when the first real C or
@@ -51,11 +59,13 @@ Each language task adds its directory and lists it here.
 - Pin every tool in `mise.toml`, at an exact version. Don't install tools
   another way. Python packages, including ruff and pyright, are the
   exception: add them with `mise exec -- uv add --dev <package>`, which pins
-  them in `uv.lock`. The C and C++ compiler is another: it comes from the OS,
-  because mise has no maintained compiler toolchain. The presets name `g++`,
-  which is GCC on Linux and Apple Clang on macOS, because the cloud agent
-  image's default `c++` is a Clang that lacks the C++ standard library and
-  sanitizer runtimes it needs.
+  them in `uv.lock`. The Rust toolchain is another: `rust-toolchain.toml`
+  pins it, so that Dependabot can update it, and mise installs it from there.
+  The C and C++ compiler is the third: it comes from the OS, because mise has
+  no maintained compiler toolchain. The presets name `g++`, which is GCC on
+  Linux and Apple Clang on macOS, because the cloud agent image's default
+  `c++` is a Clang that lacks the C++ standard library and sanitizer runtimes
+  it needs.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
   them. People write those files (finding F2 in the plan).
 - The PR body follows the `reviewable-prs` rule.
