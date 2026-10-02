@@ -30,7 +30,7 @@ elseif(CMAKE_CXX_CLANG_TIDY AND APPLE)
 endif()
 
 add_library(interpolation cpp/src/interpolation.cpp)
-target_include_directories(interpolation PUBLIC cpp/include)
+target_include_directories(interpolation PUBLIC cpp/include PRIVATE cpp/src/private)
 
 enable_testing()
 add_executable(interpolation_test cpp/tests/interpolation_test.cpp)

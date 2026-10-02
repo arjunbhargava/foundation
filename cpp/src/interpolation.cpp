@@ -1,4 +1,5 @@
 #include "foundation/interpolation.hpp"
+#include "marker.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -6,6 +7,8 @@
 #include <format>
 #include <span>
 #include <stdexcept>
+
+static_assert(foundation::detail::private_marker == 0);
 
 namespace foundation {
 
