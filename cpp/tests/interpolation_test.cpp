@@ -1,3 +1,4 @@
+#include "../src/interpolation.cpp" // NOLINT(bugprone-suspicious-include)
 #include "foundation/interpolation.hpp"
 
 #include <cmath>
