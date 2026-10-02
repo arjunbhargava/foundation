@@ -104,8 +104,12 @@ mutate_rust() {
   for path in $files; do
     file_options+=(--file "$path")
   done
+  # cargo-mutants builds the mutants in a copy of the source tree.
+  # --gitignore true leaves out what git ignores: 500 MB of .venv,
+  # node_modules, and build output here, and mutmut's mutants/, which
+  # mutate:python rewrites while `mise run mutate` runs both.
   local status=0
-  cargo mutants --no-shuffle --output target "${file_options[@]}" || status=$?
+  cargo mutants --gitignore true --no-shuffle --output target "${file_options[@]}" || status=$?
   # 2 means some mutants survived, and 3 that some timed out: results to
   # report, not failures.
   if ((status != 0 && status != 2 && status != 3)); then
