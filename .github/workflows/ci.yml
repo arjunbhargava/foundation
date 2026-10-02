@@ -51,7 +51,7 @@ jobs:
               echo true
             fi
           }
-          echo "install-script=$(changed .cursor/install.sh)" >> "$GITHUB_OUTPUT"
+          echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)" >> "$GITHUB_OUTPUT"
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
 
   install-script:
