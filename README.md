@@ -45,6 +45,7 @@ them:
 
 | Skill | Use when |
 |---|---|
+| [`add-language`](.cursor/skills/add-language/SKILL.md) | Adding a programming language to a project: its checks, docs build, CI job, and test command. |
 | [`architecture-docs`](.cursor/skills/architecture-docs/SKILL.md) | Designing module or system boundaries, or writing READMEs, design docs, ADRs, and architecture diagrams. |
 | [`clarity`](.cursor/skills/clarity/SKILL.md) | Creating or reorganising a module or file, writing a document, or designing a diagram, docs site, terminal output, or user interface. |
 | [`decompose`](.cursor/skills/decompose/SKILL.md) | Splitting an approved plan into Linear sub-issues, one per PR, for agents to work on in parallel. |
