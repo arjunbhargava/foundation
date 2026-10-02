@@ -51,5 +51,3 @@ Each language task adds its directory and lists it here.
   set up. It installs the pinned mise, then runs `mise install` and
   `mise run setup`. If `mise` or a tool is missing, rerun
   `bash .cursor/install.sh`.
-- Secrets arrive as environment variables set in the Cursor dashboard.
-  `.env.example` lists their names.
