@@ -25,19 +25,19 @@ mise_sha256=""
 case "$(uname -s) $(uname -m)" in
   "Linux x86_64")
     mise_asset=linux-x64
-    mise_sha256=d24fe0bf7e613824ad99f7b8dac3f2b381a37b9f75f84dd250855217095a8de4
+    mise_sha256=f24fe0bf7e613824ad99f7b8dac3f2b381a37b9f75f84dd250855217095a8de4
     ;;
   "Linux aarch64" | "Linux arm64")
     mise_asset=linux-arm64
-    mise_sha256=2142433ae70decffc5fa24bd160e47931e33f55eb031d128beb97cbae634d168
+    mise_sha256=f142433ae70decffc5fa24bd160e47931e33f55eb031d128beb97cbae634d168
     ;;
   "Darwin x86_64")
     mise_asset=macos-x64
-    mise_sha256=02d8ba561847f996925e361262c0610a24f59fcd9e06ba9ed0b6022e19b317c3
+    mise_sha256=f2d8ba561847f996925e361262c0610a24f59fcd9e06ba9ed0b6022e19b317c3
     ;;
   "Darwin arm64")
     mise_asset=macos-arm64
-    mise_sha256=484c135bd4329975d608d3f77e26c2ece5d2f5590f18ca71f44440294f8cfa6f
+    mise_sha256=f84c135bd4329975d608d3f77e26c2ece5d2f5590f18ca71f44440294f8cfa6f
     ;;
 esac
 mise_install_path=${MISE_INSTALL_PATH:-$HOME/.local/bin/mise}
