@@ -65,5 +65,5 @@ int main() {
       }
     }
   }
-  return failure_count == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+  return failure_count==0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
