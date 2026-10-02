@@ -32,6 +32,7 @@ jobs:
     # as a change, so an error runs jobs rather than skipping them.
     runs-on: ubuntu-latest
     outputs:
+      install-script: ${{ steps.diff.outputs.install-script }}
       docs: ${{ steps.diff.outputs.docs }}
       python: ${{ steps.diff.outputs.python }}
       typescript: ${{ steps.diff.outputs.typescript }}
@@ -52,9 +53,41 @@ jobs:
               echo true
             fi
           }
+          echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)" >> "$GITHUB_OUTPUT"
           echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
           echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
           echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json)" >> "$GITHUB_OUTPUT"
+
+  install-script:
+    # Sets up a fresh machine of each kind people use, the way a person does,
+    # and one the way a cloud agent does, with the install command in
+    # .cursor/environment.json. Then runs every check, then reruns the
+    # script, which must find mise at that caller's mise-path and download
+    # nothing. /bin/bash is used because a fresh Mac's is bash 3.2.
+    needs: changes
+    if: needs.changes.outputs.install-script == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest, caller: person, mise-path: $HOME/.local/bin/mise }
+          - { runner: ubuntu-24.04-arm, caller: person, mise-path: $HOME/.local/bin/mise }
+          - { runner: macos-latest, caller: person, mise-path: $HOME/.local/bin/mise }
+          - { runner: ubuntu-latest, caller: cloud agent, mise-path: /usr/local/bin/mise }
+    name: install-script (${{ matrix.runner }}, ${{ matrix.caller }})
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: matrix.caller == 'person'
+        run: /bin/bash .cursor/install.sh
+      - if: matrix.caller == 'cloud agent'
+        run: sh -c "$(jq -r .install .cursor/environment.json)"
+      - run: mise run check
+      - run: |
+          /bin/bash .cursor/install.sh | tee rerun.log
+          grep -qF "already installed at ${{ matrix.mise-path }}; nothing to download" rerun.log
 
   docs:
     # The docs are built from every language's source, so this job runs when
@@ -98,7 +131,7 @@ jobs:
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
     # a skipped required check as passing, so this job must still run, and
     # fail, when the run is cancelled.
-    needs: [changes, docs, python, typescript]
+    needs: [changes, install-script, docs, python, typescript]
     if: always()
     runs-on: ubuntu-latest
     steps:

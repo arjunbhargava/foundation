@@ -59,6 +59,7 @@ Each language task adds its directory and lists it here.
 ## Cursor Cloud specific instructions
 
 - `.cursor/environment.json` runs `.cursor/install.sh` when the machine is
-  set up. It installs the pinned mise, then runs `mise install` and
-  `mise run setup`. If `mise` or a tool is missing, rerun
-  `bash .cursor/install.sh`.
+  set up. It installs the pinned mise to `/usr/local/bin`, which is on every
+  agent shell's PATH, then runs `mise install` and `mise run setup`. If
+  `mise` or a tool is missing, rerun
+  `MISE_INSTALL_PATH=/usr/local/bin/mise bash .cursor/install.sh`.
