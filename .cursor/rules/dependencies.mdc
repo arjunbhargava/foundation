@@ -28,9 +28,11 @@ dependencies. A PR that adds one includes all of these:
    dependency's licence isn't allowed, say so in the PR and let a person
    decide.
 
-Never edit a lockfile by hand. On a lockfile merge conflict, resolve the
-manifest first, then check out the base branch's lockfile and rerun the lock
-command (`uv lock`, `pnpm install`, or `cargo update --workspace`). This keeps
-the base branch's versions and adds only what the merged manifest needs.
-Deleting the lockfile and locking from scratch would instead upgrade every
-dependency.
+Never edit a lockfile by hand. On a lockfile merge conflict, first check out
+the base branch's lockfile, for example `git checkout origin/main -- uv.lock`,
+because uv and Cargo refuse to read one with conflict markers. Then resolve
+the manifest and rerun the lock command (`uv lock`, `pnpm install`, or
+`cargo update --workspace`). This keeps the base branch's versions and adds
+only what the merged manifest needs. Deleting the lockfile and locking from
+scratch would instead move every dependency to the newest version its
+manifest allows.
