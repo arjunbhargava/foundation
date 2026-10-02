@@ -19,6 +19,8 @@ generated code, and vendored files: **≤ 500 changed lines**. Smaller is better
   mechanical change first, then the behaviour change on top.
 - No drive-by edits (formatting, unrelated fixes, dependency bumps). Note them
   in the PR body as follow-ups instead.
+- A change that decision D7 in `docs/template-plan.md` says needs an approved
+  plan gets one before coding. Read the `spec` skill.
 
 When a task looks likely to exceed the budget, read the `large-changes` skill
 before starting it. It covers splitting the work into stacked PRs, and the
@@ -36,7 +38,8 @@ rather than removing it.
    `Fixes ENG-123`), which links the PR to the issue.
 2. How to review: where to start reading, what is mechanical and can be skimmed.
 3. How it was verified: commands run and their results, and which test covers
-   each acceptance criterion.
+   each acceptance criterion. Read the `testing` skill when writing or
+   changing tests.
 4. What was not verified, and known limitations: include deliberate omissions.
 5. Changes from the plan, and problems found outside the scope: how the work
    differs from the agreed plan. Report problems outside the task's scope as

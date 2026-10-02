@@ -18,7 +18,7 @@ issue, add "Fixes <issue ID>" (for example "Fixes ENG-123"). -->
 ## How it was verified
 
 <!-- Commands run and their results, and which test covers each acceptance
-criterion. -->
+criterion (see the testing skill). -->
 
 ## What was not verified, and known limitations
 

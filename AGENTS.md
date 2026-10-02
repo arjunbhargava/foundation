@@ -34,7 +34,7 @@ the only languages so far; the other language tasks in
   first real Rust crate arrives, and give that crate `#![deny(missing_docs)]`.
 - `Cargo.toml`: the Rust workspace, which lists each crate. `Cargo.lock`
   locks the dependencies, `rust-toolchain.toml` pins Rust, and `deny.toml`
-  holds the licence allow-list for every language.
+  holds the licence allow-list for shipped dependencies in every language.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
   generated from doc comments.
 

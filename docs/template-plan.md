@@ -56,7 +56,7 @@ benchmarks, so treat the numbers as direction rather than precise effects.
 | F5 | A second model reviewing finished code helped more than a model planning before the code was written. Good plans help, but a bad plan is worse than none. [6][7] | People approve plans only for larger changes. Every PR gets a review by a separate agent before a person sees it. |
 | F6 | Asking agents for a structured handoff made their work easier to review, not more correct. Sections such as "known limitations" appeared only when required. [8] | The PR template requires those sections. |
 | F7 | In Cursor's experiments with hundreds of agents, agents coordinating through a shared file with locks collapsed to the speed of 1–3 agents. What worked was a planner that splits the work, workers that each own one task on their own copy of the code, and a handoff back to the planner. [9] | Plans and task lists live in Linear, not in a shared file. Each task becomes one agent, one branch, and one PR. |
-| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Use a merge queue. |
+| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Test each PR combined with `main` before merging: up-to-date branches for now, a merge queue later (T4). |
 | F9 | At Meta, engineers accepted 73% of tests generated to catch specific deliberate bugs. [12] | Use mutation testing to measure whether agent-written tests catch real mistakes. |
 
 ## Decisions
@@ -303,6 +303,13 @@ edit it (F2). Keep each skill short and focused.
 - `add-language`: the steps from Stage 2 as a checklist, so a project can add
   a language later.
 
+**T20. Rename the `spec` skill to `plan`.** Needs: T12.
+
+- The skill writes what D7, the PR template, and `docs/linear.md` call a
+  plan, and the `clarity` rule asks for one name per concept (found in PR
+  #12). Rename the directory and every reference to it, with no other change,
+  as a mechanical PR.
+
 ### Stage 4: review and quality checks
 
 **T13. Independent review before a person reviews.** Needs: T5. See F3 and
@@ -327,6 +334,32 @@ F5.
   TypeScript. For Rust, crate dependencies plus `cargo-deny` bans enforce it.
   For C/C++, use CMake target visibility.
 - The example modules get one boundary rule each, to prove the check works.
+
+**T21. Fixes from the first language tasks.** Needs: T7, T8, T9.
+
+The language tasks were the first users of several skills and of CI with
+four languages, and their PRs listed what to fix. Split into one PR for the
+skills and one for CI.
+
+- `add-language`: add what T6–T9 found missing or wrong. Development tools go
+  in the lockfile, not `mise.toml`; each version has one source; a language
+  adds `lint:<language>` and `test:<language>` and edits only `setup` and
+  `fmt`; the CI filter includes root config files and files other jobs read;
+  tools must work on every platform the `install-script` job runs on; what to
+  do when a tool can't come from mise, or the language has no package
+  manager; the Dependabot cooldown; and how to show each check failing
+  without one break hiding another.
+- `source-docs`: intersphinx in `assets/conf.py`; the Rust stub page's link,
+  which fails under MyST; and `-D missing_docs` in `RUSTDOCFLAGS`.
+- `testing`: name the marker in each language that keeps paid and
+  live-service tests out of `mise run test`.
+- CI: install only the tools each job needs, or cache mise's directory;
+  check that each lockfile matches its manifest (`uv sync --locked`,
+  `pnpm install --frozen-lockfile`, `cargo build --locked`); run cargo-deny's
+  advisory check on a schedule; and group the `changes` job's
+  `$GITHUB_OUTPUT` lines (actionlint SC2129).
+- Dependabot can't update the pins in `mise.toml`. Bump them by hand, or move
+  to Renovate if that becomes a burden.
 
 ### Stage 5: compute jobs
 
@@ -381,6 +414,26 @@ F5.
 - In the repository: `docs/linear.md`, listing these conventions in a few
   lines.
 
+**T22. Collect follow-ups from merged PRs.** Needs: T13, T17.
+
+Every PR lists risks, limitations, and problems outside its scope, but
+nothing collects them afterwards, so they are lost unless someone rereads
+old PRs. This task adds a scheduled Cursor Automation that does that,
+alongside `prune-review`.
+
+- The PR template asks each follow-up to be marked either as work to do later
+  or as a decision a person needs to make, so they can be told apart.
+- A skill, or a section of `prune-review`, covers the run: read the
+  "What was not verified", "Changes from the plan", and "Risks and follow-ups"
+  sections of PRs merged since the last run; drop items `main` has already
+  fixed; and file each remaining item as a Linear issue without
+  `agent-ready`, so a person decides what agents work on. Decisions go in a
+  separate list for a person, not into PRs.
+- A scheduled automation, weekly or after a set number of merges, runs this
+  and `prune-review` together. Each fix lands as its own small PR.
+- Done when: a run on this repository files the open items from PRs #1–#17
+  that the housekeeping PR didn't fix, and none it did.
+
 ### Stage 7: template mechanics
 
 **T18. Convert to Copier.** Needs: all earlier tasks, D1.
@@ -405,19 +458,32 @@ projects that use the template.
 - Repeat after each model upgrade, and remove instructions that no longer
   help.
 
+**T23. Auto mode for exploratory tasks.** Needs: T13, T22.
+
+Some tasks need several rounds of exploration, and waiting for a person's
+review on each round stalls them. In auto mode, PRs for a task marked as
+exploratory merge without a person's approval, with CI and Bugbot as the
+gate. Design first, covering:
+
+- How a task is marked for auto mode, and who can mark it.
+- What replaces the required approval in the `main: review` ruleset (T4, D6)
+  for those PRs, without weakening it for others.
+- Spend and size limits for an auto-mode task.
+- How a person audits auto-merged work afterwards.
+
 ## Order and parallel work
 
 ```text
 T1 ─┬─ T2
     ├─ T3 ── T4 ── T6 ─┬─ T7 ─┐
-    │                  ├─ T8 ─┼─ T14, T15
+    │                  ├─ T8 ─┼─ T14, T15, T21
     │                  ├─ T9 ─┘
     │                  └─ T16 (also needs D4, D8)
-    ├─ T5 ─┬─ T13
-    │      └─ T17
+    ├─ T5 ─┬─ T13 ─┐
+    │      └─ T17 ─┴─ T22 ── T23
     └─ T10 ─┬─ T11
-            └─ T12
-T18 needs everything above.
+            └─ T12 ── T20
+T18 needs everything above except T22 and T23.
 ```
 
 Right after T1, four tasks (T2, T3, T5, T10) can start at once. Keep the
@@ -436,8 +502,9 @@ merged.
   branch or run ID.
 - An agent that finds a problem outside its task files a Linear issue instead
   of fixing it.
-- The merge queue tests each PR combined with the ones ahead of it before
-  merging.
+- Each PR is tested combined with `main` before merging. For now that means
+  requiring up-to-date branches; a merge queue replaces it once the
+  repository moves to an organization (T4).
 - For a hard task, run several agents on it separately and review only the
   best result. Parallel agents should not multiply review work.
 
@@ -446,8 +513,9 @@ merged.
 - A custom system for coordinating agents. Cursor already provides subagents,
   an API, automations, and Linear routing.
 - Agents talking to each other directly, or shared memory files.
-- A dedicated agent for merging other agents' work. The merge queue covers it,
-  and Cursor found such a role slowed things down [9].
+- A dedicated agent for merging other agents' work. Required up-to-date
+  branches, and later a merge queue, cover it, and Cursor found such a role
+  slowed things down [9].
 - Release automation, deployment, and choices of C/C++ package manager or
   experiment tracker. These belong to each project.
 - Go. It appears in the `source-docs` skill but isn't a team language; remove

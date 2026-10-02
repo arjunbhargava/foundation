@@ -5,9 +5,9 @@
 # https://embarkstudios.github.io/cargo-deny/checks/cfg.html
 
 [licenses]
-# The licences that a dependency in any language may have without asking a
-# person first (.cursor/rules/dependencies.mdc). This is the only copy of the
-# list. Never add to it to make a dependency pass.
+# The licences that a shipped dependency in any language may have without
+# asking a person first (.cursor/rules/dependencies.mdc). This is the only copy
+# of the list. Never add to it to make a dependency pass.
 allow = [
   "Apache-2.0",
   "MIT",
@@ -18,6 +18,9 @@ allow = [
   "BSL-1.0",
   "Unicode-3.0",
   "PSF-2.0",
+  "0BSD",
+  "CC0-1.0",
+  "BlueOak-1.0.0",
 ]
 # The rule covers development dependencies, which cargo-deny skips by default.
 include-dev = true
