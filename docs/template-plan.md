@@ -134,21 +134,50 @@ can't change those settings, so they're marked **(person)**.
   - Triggers on pull requests and on `merge_group`, the event the merge queue
     uses.
   - Cancels older runs of the same PR when a new commit arrives.
-- A PR size check that fails above 500 changed lines, not counting lockfiles
-  or generated files, unless the PR description starts with `Oversize:`.
+  - Installs mise with `.cursor/install.sh`, the same version agents use, and
+    runs the shared `mise run` commands.
+  - One job, `ci-ok`, passes only when every other job passed or was skipped.
+    It is the only required CI check, so language tasks add jobs without
+    changing the rulesets.
+- A PR size check that fails above 500 changed lines, not counting files
+  marked `linguist-generated` in `.gitattributes`, unless the PR description
+  starts with `Oversize:`.
+- A workflow that labels a PR `agent` when any of its commits is authored by
+  `cursoragent@cursor.com`, creating the label if it is missing.
 - Security defaults:
   - Workflows get read-only permissions unless a job needs more.
-  - Third-party actions are pinned to an exact commit.
-  - Renovate or Dependabot opens dependency and action updates.
-  - CodeQL code scanning covers all four languages.
-- `.github/rulesets/main.json`: require CI to pass, require one human review,
-  turn on the merge queue, and allow only merge commits (D6). Add a script or
-  documented `gh api` command that applies the ruleset, because GitHub doesn't
-  copy settings from templates.
-- **(person)** Apply the ruleset. Turn on secret scanning with push
-  protection.
+  - Actions are pinned to an exact commit.
+  - Dependabot opens action updates. Each language task adds its package
+    ecosystem.
+  - CodeQL code scanning covers all four languages. CodeQL fails on a
+    language with no code, so T4 scans `actions` and each language task adds
+    its own.
+- Two rulesets in `.github/rulesets/`, and `apply.sh`, which applies them with
+  `gh api` because GitHub doesn't copy settings from templates. Agent PRs are
+  authored by the owner's account, and GitHub doesn't let authors approve
+  their own PRs, so checks and review are separate rulesets:
+  - `main: checks`: `ci-ok` and the size check must pass on a branch that is
+    up to date with `main`, and force pushes are blocked. Nobody can bypass
+    it.
+  - `main: review`: one approval, including a code owner's. Repository admins
+    can bypass it, but only through a pull request.
+
+  The script also allows only merge commits (D6) and turns on secret scanning
+  with push protection.
+- No merge queue for now. GitHub offers merge queues only to repositories
+  owned by an organization, and this one is owned by a user. Requiring
+  up-to-date branches gives the same guarantee, that `main` only receives
+  tested combinations, at the cost of updating and retesting a PR whenever
+  `main` moves ahead of it. To switch after moving the repository to an
+  organization:
+  1. In `.github/rulesets/main-checks.json`, add a `merge_queue` rule with
+     `merge_method` `MERGE`, and set `strict_required_status_checks_policy`
+     to `false`. `apply.sh` lists the full rule.
+  2. Rerun `apply.sh`. CI already runs on `merge_group`.
+- **(person)** Run `apply.sh`.
 - Done when: a test PR above 500 lines fails the size check, and a PR merges
-  through the merge queue.
+  only after its required checks pass on a branch that is up to date with
+  `main`.
 
 **T5. PR template.** Needs: T1. Can run alongside T2–T4.
 

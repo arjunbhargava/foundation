@@ -1,0 +1,83 @@
+# Checks every pull request, and every merge group once the merge queue is on.
+# The rulesets require only the ci-ok job, so adding a job never needs a
+# ruleset change.
+#
+# To add a language: add an output to the changes job, add a job that needs
+# changes and runs only when that output is 'true', and add the job to
+# ci-ok's needs. Jobs run tools through the shared `mise run` commands.
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A new commit on a PR cancels the PR's older run. Merge-group runs have no
+  # PR number, so each gets its own group and none cancels another.
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Naming bash explicitly adds -o pipefail, which the default shell lacks.
+    shell: bash
+
+jobs:
+  changes:
+    # Each output is 'true' when the change touches that job's files, or
+    # ci.yml or mise.toml, which define every job. A failed diff also counts
+    # as a change, so an error runs jobs rather than skipping them.
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.diff.outputs.docs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: diff
+        env:
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+        run: |
+          base=${MERGE_GROUP_BASE_SHA:-origin/$GITHUB_BASE_REF}
+          changed() {
+            if git diff --quiet "$base...HEAD" -- "$@" .github/workflows/ci.yml mise.toml; then
+              echo false
+            else
+              echo true
+            fi
+          }
+          echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
+
+  docs:
+    # The docs are built from every language's source, so this job runs when
+    # any output of the changes job is 'true'.
+    needs: changes
+    if: contains(toJSON(needs.changes.outputs), 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run docs
+
+  ci-ok:
+    # The only required CI check. A skipped job means its files didn't
+    # change, and counts as passing. always(), not !cancelled(): GitHub treats
+    # a skipped required check as passing, so this job must still run, and
+    # fail, when the run is cancelled.
+    needs: [changes, docs]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "::error::A job that ci-ok needs failed or was cancelled. Results by job:"
+          echo "$NEEDS"
+          exit 1
