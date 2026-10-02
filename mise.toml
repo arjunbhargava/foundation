@@ -12,6 +12,8 @@
 # Installs the Rust toolchain that rust-toolchain.toml names, with rustup.
 idiomatic_version_file_enable_tools = ["rust"]
 
+# Each CI job installs only the tools its MISE_ENABLE_TOOLS names in
+# .github/workflows/ci.yml, so add a new tool to every job that runs it.
 [tools]
 cargo-deny = "0.20.2"
 jq = "1.8.2" # .github/rulesets/apply.sh
