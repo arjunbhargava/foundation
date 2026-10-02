@@ -43,6 +43,6 @@ pub struct State {
 pub fn step(state: State, acceleration: impl Fn(f64) -> f64, time_step: f64) -> State {
     let half_step_velocity = state.velocity + 0.5 * time_step * acceleration(state.position);
     let position = state.position + time_step * half_step_velocity;
-    let velocity = half_step_velocity + 0.5 * time_step * acceleration(position);
+    let velocity = half_step_velocity + 0.5 * time_step * acceleration(state.position);
     State { position, velocity }
 }
