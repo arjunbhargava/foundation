@@ -18,6 +18,6 @@ template-plan
 :caption: API reference
 :maxdepth: 1
 
-api/python/foundation/index
+Python <api/python/foundation/index>
 api/rust
 ```
