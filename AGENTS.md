@@ -20,7 +20,7 @@ thing:
 | `mise run test:typescript` | Run only the TypeScript tests. Arguments after `--` go to vitest: `mise run test:typescript -- -t precision`. |
 | `mise run test:cpp` | Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them. Arguments after `--` go to ctest: `mise run test:cpp -- -R chord`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
-| `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python` and `mutate:rust` run one language. `check` doesn't run it, because it's slow. |
+| `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python`, `mutate:rust`, and `mutate:typescript` run one language. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
 | `mise run check` | Run everything CI runs. |
 

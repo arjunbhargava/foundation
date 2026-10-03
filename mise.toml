@@ -124,6 +124,10 @@ description = "Mutation-test the changed Rust code with cargo-mutants; an argume
 tools = { "cargo:cargo-mutants" = "27.1.0" }
 run = ".github/scripts/mutate.sh rust"
 
+[tasks."mutate:typescript"]
+description = "Mutation-test the changed TypeScript code with StrykerJS; an argument after -- replaces origin/main as the base"
+run = ".github/scripts/mutate.sh typescript"
+
 [tasks."test:mutate-script"]
 description = "Check which files .github/scripts/mutate.sh mutates and what it reports, with fake mutation tools"
 run = ".github/scripts/mutate_test.sh"
