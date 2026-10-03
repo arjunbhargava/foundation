@@ -22,6 +22,7 @@ thing:
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 | `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python`, `mutate:rust`, and `mutate:typescript` run one language. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
+| `mise run spend` | Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs `CURSOR_ADMIN_API_KEY`. Arguments after `--` go to the script: `mise run spend -- --since 2026-09-26`. |
 | `mise run check` | Run everything CI runs. |
 
 Run `mise run check` before opening a PR; it must pass. It checks every
@@ -65,6 +66,9 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   - Rust: a `deny` entry with `wrappers` under `[bans]` in `deny.toml`.
   - C and C++: in `CMakeLists.txt`, make a target's include directories and
     links `PRIVATE` unless its public headers need them.
+- `.github/scripts/`: the repository's own tooling, which people, agents, and
+  CI run through `mise run`, such as `mutate.sh` and `agent_spend.py`. Each
+  script is tested by the `_test` file next to it.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
   generated from doc comments.
 

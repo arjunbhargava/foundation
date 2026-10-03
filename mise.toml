@@ -77,6 +77,10 @@ run = [
   "uv run ruff format --check",
   "uv run ruff check",
   "uv run pyright --warnings",
+  # Pyright skips dot directories, even files named on its command line, so
+  # .github/scripts/ is a project of its own, whose pyrightconfig.json takes
+  # the settings in pyproject.toml.
+  "uv run pyright --warnings --project .github/scripts",
   "uv run lint-imports",
 ]
 
@@ -169,6 +173,10 @@ run = ".github/scripts/mutate_test.sh"
 [tasks.docs]
 description = "Build the documentation site"
 run = "docs/build.sh"
+
+[tasks.spend]
+description = "Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs CURSOR_ADMIN_API_KEY; arguments after -- go to the script, such as --since 2026-09-26"
+run = "uv run python .github/scripts/agent_spend.py"
 
 [tasks.check]
 description = "Run everything CI runs; must pass before opening a PR"
