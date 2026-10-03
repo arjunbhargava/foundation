@@ -41,7 +41,7 @@ main() {
 
 mutate_python() {
   local files
-  files=$(files_to_mutate 'src/*.py' tests/)
+  files=$(files_to_mutate tests/ 'src/*.py')
   if [[ -z $files ]]; then
     report Python "" 0 0 ""
     return
@@ -94,7 +94,7 @@ mutate_python() {
 
 mutate_rust() {
   local files crate
-  files=$(for crate in crates/*/; do files_to_mutate "${crate}src/*.rs" "${crate}tests/"; done)
+  files=$(for crate in crates/*/; do files_to_mutate "${crate}tests/" "${crate}src/*.rs"; done)
   if [[ -z $files ]]; then
     report Rust "" 0 0 ""
     return
@@ -134,17 +134,19 @@ mutate_rust() {
   } | report Rust "$files" "$survived_count" "$mutant_count" "$outcome_counts"
 }
 
-# Prints the source files to mutate in one package: all of them if any of its
+# Prints the source files to mutate in one package, given a pathspec for its
+# tests and then one or more for its sources: all the sources if any of its
 # tests changed, and otherwise those that changed. A change to this script or
 # its workflow counts as a change to every package's tests, so that the PR
 # making it runs every step here in CI. In a git pathspec, * also matches /,
 # so src/*.py includes src/foundation/quadrature.py.
 files_to_mutate() {
-  local sources=$1 tests=$2
+  local tests=$1
+  shift
   if git diff --quiet "$merge_base" -- "$tests" .github/scripts/mutate.sh .github/workflows/mutation.yml; then
-    git diff --name-only --diff-filter=d "$merge_base" -- "$sources"
+    git diff --name-only --diff-filter=d "$merge_base" -- "$@"
   else
-    git ls-files -- "$sources"
+    git ls-files -- "$@"
   fi
 }
 
