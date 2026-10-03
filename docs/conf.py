@@ -4,10 +4,12 @@ project = "foundation"
 
 extensions = [
     "myst_parser",
+    # Python:
     "autoapi.extension",
-    "breathe",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
+    # C and C++:
+    "breathe",
 ]
 
 # Python: parsed from source without importing it.
@@ -29,9 +31,10 @@ html_extra_path = ["_generated/html"]
 breathe_projects = {"foundation": "_generated/doxygen"}
 breathe_default_project = "foundation"
 
-# Links standard-library names in signatures, such as collections.abc.Sequence,
-# to the Python docs. nitpicky fails the build on any it can't resolve. Each
-# build downloads this inventory, so it needs network access.
+# Python: links standard-library names in signatures, such as
+# collections.abc.Sequence, to the Python docs. nitpicky fails the build on any
+# it can't resolve. Each build downloads this inventory, so it needs network
+# access.
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 nitpicky = True

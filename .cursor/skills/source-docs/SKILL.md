@@ -62,10 +62,9 @@ Bring each language in through the first option that works, in this order:
 | Other | Markdown if the generator can emit it, else embedded HTML | The language's canonical generator | The generator's warnings-as-errors mode |
 
 The Python, TypeScript, Rust, and C/C++ rows, and every gate in them, were
-verified end to end in this template: its `docs/build.sh` and `docs/conf.py`
-follow the assets below, and the tasks that added each language (T6–T9 in
-`docs/template-plan.md`) broke each gate once to show it fails. The diagram
-check in `build.sh` hasn't run in the template, which has no diagrams yet.
+verified end to end: the template's `docs/build.sh` and `docs/conf.py` run
+them, and the tasks that added each language (T6–T9 in
+`docs/template-plan.md`) broke each gate once to show it fails.
 
 Doxygen reports undocumented functions and macros only in a header that has a
 `@file` comment, so `build.sh` fails on a header without one.
@@ -77,17 +76,30 @@ title and a horizontal rule.
 
 ## Setup
 
-Copy the templates in `assets/`:
+A repository made from this template already has the docs build, so edit its
+files rather than recreating them: `docs/build.sh`, `docs/conf.py`,
+`docs/index.md`, the pages in `docs/api/`, and, for C and C++, `Doxyfile`. A
+repository without them copies them from the template repository, then sets
+`project` in `docs/conf.py` and fixes the source paths. In `docs/build.sh` and
+`docs/conf.py`, a comment naming the language starts each language's block.
 
-| From | To | Then |
-|---|---|---|
-| `conf.py` | `docs/conf.py` | Set `project`, keep only the extensions for the repo's languages, and point `autoapi_dirs` at the Python source |
-| `build.sh` | `docs/build.sh` | Keep one block per language in the repo, and fix its paths, such as TypeDoc's entry point `packages/PACKAGE/src/index.ts` |
-| `Doxyfile` | `Doxyfile` | C and C++ only: point `INPUT` at the public headers |
+- **Remove a language** the repository doesn't use: delete its blocks in
+  `docs/build.sh` and `docs/conf.py`, and its entry in `docs/index.md`. Rust
+  and C and C++ also have a page in `docs/api/` to delete, and C and C++ have
+  `Doxyfile`.
+- **Add back one of the four:** copy its blocks from the template
+  repository's files.
+- **Add another language:** start from the `docs/build.sh` block of the
+  language with the same integration, TypeScript's for Markdown or Rust's for
+  embedded HTML, and gate it with the generator's warnings-as-errors mode.
+- **Add diagrams** (see `architecture-docs`): put
+  `docs/diagrams/render.sh --check` above the language blocks in
+  `docs/build.sh`, so a stale SVG fails the build. That check hasn't run in
+  the template, which has no diagrams yet.
 
-Then:
+The build also needs the following, which the template already has:
 
-- Write `docs/index.md` with two toctrees. The "Explanation" toctree lists
+- `docs/index.md` has two toctrees. The "Explanation" toctree lists
   `architecture` and other hand-written pages. The "API reference" toctree
   lists `Python <api/python/<pkg>/index>`, `api/rust`,
   `TypeScript <_generated/ts/index>`, and `api/cpp`, for whichever languages

@@ -350,8 +350,9 @@ skills and one for CI.
   do when a tool can't come from mise, or the language has no package
   manager; the Dependabot cooldown; and how to show each check failing
   without one break hiding another.
-- `source-docs`: intersphinx in `assets/conf.py`; the Rust stub page's link,
-  which fails under MyST; and `-D missing_docs` in `RUSTDOCFLAGS`.
+- `source-docs`: intersphinx in the Sphinx configuration it gives projects; the
+  Rust stub page's link, which fails under MyST; and `-D missing_docs` in
+  `RUSTDOCFLAGS`.
 - `testing`: name the marker in each language that keeps paid and
   live-service tests out of `mise run test`.
 - CI: install only the tools each job needs, or cache mise's directory;
