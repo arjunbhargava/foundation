@@ -1,8 +1,7 @@
 <!--
-Sections and their order come from the "PR body" section of
-.cursor/rules/reviewable-prs.mdc. Omit a section that has nothing. Keep the
-body to about 150 words for a PR under 100 changed lines, and at most 300
-otherwise. An oversize PR puts
+Sections come from the "PR body" section of .cursor/rules/reviewable-prs.mdc.
+Omit an empty section, and keep the body to about 150 words for a PR under 100
+changed lines, at most 300 otherwise. An oversize PR puts
 "Oversize: <category> — <why it can't be split>" on the first line, above this
 comment.
 -->
@@ -13,7 +12,7 @@ comment.
 
 ## Verified
 
-<!-- Commands and CI run links, one line each, and one line naming the test for each acceptance criterion. -->
+<!-- Commands and CI links, one line each; the test for each acceptance criterion, in a line. -->
 
 ## Needs a person
 

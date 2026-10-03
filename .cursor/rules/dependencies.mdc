@@ -30,9 +30,9 @@ dependencies. A PR that adds one includes all of these:
      own dependencies are examples. Its licence may be any OSI-approved
      licence, public domain (including CC0-1.0), a font licence such as
      OFL-1.1, or a Creative Commons licence on data, such as caniuse-lite's
-     CC-BY-4.0 browser-support data. Under "What and why", list each licence off the
-     allow-list, including a transitive dependency's, with the dependency
-     that brings it in.
+     CC-BY-4.0 browser-support data. Under "What and why", list each licence
+     off the allow-list, including a transitive dependency's, with the
+     dependency that brings it in.
 
    Stop and ask a person in the PR before adding a shipped dependency whose
    licence isn't on the allow-list, or any dependency under AGPL, a

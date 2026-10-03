@@ -14,8 +14,7 @@ Size, counted as `git diff --stat` against the base, excluding lockfiles,
 generated code, and vendored files: aim for **300 changed lines**, with
 **500 as the ceiling**.
 
-- One logical change per PR: one language or one concern. If the title needs
-  "and", split it.
+- One language or one concern per PR. If the title needs "and", split it.
 - Never mix a refactor, rename, or move with a behaviour change. Land the
   mechanical change first, then the behaviour change on top.
 - No drive-by edits (formatting, unrelated fixes, dependency bumps). List them
@@ -29,31 +28,27 @@ only cases in which one PR may exceed 500 lines.
 
 ## PR body
 
-Start the body from `.github/pull_request_template.md`. Its sections, in
-order, are below. Omit a section that has nothing rather than writing `None`.
+Start the body from `.github/pull_request_template.md`, and omit a section
+that has nothing rather than writing `None`. Keep the body to about 150 words
+for a PR under 100 changed lines, and at most 300 otherwise.
 
-1. **What and why**: at most 3 sentences. Link the issue or design doc. When
-   the work has a Linear issue, include `Fixes <issue ID>` (for example
-   `Fixes ENG-123`), which links the PR to the issue.
-2. **Verified**: commands and CI runs, one line each, with links. Name the
-   test that covers each acceptance criterion, in a line, not a table; read
-   the `testing` skill when writing or changing tests. A gap in verification
-   or a difference from the approved plan gets one line, only when it
-   matters: here, or under Needs a person if a person must accept it.
+1. **What and why**: at most 3 sentences. Link the issue or design doc, and
+   for a Linear issue include `Fixes <issue ID>` (for example `Fixes ENG-123`).
+2. **Verified**: commands and CI runs, one line each, with links, and one
+   line, not a table, naming the test for each acceptance criterion (`testing`
+   skill). A gap in verification or a difference from the approved plan gets
+   one line, only when it matters: here, or under Needs a person if a person
+   must accept it.
 3. **Needs a person**: decisions only.
 4. **Follow-ups**: one line each; filing them in Linear is optional. A
    breaking change lists a `prune-review` of the affected area.
 
-Keep the body to about 150 words for a PR under 100 changed lines, and at
-most 300 otherwise:
-
-- Link evidence instead of pasting it. Showing that a check fails takes one
-  line per check, with its run link.
-- No "why I didn't do X" prose. Mention a rejected option only when a
-  reviewer would otherwise ask, in one sentence.
-- Mention diagrams only when they change. A PR that changes components, data
-  flow, state, or external dependencies still updates `docs/architecture.md`,
-  following the `architecture-docs` skill.
+Link evidence instead of pasting it: showing that a check fails takes one
+line per check, with its run link. No "why I didn't do X" prose: mention a
+rejected option only when a reviewer would otherwise ask, in one sentence.
+Mention diagrams only when they change; a change to components, data flow,
+state, or external dependencies still updates `docs/architecture.md`
+(`architecture-docs` skill).
 
 Commit messages carry the guide to reviewing: each commit is one coherent
 step, with a message stating why, not just what.

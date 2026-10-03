@@ -33,8 +33,7 @@ Use these headings, and keep each to a few lines:
   what changes in it.
 - **Acceptance criteria**: behaviour someone can check. Each becomes a named
   test (`testing` skill).
-- **Open questions**: anything you would otherwise have to guess. Omit the
-  heading when there are none.
+- **Open questions**: anything you would otherwise have to guess; omit if none.
 
 If the work needs more than one PR, say so; once the plan is approved, the
 `decompose` skill splits it into sub-issues.
@@ -46,6 +45,5 @@ issue the task came from, or in reply to whoever asked for it. Don't commit it
 to the repository; plans live in Linear, not in shared files (finding F7).
 
 Then stop. Write no code until a person approves the plan. If they ask for
-changes, revise it and stop again. If the work later differs from the
-approved plan in a way that matters, the PR says so in one line
-(`reviewable-prs`).
+changes, revise it and stop again. The PR notes, in one line, any difference
+from the approved plan that matters (`reviewable-prs`).

@@ -9,8 +9,8 @@ description: >
 # Large changes
 
 When a task exceeds the ceiling, stack it: plan the sequence of PRs first,
-aiming for about 300 changed lines each, make each one build and pass tests
-on its own, and base each branch on the previous one. Prefer landing an unused-but-tested piece before the change that
+make each one build and pass tests on its own, and base each branch on the
+previous one. Prefer landing an unused-but-tested piece before the change that
 wires it in.
 
 ## Oversize overrides

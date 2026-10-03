@@ -58,15 +58,13 @@ PR breaks.
 
 Check against `reviewable-prs.mdc` and the PR template:
 
-- One logical change within the line budget, or an `Oversize:` first line
+- One logical change within the 500-line ceiling, or an `Oversize:` first line
   whose category and reason the `large-changes` skill allows.
 - No refactor mixed with a behaviour change, and no drive-by edits. Problems
   outside the task are reported as issues, not fixed in the PR.
-- The body uses the template's sections in order, omits empty ones, and is
-  about 150 words for a PR under 100 changed lines, at most 300 otherwise.
-- Flag padding: pasted output where a link would do, a section that says
-  `None`, text that restates the diff, and "why I didn't do X" prose beyond
-  one sentence a reviewer would otherwise ask for.
+- The body follows the "PR body" section of `reviewable-prs`, within its word
+  limit. Flag padding: pasted output where a link would do, `None`, restating
+  the diff, and "why I didn't do X" prose a reviewer wouldn't ask for.
 - A change to components, data flow, state, or external dependencies updates
   `docs/architecture.md`, and the body names the diagrams it changed.
 

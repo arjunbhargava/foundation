@@ -357,30 +357,24 @@ skills and one for CI.
 PR descriptions were often longer than the code they described, and full of
 "why I didn't do X" prose. The owner decided:
 
-- The PR template has four sections: **What and why** (at most 3 sentences;
-  link the issue), **Verified** (commands and CI links, one line each; which
-  test covers each acceptance criterion, in a line, not a table), **Needs a
-  person** (decisions only; omit when empty), and **Follow-ups** (one line
-  each; filing them in Linear is optional).
+- Four PR sections: **What and why** (at most 3 sentences; link the issue),
+  **Verified** (commands and CI links, one line each; which test covers each
+  acceptance criterion, in a line, not a table), **Needs a person**
+  (decisions only), and **Follow-ups** (one line each; filing them in Linear
+  is optional). Omit an empty section rather than writing "None".
 - Drop "How to review" (commit messages carry it), "What was not verified"
   and "Changes from the plan" (one line under Verified or Needs a person,
-  only when it matters), and "Diagrams" (mention diagrams only when they
-  change; the `architecture-docs` requirement stays).
-- Omit an empty section rather than writing "None".
-- No "why I didn't" prose. Mention a rejected option only when a reviewer
-  would otherwise ask, in one sentence.
-- Link evidence instead of pasting it: a check-failure demonstration is one
-  line per check, with its run link.
+  only when it matters), and "Diagrams" (mention them only when they change;
+  the `architecture-docs` requirement stays).
+- No "why I didn't" prose; mention a rejected option only when a reviewer
+  would otherwise ask, in one sentence. Link evidence instead of pasting it:
+  a check-failure demonstration is one line per check, with its run link.
 - Description length: about 150 words for a PR under 100 changed lines, at
-  most 300 otherwise.
-- Task size: aim for 300 changed lines; 500 stays the ceiling. One language
-  or one concern per PR.
-- The `dependencies` rule's development-only licences also include Creative
-  Commons licences on data, such as caniuse-lite's CC-BY-4.0, which the owner
-  accepted in #28.
-- Done when: no file asks for a removed section or "None", and
-  `.github/pull_request_template.md`, `reviewable-prs`, and `BUGBOT.md`
-  agree.
+  most 300 otherwise. Task size: aim for 300 changed lines, with 500 the
+  ceiling; one language or one concern per PR.
+- The `dependencies` rule's development-only licences include Creative
+  Commons licences on data, such as caniuse-lite's CC-BY-4.0 (#28).
+- Done when: no file asks for a removed section or "None".
 
 ### Stage 5: compute jobs
 
