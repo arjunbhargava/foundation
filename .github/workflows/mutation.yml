@@ -14,8 +14,8 @@ on:
       - src/**
       - tests/**
       - crates/**
-      - scripts/mutate.sh
-      - scripts/mutate_test.sh
+      - .github/scripts/mutate.sh
+      - .github/scripts/mutate_test.sh
       - .github/workflows/mutation.yml
 
 permissions:
