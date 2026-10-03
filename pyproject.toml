@@ -11,7 +11,10 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "breathe>=5.0.0",
     "furo>=2025.12.19",
+    "import-linter>=2.15",
+    "mutmut>=3.8.0",
     "myst-parser>=5.1.0",
     "pyright[nodejs]>=1.1.414",
     "pytest>=9.1.1",
@@ -22,7 +25,8 @@ dev = [
 ]
 
 [tool.ruff]
-# People write .cursor/ (AGENTS.md), and its conf.py is a template to copy.
+# People write .cursor/ (AGENTS.md), and ruff formats the Python blocks in its
+# Markdown.
 extend-exclude = [".cursor"]
 
 [tool.ruff.lint]
@@ -38,6 +42,23 @@ convention = "google"
 
 [tool.pyright]
 typeCheckingMode = "strict"
+# mutants/ is mutmut's generated copy of src/. Setting exclude replaces
+# pyright's defaults, so the other three entries restore them.
+exclude = ["mutants", "**/node_modules", "**/__pycache__", "**/.*"]
+
+# Module boundaries, which `mise run lint:python` checks with lint-imports.
+# Add a contract for each rule:
+# https://import-linter.readthedocs.io/en/stable/contract_types.html
+[tool.importlinter]
+root_package = "foundation"
+# Lets a contract name a package from outside foundation, such as pytest.
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Library code doesn't import pytest, a development-only dependency"
+type = "forbidden"
+source_modules = ["foundation"]
+forbidden_modules = ["pytest"]
 
 [tool.pytest]
 # -n auto runs tests in parallel, so a test that depends on shared state or on
@@ -46,3 +67,8 @@ addopts = ["-n", "auto", "--doctest-modules"]
 testpaths = ["src", "tests"]
 strict = true
 filterwarnings = ["error"]
+
+[tool.mutmut]
+# mutmut records which tests call each function, and can't see calls made in
+# pytest-xdist's worker processes, so it runs the tests in one process.
+pytest_add_cli_args = ["-n", "0"]

@@ -4,7 +4,7 @@ description: >
   Turn an approved plan into Linear sub-issues, one per PR, each stating the
   interface it builds or uses, the files it owns, its acceptance criteria, the
   command that checks it, and the sub-issues it waits for. Use when a plan
-  approved through the `spec` skill needs more than one PR, or when asked to
+  approved through the `plan` skill needs more than one PR, or when asked to
   split work into tasks for agents.
 ---
 
@@ -16,7 +16,7 @@ with each other (finding F7 in `docs/template-plan.md`). Splitting closely
 connected code between agents breaks interfaces and causes rework (F8). So
 agree the interface first, land it, and then split the rest.
 
-Start only from a plan a person has approved (`spec` skill). Follow
+Start only from a plan a person has approved (`plan` skill). Follow
 `docs/linear.md`: the plan's issue becomes the parent, with one sub-issue per
 PR.
 
@@ -28,7 +28,7 @@ PR.
 - Keep closely connected work in one sub-issue rather than splitting it. Work
   is closely connected when its parts can't be built against an interface
   fixed in advance, or when they change the same functions.
-- Each sub-issue is one PR within the 500-line budget in `reviewable-prs`.
+- Each sub-issue is one PR within the size limits in `reviewable-prs`.
   Connected work too large for one PR becomes a stack (`large-changes`
   skill): one sub-issue per PR, each waiting for the one before.
 - Two sub-issues that can run at the same time don't own the same file.

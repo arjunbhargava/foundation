@@ -26,4 +26,20 @@ for linked_page in $(grep -o 'href="rust/[^"]*"' docs/api/rust.md | cut -d '"' -
   fi
 done
 
+# TypeScript: TypeDoc writes Markdown, which MyST renders inside the site.
+pnpm exec typedoc packages/statistics/src/variance.ts --plugin typedoc-plugin-markdown \
+  --out docs/_generated/ts --entryFileName index --readme none --outputFileStrategy modules \
+  --hidePageHeader --validation.notDocumented --treatWarningsAsErrors
+
+# C and C++: Doxygen writes XML, which Breathe reads during sphinx-build.
+# Doxygen skips undocumented functions and macros in a header that has no
+# @file comment, so the build requires one in every header.
+headers_without_file_comment=$(grep -rL '[@\]file' cpp/include || true)
+if [[ -n $headers_without_file_comment ]]; then
+  echo "error: add a @file doc comment to these headers, so that Doxygen reports their undocumented symbols:" >&2
+  echo "$headers_without_file_comment" >&2
+  exit 1
+fi
+doxygen Doxyfile
+
 uv run sphinx-build -W --keep-going -q -b html docs docs/_build/html

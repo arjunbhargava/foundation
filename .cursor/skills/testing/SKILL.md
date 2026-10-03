@@ -24,7 +24,7 @@ behaviour did help (finding F4 in `docs/template-plan.md`).
 - The test asserts a concrete result: given these inputs, this output or this
   error. A test that only checks the code runs, or that would still pass with
   the change reverted, doesn't cover the criterion.
-- "How it was verified" in the PR body pairs each criterion with its test. A
+- "Verified" in the PR body pairs each criterion with its test. A
   criterion no automated test can check, such as how a page looks, names the
   manual check instead.
 - Use the test runner the language already has. The `ponytail` rule's single
@@ -55,8 +55,34 @@ when it fails.
 ## Paid and live-service tests
 
 A test that costs money or calls a live service runs only when a person or the
-issue asks for it, never in normal CI. Mark it so that `mise run test` skips it
-by default, and say under "How it was verified" when it ran.
+issue asks for it, never in normal CI. Mark it `live`, so that `mise run test`
+skips it, and say under "Verified" when it ran.
+
+| Language | Mark the test | Run only the `live` tests |
+|---|---|---|
+| Python | `@pytest.mark.live` | `mise run test:python -- -m live` |
+| Rust | `#[ignore = "live: costs money or calls a live service"]` | `mise run test:rust -- -- --ignored` |
+| TypeScript | `test("…", { tags: ["live"] }, () => { … })` | `mise exec -- pnpm exec vitest run --tags-filter live` |
+| C and C++ | `set_tests_properties(<test> PROPERTIES LABELS live)` in `CMakeLists.txt` | `mise run test:cpp -- -L live -LE '^$'` |
+
+`cargo test` skips ignored tests with no configuration; `--ignored` runs every
+ignored test, not only `live` ones. The other runners need configuration that
+the template doesn't have yet, which the language's first `live` test adds:
+
+- **Python:** in `[tool.pytest]` in `pyproject.toml`, add `"-m", "not live"`
+  to `addopts`, and `markers = ["live: costs money or calls a live service"]`.
+  `strict = true` fails a test whose marker isn't registered.
+- **TypeScript:** a root `vitest.config.ts` that defines the tag, since vitest
+  fails a test whose tag isn't defined:
+  `defineConfig({ test: { tags: [{ name: "live", description: "costs money or calls a live service" }] } })`.
+  Add `--tags-filter '!live'` to `test:typescript` in `mise.toml`, and the new
+  file to the `typescript` output of the `changes` job in `ci.yml`. Vitest
+  combines several `--tags-filter` flags with AND, so the `live` tests run
+  through vitest directly, not `mise run`.
+- **C and C++:** add `"filter": { "exclude": { "label": "^live$" } }` to the
+  `sanitizers` test preset in `CMakePresets.json`. `-L live` alone finds no
+  tests, because the preset still excludes them; `-LE '^$'` replaces that
+  exclusion with one that matches no test.
 
 ## Numerical code
 

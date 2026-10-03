@@ -4,9 +4,12 @@ project = "foundation"
 
 extensions = [
     "myst_parser",
+    # Python:
     "autoapi.extension",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
+    # C and C++:
+    "breathe",
 ]
 
 # Python: parsed from source without importing it.
@@ -24,9 +27,14 @@ autoapi_add_toctree_entry = False
 # publishes it unchanged, without reading it as sources.
 html_extra_path = ["_generated/html"]
 
-# Links standard-library names in signatures, such as collections.abc.Sequence,
-# to the Python docs. nitpicky fails the build on any it can't resolve. Each
-# build downloads this inventory, so it needs network access.
+# C and C++: docs/build.sh runs Doxygen, whose XML Breathe reads.
+breathe_projects = {"foundation": "_generated/doxygen"}
+breathe_default_project = "foundation"
+
+# Python: links standard-library names in signatures, such as
+# collections.abc.Sequence, to the Python docs. nitpicky fails the build on any
+# it can't resolve. Each build downloads this inventory, so it needs network
+# access.
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 nitpicky = True

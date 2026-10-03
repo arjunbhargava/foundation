@@ -54,9 +54,9 @@ benchmarks, so treat the numbers as direction rather than precise effects.
 | F3 | About half of agent PRs that passed the tests would not have been merged by the projects' maintainers. The main reasons were not really fixing the problem, breaking other code, and poor code quality. [3] | Passing tests is not enough. Add an independent review step, test-quality checks, and a clearer handoff. |
 | F4 | Telling agents to "use test-driven development" or "use property-based testing" made little difference; agents went through the motions. Tests that state concrete expected behaviour did help. [4][5] | Don't require a process. Require one named test for each acceptance criterion, and measure test quality with mutation testing. |
 | F5 | A second model reviewing finished code helped more than a model planning before the code was written. Good plans help, but a bad plan is worse than none. [6][7] | People approve plans only for larger changes. Every PR gets a review by a separate agent before a person sees it. |
-| F6 | Asking agents for a structured handoff made their work easier to review, not more correct. Sections such as "known limitations" appeared only when required. [8] | The PR template requires those sections. |
+| F6 | Asking agents for a structured handoff made their work easier to review, not more correct. Sections such as "known limitations" appeared only when required. [8] | The PR template requires a short handoff, with one line for any limitation that matters (T24). |
 | F7 | In Cursor's experiments with hundreds of agents, agents coordinating through a shared file with locks collapsed to the speed of 1–3 agents. What worked was a planner that splits the work, workers that each own one task on their own copy of the code, and a handoff back to the planner. [9] | Plans and task lists live in Linear, not in a shared file. Each task becomes one agent, one branch, and one PR. |
-| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Use a merge queue. |
+| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Test each PR combined with `main` before merging: up-to-date branches for now, a merge queue later (T4). |
 | F9 | At Meta, engineers accepted 73% of tests generated to catch specific deliberate bugs. [12] | Use mutation testing to measure whether agent-written tests catch real mistakes. |
 
 ## Decisions
@@ -74,15 +74,15 @@ a person has recorded a different choice here.
 | D6 | Merge method | Merge commits; no squash | The rules ask for commit history that reads as the review story. Squashing erases it. |
 | D7 | Which changes need a person to approve a plan before coding | New module; change to a public interface or data format; new dependency; compute spend above the cost limit | Planning has a cost and only pays off for larger changes. |
 | D8 | Cost limit for one agent-launched compute job before asking a person | **Decided:** no per-job limit for now; total agent compute spend at most $10,000 per day | Enforce the daily cap with the provider's budget controls (T16), not only the rule. Revisit the per-job limit when T16 lands. |
-| D9 | Open agent PRs allowed per reviewer | Start at 3 | People review everything, so review time, not agent count, limits throughput. Adjust from data. |
+| D9 | Open agent PRs allowed per reviewer | **Decided:** 5, raised from 3 on 2026-10-02 | People review everything, so review time, not agent count, limits throughput. The owner raised it to 5 after Stage 2, because 3 made progress too slow. Adjust from data. |
 | D10 | Cursor plan | Ask the owner | Team pools of the team's own GPU machines for agents need the Enterprise plan. |
 
 ## The work
 
-Each task below is one PR of at most 500 changed lines, following
-`reviewable-prs`. Each must pass CI on its own. "Needs" lists the tasks that
-must be merged first. Tasks with the same needs can run in parallel, each with
-its own agent.
+Each task below is one PR of about 300 changed lines, and at most 500,
+following `reviewable-prs`. Each must pass CI on its own. "Needs" lists the
+tasks that must be merged first. Tasks with the same needs can run in
+parallel, each with its own agent.
 
 Some steps are settings in GitHub, Cursor, or Linear rather than files. Agents
 can't change those settings, so they're marked **(person)**.
@@ -181,17 +181,8 @@ can't change those settings, so they're marked **(person)**.
 
 **T5. PR template.** Needs: T1. Can run alongside T2–T4.
 
-- `.github/pull_request_template.md`, in the order from `reviewable-prs`:
-  1. What changes and why, with the Linear issue ID (for example
-     `Fixes ENG-123`). This links the PR to the issue.
-  2. How to review: where to start, and what can be skimmed.
-  3. How it was verified, including which test covers each acceptance
-     criterion.
-  4. What was not verified, and known limitations.
-  5. Changes from the agreed plan, and problems found outside the task's
-     scope. Report these as new Linear issues rather than fixing them here.
-  6. Diagrams updated, or "no structural change".
-  7. Risks and follow-ups.
+- `.github/pull_request_template.md`, with the sections `reviewable-prs`
+  lists, in its order. T24 cut them from seven to four.
 - Update `reviewable-prs` to match.
 - Done when: the template and the rule list the same sections in the same
   order.
@@ -292,7 +283,7 @@ edit it (F2). Keep each skill short and focused.
     match known exact solutions; results respect the problem's symmetries.
     Compare floating-point values with stated tolerances, never exact
     equality.
-- `spec`: for changes that meet the D7 threshold, write a short plan covering
+- `plan`: for changes that meet the D7 threshold, write a short plan covering
   the problem, the interface, the files touched, and the acceptance criteria.
   Then stop until a person approves it.
 - `decompose`: turn an approved plan into Linear sub-issues. Each sub-issue
@@ -302,6 +293,13 @@ edit it (F2). Keep each skill short and focused.
   work in one task rather than splitting it (F8).
 - `add-language`: the steps from Stage 2 as a checklist, so a project can add
   a language later.
+
+**T20. Rename the `spec` skill to `plan`.** Needs: T12.
+
+- The skill writes what D7, the PR template, and `docs/linear.md` call a
+  plan, and the `clarity` rule asks for one name per concept (found in PR
+  #12). Rename the directory and every reference to it, with no other change,
+  as a mechanical PR.
 
 ### Stage 4: review and quality checks
 
@@ -318,7 +316,17 @@ F5.
 - Run mutation testing on changed code in CI (F4, F9). At first it reports results
   only; it doesn't block merging. Tools: `cargo-mutants` (Rust), `mutmut`
   (Python), StrykerJS (TypeScript), Mull (C/C++; the least mature).
-- Decide after a month of data whether to make it blocking.
+- Decide after a month of data whether to make it blocking. The data for each
+  PR in that month comes from the runs of `.github/workflows/mutation.yml`:
+  - Each language's counts, from the line
+    `### <Language> mutation testing: <survived> of <total> mutants survived`
+    that starts its report. `gh run list --workflow mutation.yml` lists the
+    runs, and `gh run view <run ID> --log | grep 'mutation testing:'` prints
+    the lines. GitHub keeps logs for 90 days by default.
+  - The job's wall time, from `startedAt` and `completedAt` in
+    `gh run view <run ID> --json jobs`.
+  - For a sample of surviving mutants, whether a person judges each one a gap
+    in the tests or a change that can't alter behaviour.
 
 **T15. Enforce module boundaries.** Needs: T7, T8, T9.
 
@@ -328,9 +336,64 @@ F5.
   For C/C++, use CMake target visibility.
 - The example modules get one boundary rule each, to prove the check works.
 
+**T21. Fixes from the first language tasks.** Needs: T7, T8, T9.
+
+The language tasks were the first users of several skills and of CI with
+four languages, and their PRs listed what to fix. Split into one PR for the
+skills and one for CI.
+
+- `add-language`: add what T6–T9 found missing or wrong. Development tools go
+  in the lockfile, not `mise.toml`; each version has one source; a language
+  adds `lint:<language>` and `test:<language>` and edits only `setup` and
+  `fmt`; the CI filter includes root config files and files other jobs read;
+  tools must work on every platform the `install-script` job runs on; what to
+  do when a tool can't come from mise, or the language has no package
+  manager; the Dependabot cooldown; and how to show each check failing
+  without one break hiding another.
+- `source-docs`: intersphinx in the Sphinx configuration it gives projects; the
+  Rust stub page's link, which fails under MyST; and `-D missing_docs` in
+  `RUSTDOCFLAGS`.
+- `testing`: name the marker in each language that keeps paid and
+  live-service tests out of `mise run test`.
+- CI: install only the tools each job needs, or cache mise's directory;
+  check that each lockfile matches its manifest (`uv sync --locked`,
+  `pnpm install --frozen-lockfile`, `cargo build --locked`); run cargo-deny's
+  advisory check on a schedule; and group the `changes` job's
+  `$GITHUB_OUTPUT` lines (actionlint SC2129).
+- Dependabot can't update the pins in `mise.toml`. Bump them by hand, or move
+  to Renovate if that becomes a burden.
+
+**T24. Smaller PRs and shorter descriptions.** Needs: T13.
+
+PR descriptions were often longer than the code they described, and full of
+"why I didn't do X" prose. The owner decided:
+
+- Four PR sections: **What and why** (at most 3 sentences; link the issue),
+  **Verified** (commands and CI links, one line each; which test covers each
+  acceptance criterion, in a line, not a table), **Needs a person**
+  (decisions only), and **Follow-ups** (one line each; filing them in Linear
+  is optional). Omit an empty section rather than writing "None".
+- Drop "How to review" (commit messages carry it), "What was not verified"
+  and "Changes from the plan" (one line under Verified or Needs a person,
+  only when it matters), and "Diagrams" (mention them only when they change;
+  the `architecture-docs` requirement stays).
+- No "why I didn't" prose; mention a rejected option only when a reviewer
+  would otherwise ask, in one sentence. Link evidence instead of pasting it:
+  a check-failure demonstration is one line per check, with its run link.
+- Description length: about 150 words for a PR under 100 changed lines, at
+  most 300 otherwise. Task size: aim for 300 changed lines, with 500 the
+  ceiling; one language or one concern per PR.
+- The `dependencies` rule's development-only licences include Creative
+  Commons licences on data, such as caniuse-lite's CC-BY-4.0 (#28).
+- Done when: no file asks for a removed section or "None".
+
 ### Stage 5: compute jobs
 
 **T16. Compute job support.** Needs: T6, D4, D8.
+
+**Deferred** (owner, 2026-10-02): the owner will run compute jobs on their own
+cloud, so D4's choice of launcher waits until that setup is known. T18 doesn't
+wait for this task.
 
 - A base container image (`Dockerfile`) with pinned CUDA versions. CI builds
   it, tags it with the commit, and pushes it to GitHub's container registry.
@@ -381,9 +444,27 @@ F5.
 - In the repository: `docs/linear.md`, listing these conventions in a few
   lines.
 
+**T22. Collect follow-ups from merged PRs.** Needs: T13, T17.
+
+Every PR lists work for later under "Follow-ups" and decisions under "Needs
+a person" (T24), but nothing collects them afterwards, so they are lost
+unless someone rereads old PRs. This task adds a scheduled Cursor Automation
+that does that, alongside `prune-review`.
+
+- A skill, or a section of `prune-review`, covers the run: read those two
+  sections of PRs merged since the last run, or the sections that held the
+  same items in PRs from before T24; drop items `main` has already
+  fixed; and file each remaining item as a Linear issue without
+  `agent-ready`, so a person decides what agents work on. Decisions go in a
+  separate list for a person, not into PRs.
+- A scheduled automation, weekly or after a set number of merges, runs this
+  and `prune-review` together. Each fix lands as its own small PR.
+- Done when: a run on this repository files the open items from PRs #1–#17
+  that the housekeeping PR didn't fix, and none it did.
+
 ### Stage 7: template mechanics
 
-**T18. Convert to Copier.** Needs: all earlier tasks, D1.
+**T18. Convert to Copier.** Needs: all earlier tasks except T16, D1.
 
 - Turn the repository into a Copier template with one yes/no question per
   language.
@@ -405,19 +486,32 @@ projects that use the template.
 - Repeat after each model upgrade, and remove instructions that no longer
   help.
 
+**T23. Auto mode for exploratory tasks.** Needs: T13, T22.
+
+Some tasks need several rounds of exploration, and waiting for a person's
+review on each round stalls them. In auto mode, PRs for a task marked as
+exploratory merge without a person's approval, with CI and Bugbot as the
+gate. Design first, covering:
+
+- How a task is marked for auto mode, and who can mark it.
+- What replaces the required approval in the `main: review` ruleset (T4, D6)
+  for those PRs, without weakening it for others.
+- Spend and size limits for an auto-mode task.
+- How a person audits auto-merged work afterwards.
+
 ## Order and parallel work
 
 ```text
 T1 ─┬─ T2
     ├─ T3 ── T4 ── T6 ─┬─ T7 ─┐
-    │                  ├─ T8 ─┼─ T14, T15
+    │                  ├─ T8 ─┼─ T14, T15, T21
     │                  ├─ T9 ─┘
     │                  └─ T16 (also needs D4, D8)
-    ├─ T5 ─┬─ T13
-    │      └─ T17
+    ├─ T5 ─┬─ T13 ─┬─ T24
+    │      └─ T17 ─┴─ T22 ── T23
     └─ T10 ─┬─ T11
-            └─ T12
-T18 needs everything above.
+            └─ T12 ── T20
+T18 needs everything above except T16, T22, and T23.
 ```
 
 Right after T1, four tasks (T2, T3, T5, T10) can start at once. Keep the
@@ -434,10 +528,11 @@ merged.
 - Shared state lives in git and Linear only. No shared task files, no shared
   databases or fixed ports, and every external resource name includes the
   branch or run ID.
-- An agent that finds a problem outside its task files a Linear issue instead
-  of fixing it.
-- The merge queue tests each PR combined with the ones ahead of it before
-  merging.
+- An agent that finds a problem outside its task lists it under Follow-ups
+  instead of fixing it.
+- Each PR is tested combined with `main` before merging. For now that means
+  requiring up-to-date branches; a merge queue replaces it once the
+  repository moves to an organization (T4).
 - For a hard task, run several agents on it separately and review only the
   best result. Parallel agents should not multiply review work.
 
@@ -446,8 +541,9 @@ merged.
 - A custom system for coordinating agents. Cursor already provides subagents,
   an API, automations, and Linear routing.
 - Agents talking to each other directly, or shared memory files.
-- A dedicated agent for merging other agents' work. The merge queue covers it,
-  and Cursor found such a role slowed things down [9].
+- A dedicated agent for merging other agents' work. Required up-to-date
+  branches, and later a merge queue, cover it, and Cursor found such a role
+  slowed things down [9].
 - Release automation, deployment, and choices of C/C++ package manager or
   experiment tracker. These belong to each project.
 - Go. It appears in the `source-docs` skill but isn't a team language; remove

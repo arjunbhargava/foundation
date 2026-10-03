@@ -1,0 +1,38 @@
+# Checks main's locked Rust dependencies against the RustSec advisory database
+# once a week. lint:rust checks advisories too, but CI runs it only on PRs
+# that change Rust files, so without this a new advisory against a locked
+# crate goes unseen until the next Rust change. It doesn't run on PRs, and
+# the rulesets don't require it.
+#
+# GitHub runs a schedule only on the default branch. It sends a failed run's
+# notification to whoever created the workflow or last changed its cron line.
+# In a public repository, it disables the schedule after 60 days with no
+# repository activity.
+name: Rust advisories
+
+on:
+  schedule:
+    # Mondays at 06:23 UTC. GitHub delays or drops runs at the start of an hour.
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Naming bash explicitly adds -o pipefail, which the default shell lacks.
+    shell: bash
+
+jobs:
+  cargo-deny-advisories:
+    runs-on: ubuntu-latest
+    env:
+      # cargo-deny reads the dependency graph with cargo.
+      MISE_ENABLE_TOOLS: rust,cargo-deny
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise exec -- cargo deny --locked check advisories

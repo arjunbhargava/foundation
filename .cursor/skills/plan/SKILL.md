@@ -1,5 +1,5 @@
 ---
-name: spec
+name: plan
 description: >
   Write a short plan covering the problem, the interface, the files touched,
   and the acceptance criteria, then stop until a person approves it. Use when
@@ -8,12 +8,12 @@ description: >
   dependency.
 ---
 
-# Spec
+# Plan
 
 Some changes need a plan that a person approves before any code is written:
 those that meet decision D7 in `docs/template-plan.md`. Check a task against
 D7 before starting, and again if the work grows, for example when it turns out
-to need a new dependency. Below the threshold, write no plan. Planning pays
+to need a new module. Below the threshold, write no plan. Planning pays
 off only for larger changes, and a bad plan is worse than none (finding F5).
 
 D7's last trigger, compute spend above the cost limit, is handled when a job
@@ -33,7 +33,7 @@ Use these headings, and keep each to a few lines:
   what changes in it.
 - **Acceptance criteria**: behaviour someone can check. Each becomes a named
   test (`testing` skill).
-- **Open questions**: anything you would otherwise have to guess, or None.
+- **Open questions**: anything you would otherwise have to guess; omit if none.
 
 If the work needs more than one PR, say so; once the plan is approved, the
 `decompose` skill splits it into sub-issues.
@@ -45,5 +45,6 @@ issue the task came from, or in reply to whoever asked for it. Don't commit it
 to the repository; plans live in Linear, not in shared files (finding F7).
 
 Then stop. Write no code until a person approves the plan. If they ask for
-changes, revise it and stop again. The PR's "Changes from the plan" section
-later reports how the work differs from the approved plan.
+changes, revise it and stop again. The PR notes, in one line, any difference
+from the approved plan that matters (`reviewable-prs`). A new dependency the
+plan doesn't name doesn't stop the work; the PR marks it "(not in the plan)".

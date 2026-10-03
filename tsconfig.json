@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"module": "nodenext",
+		"noEmit": true,
+		// Lets an import name the .ts file it imports, which Vite and Node both
+		// resolve.
+		"allowImportingTsExtensions": true,
+		// Vitest compiles one file at a time, so tsc must reject code that only
+		// compiles with the whole program in view.
+		"isolatedModules": true
+	},
+	"include": ["packages/*/src"]
+}
