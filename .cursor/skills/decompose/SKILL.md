@@ -28,7 +28,7 @@ PR.
 - Keep closely connected work in one sub-issue rather than splitting it. Work
   is closely connected when its parts can't be built against an interface
   fixed in advance, or when they change the same functions.
-- Each sub-issue is one PR within the 500-line budget in `reviewable-prs`.
+- Each sub-issue is one PR within the size limits in `reviewable-prs`.
   Connected work too large for one PR becomes a stack (`large-changes`
   skill): one sub-issue per PR, each waiting for the one before.
 - Two sub-issues that can run at the same time don't own the same file.

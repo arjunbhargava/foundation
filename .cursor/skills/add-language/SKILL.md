@@ -23,6 +23,12 @@ first code in the language.
 - [ ] Format, lint, and type checks, with warnings treated as errors. `fmt`
       fixes everything the format check reports, including import order if
       the check covers it.
+- [ ] A module boundary check in `lint:<language>`, with one rule that a
+      plausible mistake in the example breaks, such as library code
+      importing a development-only dependency. Where the build already
+      enforces the rule, as Cargo and CMake do, the build is the check. Add
+      the language to the "Module boundaries" list under "Where code lives"
+      in `AGENTS.md`, naming the file and section its rules go in.
 - [ ] Each tool checks only the files it should. Exclude `.cursor/`, which
       people write: ruff also formats Python code blocks in Markdown, so
       `pyproject.toml` excludes it. Expect overlap at the root: Biome checks
@@ -71,11 +77,13 @@ repository installs. This is where each version lives:
 
 ## Commands
 
-- [ ] `lint:<language>` and `test:<language>` tasks in `mise.toml`, which
-      `lint` and `test` pick up. Of the shared tasks, edit only `setup` and
-      `fmt`. `setup` installs from the lockfile in a mode that fails when it
-      doesn't match the manifest, such as `uv sync --locked`; a language with
-      no package manager adds nothing to it.
+- [ ] `lint:<language>`, `test:<language>`, and `setup:<language>` tasks in
+      `mise.toml`, which `lint`, `test`, and `setup` pick up. Of the shared
+      tasks, edit only `fmt`. `setup:<language>` installs from the lockfile in
+      a mode that fails when it doesn't match the manifest, such as
+      `uv sync --locked`, so the language's CI job fails on a manifest edited
+      without relocking. A language with no package manager has no
+      `setup:<language>`.
 - [ ] `test:<language>` runs the tests of every package in the language, and
       passes arguments after `--` to the test runner. Add both tasks to the
       Commands table in `AGENTS.md`, with an example of passing arguments to
@@ -90,6 +98,18 @@ repository installs. This is where each version lives:
       (such as `tsconfig.json` or `.clang-tidy`), and each file that only
       another job reads. The `docs` job runs only when some output is true,
       so `Doxyfile`, which only the docs build reads, is in the `cpp` output.
+- [ ] The job's `MISE_ENABLE_TOOLS` lists each tool in `mise.toml` that its
+      commands run, and `.cursor/install.sh` installs only those. The job
+      runs `mise run setup:<language>`, if the language has one, before lint
+      and test. Add the tools the language's docs block runs to the `docs`
+      job's list too. mise ignores a tool missing from a list, so the command
+      silently runs the runner's own version, or fails if the runner has
+      none. The C and C++ job lists `uv` for this reason: mise installs the
+      `pipx:` tools with it, and without it falls back to the runner's pipx.
+      To check a list, set `MISE_ENABLE_TOOLS` to it locally and run
+      `mise exec -- which <tool>` for each tool the job's commands call: each
+      must resolve inside mise's directory. Rust's tools resolve to rustup's
+      proxies in `~/.cargo/bin` instead, which read `rust-toolchain.toml`.
 - [ ] Its language in the matrix in `.github/workflows/codeql.yml`.
 - [ ] Its package ecosystem in `.github/dependabot.yml`, with the weekly
       schedule and 7-day `cooldown` that every entry has. A language with no
@@ -132,5 +152,5 @@ reverting:
 6. Break a check that treats warnings as errors with a warning, not an error,
    so that the run shows warnings fail.
 7. Revert every break in one commit, and check that the tree then matches the
-   commit before the first break. List each break under "How it was
-   verified" with its commit, its CI run, and the error it printed.
+   commit before the first break. Under "Verified", give each break one
+   line: the check it broke, and a link to its CI run.
