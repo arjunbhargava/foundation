@@ -5,6 +5,12 @@
 # To add a language: add an output to the changes job, add a job that needs
 # changes and runs only when that output is 'true', and add the job to
 # ci-ok's needs. Jobs run tools through the shared `mise run` commands.
+#
+# Each job sets MISE_ENABLE_TOOLS to the tools in mise.toml that its commands
+# run, and .cursor/install.sh installs only those. mise ignores a tool missing
+# from the list, so its command runs the runner's own version, or fails if
+# the runner has none. Add a new tool to every job that runs it, including
+# docs, which runs every language's docs tools.
 name: CI
 
 on:
@@ -55,19 +61,22 @@ jobs:
               echo true
             fi
           }
-          echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)" >> "$GITHUB_OUTPUT"
-          echo "docs=$(changed docs/)" >> "$GITHUB_OUTPUT"
-          echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)" >> "$GITHUB_OUTPUT"
-          echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)" >> "$GITHUB_OUTPUT"
-          echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)" >> "$GITHUB_OUTPUT"
-          echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)" >> "$GITHUB_OUTPUT"
+          {
+            echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)"
+            echo "docs=$(changed docs/)"
+            echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)"
+            echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)"
+            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)"
+            echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)"
+          } >> "$GITHUB_OUTPUT"
 
   install-script:
     # Sets up a fresh machine of each kind people use, the way a person does,
     # and one the way a cloud agent does, with the install command in
     # .cursor/environment.json. Then runs every check, then reruns the
     # script, which must find mise at that caller's mise-path and download
-    # nothing. /bin/bash is used because a fresh Mac's is bash 3.2.
+    # nothing. /bin/bash is used because a fresh Mac's is bash 3.2. It sets
+    # no MISE_ENABLE_TOOLS, so it installs every tool, as people do.
     needs: changes
     if: needs.changes.outputs.install-script == 'true'
     strategy:
@@ -99,22 +108,28 @@ jobs:
     needs: changes
     if: contains(toJSON(needs.changes.outputs), 'true')
     runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: uv,rust,node,pnpm,conda:doxygen
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: mise run setup
       - run: mise run docs
 
   python:
     needs: changes
     if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: uv
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: mise run setup:python
       - run: mise run lint:python
       - run: mise run test:python
 
@@ -122,11 +137,14 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: rust,cargo-deny
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: mise run setup:rust
       - run: mise run lint:rust
       - run: mise run test:rust
 
@@ -134,11 +152,14 @@ jobs:
     needs: changes
     if: needs.changes.outputs.typescript == 'true'
     runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: node,pnpm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: mise run setup:typescript
       - run: mise run lint:typescript
       - run: mise run test:typescript
 
@@ -149,6 +170,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.cpp == 'true'
     runs-on: ubuntu-latest
+    env:
+      # mise installs the pipx: tools with uv.
+      MISE_ENABLE_TOOLS: uv,cmake,ninja,pipx:clang-format,pipx:clang-tidy
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
