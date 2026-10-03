@@ -72,32 +72,45 @@ description = "Check formatting, lint, and types without changing files"
 depends = ["lint:*"]
 
 [tasks."lint:python"]
-description = "Check Python formatting, lint including docstrings, and types"
+description = "Check Python formatting, lint including docstrings, types, and module boundaries"
 run = [
   "uv run ruff format --check",
   "uv run ruff check",
   "uv run pyright --warnings",
+  "uv run lint-imports",
 ]
 
 [tasks."lint:rust"]
-description = "Check Rust formatting, lint including doc comments, and dependencies' advisories and licences"
+description = "Check Rust formatting, lint including doc comments, and dependencies' advisories, bans, licences, and sources"
 run = [
   "cargo fmt --check",
   "cargo clippy --locked --all-targets -- -D warnings",
-  "cargo deny --locked check advisories licenses",
+  "cargo deny --locked check advisories bans licenses sources",
 ]
 
 [tasks."lint:typescript"]
-description = "Check TypeScript formatting, lint, and types"
+description = "Check TypeScript formatting, lint, types, and module boundaries"
 run = [
   "pnpm exec biome ci --error-on-warnings",
   "pnpm exec tsc",
+  # err-long prints each broken rule's comment, which says what to do.
+  "pnpm exec depcruise packages --output-type err-long",
 ]
 
 [tasks."lint:cpp"]
-description = "Check C and C++ formatting, and build with clang-tidy and compiler warnings as errors"
+description = "Check C and C++ formatting and that no #include uses ../, and build with clang-tidy and compiler warnings as errors"
 run = [
   'find cpp -name "*.[ch]" -o -name "*.[ch]pp" | xargs clang-format --dry-run --Werror',
+  # CMake keeps a target's PRIVATE include directories, and those of its
+  # PRIVATE dependencies, off other targets' search paths. A quoted include
+  # with ../ is found relative to the including file instead, so it would
+  # reach any header in the repository.
+  '''
+  if grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<][^">]*\.\./' cpp; then
+    echo "error: the #include lines above use ../, which bypasses the include directories CMake gives each target. Include the header by its path under an include directory of a target this one links, such as foundation/interpolation.hpp." >&2
+    exit 1
+  fi
+  ''',
   "cmake --preset clang-tidy",
   "cmake --build --preset clang-tidy",
 ]
