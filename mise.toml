@@ -77,6 +77,10 @@ run = [
   "uv run ruff format --check",
   "uv run ruff check",
   "uv run pyright --warnings",
+  # Pyright skips dot directories, even files named on its command line, so
+  # .github/scripts/ is a project of its own, whose pyrightconfig.json takes
+  # the settings in pyproject.toml.
+  "uv run pyright --warnings --project .github/scripts",
   "uv run lint-imports",
 ]
 
