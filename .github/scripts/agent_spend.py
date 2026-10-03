@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Self
 
-API_KEY_VARIABLE = "CURSOR_ADMIN_API_KEY"
+ADMIN_KEY_VARIABLE = "CURSOR_ADMIN_API_KEY"
 USAGE_EVENTS_URL = "https://api.cursor.com/teams/filtered-usage-events"
 EVENTS_PER_PAGE = 1000  # The endpoint's maximum.
 REQUEST_TIMEOUT_S = 60
@@ -51,10 +51,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         stderr.
     """
     since, until = _parse_window(argv)
-    api_key = os.environ.get(API_KEY_VARIABLE)
+    api_key = os.environ.get(ADMIN_KEY_VARIABLE)
     if not api_key:
         print(
-            f"error: {API_KEY_VARIABLE} is not set. Set it to a Cursor team Admin API key: "
+            f"error: {ADMIN_KEY_VARIABLE} is not set. Set it to a Cursor team Admin API key: "
             "for cloud agents, as a secret under Cloud Agents > Secrets in the Cursor dashboard.",
             file=sys.stderr,
         )
