@@ -23,7 +23,8 @@ dev = [
 ]
 
 [tool.ruff]
-# People write .cursor/ (AGENTS.md), and its conf.py is a template to copy.
+# People write .cursor/ (AGENTS.md), and ruff formats the Python blocks in its
+# Markdown.
 extend-exclude = [".cursor"]
 
 [tool.ruff.lint]
