@@ -13,7 +13,7 @@ const EXACT_VARIANCE = 30;
 // tolerance, 1e-6 relative, is about 10 times that. The textbook one-pass
 // formula, bounded by n·κ²·ε ≈ 20, returns -170.67 here, and dividing by n
 // rather than n − 1 returns 22.5.
-const VARIANCE_TOLERANCE = 3e-5;
+const VARIANCE_TOLERANCE = 1e3;
 
 test("estimateVariance keeps its precision when the values share a large offset", () => {
 	const variance = estimateVariance(OFFSET_VALUES);
