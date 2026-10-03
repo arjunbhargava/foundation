@@ -19,7 +19,8 @@ idiomatic_version_file_enable_tools = ["rust"]
 # version and checksums are pinned in .cursor/install.sh.
 #
 # Each CI job installs only the tools its MISE_ENABLE_TOOLS names in
-# .github/workflows/ci.yml, so add a new tool to every job that runs it.
+# .github/workflows/ci.yml, so add a new tool to every job that runs it. A job
+# that runs a tool it doesn't list fails, with an error naming the tool.
 [tools]
 cargo-deny = "0.20.2"
 jq = "1.8.2" # .github/rulesets/apply.sh
@@ -165,6 +166,10 @@ run = ".github/scripts/mutate.sh typescript"
 [tasks."test:mutate-script"]
 description = "Check which files .github/scripts/mutate.sh mutates and what it reports, with fake mutation tools"
 run = ".github/scripts/mutate_test.sh"
+
+[tasks."test:block-unlisted-tools-script"]
+description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
+run = ".github/scripts/block_unlisted_tools_test.sh"
 
 [tasks.docs]
 description = "Build the documentation site"
