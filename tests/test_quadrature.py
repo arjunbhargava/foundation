@@ -52,8 +52,10 @@ def test_trapezoid_is_exact_for_a_linear_function() -> None:
         samples = [1 + 2 * (i * spacing) for i in range(interval_count + 1)]
         length = interval_count * spacing
         exact_integral = length + length**2
+        # Without abs=0, approx also accepts its default absolute tolerance,
+        # 1e-12, which here is about 1000 times looser.
         assert integrate_trapezoid(samples, spacing) == pytest.approx(
-            exact_integral, rel=ROUND_OFF_TOLERANCE
+            exact_integral, rel=ROUND_OFF_TOLERANCE, abs=0
         ), f"{interval_count} intervals"
 
 
