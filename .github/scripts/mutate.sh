@@ -84,14 +84,13 @@ mutate_python() {
   tested_count=$(awk -F': ' '$2 != "not checked" { n++ } END { print n + 0 }' <<< "$results")
   status_counts=$(awk -F': ' '$2 != "not checked" { count[$2]++ } END { for (status in count) printf "%s%d %s", (n++ ? ", " : ""), count[status], status }' <<< "$results")
 
-  local mutant
-  {
-    echo '```diff'
-    for mutant in $survivors; do
-      uv run mutmut show "$mutant"
-    done
-    echo '```'
-  } | report Python "$files" "$survived_count" "$tested_count" "mutmut: $status_counts."
+  # A command substitution fails the script, under set -e, only if it is
+  # the whole right-hand side of an assignment, so each is assigned before
+  # report prints it.
+  local mutant survivor_diffs
+  survivor_diffs=$(for mutant in $survivors; do uv run mutmut show "$mutant" || exit 1; done)
+  report Python "$files" "$survived_count" "$tested_count" "mutmut: $status_counts." \
+    "$(printf '```diff\n%s\n```' "$survivor_diffs")"
 }
 
 mutate_rust() {
@@ -129,11 +128,10 @@ mutate_rust() {
   local survived_count outcome_counts
   survived_count=$(jq .missed "$results_dir/outcomes.json")
   outcome_counts=$(jq -r '"cargo-mutants: \(.caught) caught, \(.missed) missed, \(.timeout) timed out, \(.unviable) unviable (failed to build)."' "$results_dir/outcomes.json")
-  {
-    echo '```text'
-    cat "$results_dir/missed.txt"
-    echo '```'
-  } | report Rust "$files" "$survived_count" "$mutant_count" "$outcome_counts"
+  local missed_mutants
+  missed_mutants=$(cat "$results_dir/missed.txt")
+  report Rust "$files" "$survived_count" "$mutant_count" "$outcome_counts" \
+    "$(printf '```text\n%s\n```' "$missed_mutants")"
 }
 
 mutate_typescript() {
@@ -178,11 +176,10 @@ mutate_typescript() {
   survivors=$(jq '[.files | to_entries[] | .key as $file | .value.mutants[] | select(.status == "Survived" or .status == "NoCoverage") | . + {file: $file}] | sort_by(.file, .location.start.line, .location.start.column)' "$report_file")
   survived_count=$(jq length <<< "$survivors")
   status_counts=$(jq -r '[.files[].mutants[].status] | group_by(.) | map("\(length) \(.[0])") | join(", ")' "$report_file")
-  {
-    echo '```text'
-    jq -r '.[] | "\(.file):\(.location.start.line):\(.location.start.column): \(.mutatorName), replaced with \(.replacement // "" | gsub("\\s+"; " ")) (\(.status))"' <<< "$survivors"
-    echo '```'
-  } | report TypeScript "$files" "$survived_count" "$mutant_count" "StrykerJS: $status_counts."
+  local survivor_lines
+  survivor_lines=$(jq -r '.[] | "\(.file):\(.location.start.line):\(.location.start.column): \(.mutatorName), replaced with \(.replacement // "" | gsub("\\s+"; " ")) (\(.status))"' <<< "$survivors")
+  report TypeScript "$files" "$survived_count" "$mutant_count" "StrykerJS: $status_counts." \
+    "$(printf '```text\n%s\n```' "$survivor_lines")"
 }
 
 # Prints the source files to mutate in one package, given a pathspec for its
@@ -205,7 +202,7 @@ files_to_mutate() {
 # Prints one language's report, and in GitHub Actions appends it to the job
 # summary. With surviving mutants, it reads their list from stdin.
 report() {
-  local language=$1 files=$2 survived=$3 total=$4 tool_counts=$5
+  local language=$1 files=$2 survived=$3 total=$4 tool_counts=$5 survivor_list=${6:-}
   if [[ -z $files ]]; then
     echo "### $language mutation testing: no source or test file changed since the merge base with $base"
   else
@@ -218,7 +215,7 @@ report() {
       echo
       echo "Every test still passes with each change below. Add a test that fails on it, or say in the PR why the change can't alter behaviour."
       echo
-      cat
+      echo "$survivor_list"
     fi
   fi | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 }
