@@ -152,5 +152,5 @@ reverting:
 6. Break a check that treats warnings as errors with a warning, not an error,
    so that the run shows warnings fail.
 7. Revert every break in one commit, and check that the tree then matches the
-   commit before the first break. List each break under "How it was
-   verified" with its commit, its CI run, and the error it printed.
+   commit before the first break. Under "Verified", give each break one
+   line: the check it broke, and a link to its CI run.

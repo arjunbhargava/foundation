@@ -93,9 +93,9 @@ creating or editing a diagram. In addition:
 
 Maintenance: every PR checks the diagrams against its diff. If it changes
 components, dependencies, data flow, state transitions, or external services,
-update the affected diagrams in the same PR. Then report in the PR body which
-diagrams were updated, or state `no structural change`. A stale diagram is
-worse than none, because it teaches the wrong model.
+update the affected diagrams in the same PR, and name them in the PR body.
+Don't mention diagrams when none changed. A stale diagram is worse than none,
+because it teaches the wrong model.
 
 ## Placement
 
