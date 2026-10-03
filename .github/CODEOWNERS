@@ -4,3 +4,6 @@
 /.github/                @arjunbhargava
 /deny.toml               @arjunbhargava
 /docs/architecture.md    @arjunbhargava
+/.dependency-cruiser.cjs @arjunbhargava
+/pyproject.toml          @arjunbhargava
+/CMakeLists.txt          @arjunbhargava
