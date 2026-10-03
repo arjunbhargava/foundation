@@ -8,8 +8,8 @@ name: Mutation testing
 
 on:
   pull_request:
-    # The code it mutates, the tests that check that code, and its own
-    # definition.
+    # The code it mutates, the tests that check that code, its own
+    # definition, and the mutation tools' pins in mise.toml.
     paths:
       - src/**
       - tests/**
@@ -19,6 +19,7 @@ on:
       - .github/scripts/mutate_test.sh
       - .github/workflows/mutation.yml
       - stryker.config.json
+      - mise.toml
 
 permissions:
   contents: read
