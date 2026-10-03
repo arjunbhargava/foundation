@@ -12,7 +12,8 @@ dependencies. A PR that adds one includes all of these:
 1. **A reason.** Under "What and why", one line per new dependency
    giving its name, its licence, and why it's needed, for example
    `h5py (BSD-3-Clause): reads HDF5 checkpoint files, which the standard library can't`.
-   If the approved plan doesn't name it, also list it under "Needs a person".
+   If the approved plan doesn't name it, end the line with "(not in the plan)"
+   and carry on; it doesn't stop the work.
 2. **A committed lockfile.** Add the dependency with the package manager
    (`uv add`, `pnpm add`, `cargo add`), and commit the lockfile it writes in
    the same commit as the manifest. C and C++ have no lockfile, so pin an
@@ -34,7 +35,7 @@ dependencies. A PR that adds one includes all of these:
      off the allow-list, including a transitive dependency's, with the
      dependency that brings it in.
 
-   Stop and ask a person in the PR before adding a shipped dependency whose
+   Stop and ask under "Needs a person" before adding a shipped dependency whose
    licence isn't on the allow-list, or any dependency under AGPL, a
    source-available or non-commercial licence such as SSPL or BUSL, a custom
    licence, or no licence.

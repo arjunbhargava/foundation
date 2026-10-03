@@ -13,7 +13,7 @@ description: >
 Some changes need a plan that a person approves before any code is written:
 those that meet decision D7 in `docs/template-plan.md`. Check a task against
 D7 before starting, and again if the work grows, for example when it turns out
-to need a new dependency. Below the threshold, write no plan. Planning pays
+to need a new module. Below the threshold, write no plan. Planning pays
 off only for larger changes, and a bad plan is worse than none (finding F5).
 
 D7's last trigger, compute spend above the cost limit, is handled when a job
@@ -46,4 +46,5 @@ to the repository; plans live in Linear, not in shared files (finding F7).
 
 Then stop. Write no code until a person approves the plan. If they ask for
 changes, revise it and stop again. The PR notes, in one line, any difference
-from the approved plan that matters (`reviewable-prs`).
+from the approved plan that matters (`reviewable-prs`). A new dependency the
+plan doesn't name doesn't stop the work; the PR marks it "(not in the plan)".

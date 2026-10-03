@@ -32,11 +32,13 @@ Start the body from `.github/pull_request_template.md`, and omit a section
 that has nothing rather than writing `None`. Keep the body to about 150 words
 for a PR under 100 changed lines, and at most 300 otherwise.
 
-1. **What and why**: at most 3 sentences. Link the issue or design doc, and
-   for a Linear issue include `Fixes <issue ID>` (for example `Fixes ENG-123`).
+1. **What and why**: at most 3 sentences, plus one line per new dependency,
+   ending "(not in the plan)" if the approved plan doesn't name it
+   (`dependencies` rule). Link the issue or design doc, and for a Linear
+   issue include `Fixes <issue ID>` (for example `Fixes ENG-123`).
 2. **Verified**: commands and CI runs, one line each, with links, and one
    line, not a table, naming the test for each acceptance criterion (`testing`
-   skill). A gap in verification or a difference from the approved plan gets
+   skill). A gap in verification or another difference from the plan gets
    one line, only when it matters: here, or under Needs a person if a person
    must accept it.
 3. **Needs a person**: decisions only.
