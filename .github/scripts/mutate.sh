@@ -85,13 +85,13 @@ mutate_python() {
   status_counts=$(awk -F': ' '$2 != "not checked" { count[$2]++ } END { for (status in count) printf "%s%d %s", (n++ ? ", " : ""), count[status], status }' <<< "$results")
 
   local mutant
-  {
+  report Python "$files" "$survived_count" "$tested_count" "mutmut: $status_counts." < <(
     echo '```diff'
     for mutant in $survivors; do
       uv run mutmut show "$mutant"
     done
     echo '```'
-  } | report Python "$files" "$survived_count" "$tested_count" "mutmut: $status_counts."
+  )
 }
 
 mutate_rust() {
@@ -129,11 +129,11 @@ mutate_rust() {
   local survived_count outcome_counts
   survived_count=$(jq .missed "$results_dir/outcomes.json")
   outcome_counts=$(jq -r '"cargo-mutants: \(.caught) caught, \(.missed) missed, \(.timeout) timed out, \(.unviable) unviable (failed to build)."' "$results_dir/outcomes.json")
-  {
+  report Rust "$files" "$survived_count" "$mutant_count" "$outcome_counts" < <(
     echo '```text'
     cat "$results_dir/missed.txt"
     echo '```'
-  } | report Rust "$files" "$survived_count" "$mutant_count" "$outcome_counts"
+  )
 }
 
 mutate_typescript() {
@@ -178,11 +178,11 @@ mutate_typescript() {
   survivors=$(jq '[.files | to_entries[] | .key as $file | .value.mutants[] | select(.status == "Survived" or .status == "NoCoverage") | . + {file: $file}] | sort_by(.file, .location.start.line, .location.start.column)' "$report_file")
   survived_count=$(jq length <<< "$survivors")
   status_counts=$(jq -r '[.files[].mutants[].status] | group_by(.) | map("\(length) \(.[0])") | join(", ")' "$report_file")
-  {
+  report TypeScript "$files" "$survived_count" "$mutant_count" "StrykerJS: $status_counts." < <(
     echo '```text'
     jq -r '.[] | "\(.file):\(.location.start.line):\(.location.start.column): \(.mutatorName), replaced with \(.replacement // "" | gsub("\\s+"; " ")) (\(.status))"' <<< "$survivors"
     echo '```'
-  } | report TypeScript "$files" "$survived_count" "$mutant_count" "StrykerJS: $status_counts."
+  )
 }
 
 # Prints the source files to mutate in one package, given a pathspec for its
