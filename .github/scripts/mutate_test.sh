@@ -13,6 +13,9 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 # The report would otherwise go to the real job summary in GitHub Actions.
 unset GITHUB_STEP_SUMMARY
+# git ignores the user's and the system's settings, such as commit signing or
+# a hooks directory, which could make the test repository's commit fail.
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 
 main() {
   make_fake_tools
