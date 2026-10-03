@@ -116,20 +116,9 @@ The build also needs the following, which the template already has:
 - Declare the Python docs dependencies with the repo's other dev dependencies:
   `sphinx`, `sphinx-autoapi`, `myst-parser`, `furo`, and `ruff`, plus `breathe` if the repo has C or C++. Put the TypeDoc packages
   in `devDependencies`.
-- Configure `ruff` in `pyproject.toml`:
-
-  ```toml
-  [tool.ruff.lint]
-  extend-select = ["D"]
-  ignore = ["D107"]
-
-  [tool.ruff.lint.per-file-ignores]
-  # Tests aren't API reference; their names state the behaviour they check.
-  "tests/**" = ["D"]
-
-  [tool.ruff.lint.pydocstyle]
-  convention = "google"
-  ```
+- Configure `ruff` as `[tool.ruff.lint]` in this repository's `pyproject.toml`
+  does: select the `D` rules, use the Google convention, ignore `D107`, and
+  ignore `D` under `tests/`. Copy those tables rather than rewriting them.
 
 - Add `docs/_build/` and `docs/_generated/` to `.gitignore`.
 

@@ -132,8 +132,9 @@ Each diagram starts with `...@_style`. Embed a diagram with alt text that states
 its takeaway: `![Data flow: raw data goes down through Ingest, …](diagrams/dataflow.svg)`.
 
 After editing a `.d2` file, run `docs/diagrams/render.sh`, look at the SVG,
-and commit the source and the SVG together. `render.sh --check` runs as part
-of `docs/build.sh`, so a stale SVG fails the docs build. Renders are pinned to
+and commit the source and the SVG together. A project's first diagram adds
+`docs/diagrams/render.sh --check` to `docs/build.sh`, which the template does
+not yet have; from then on a stale SVG fails the docs build. Renders are pinned to
 one D2 version, because other versions produce different SVGs. Install it with
 `curl -fsSL https://d2lang.com/install.sh | sh -s -- --version v0.9.0`, and
 bump the version in `render.sh` in a PR of its own that re-renders everything.
