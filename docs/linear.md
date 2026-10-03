@@ -41,8 +41,8 @@ these conventions rely on (task T17 in [the template plan](template-plan.md)).
   description includes `Fixes <issue ID>`, for example `Fixes ENG-123`, as
   `.github/pull_request_template.md` asks. Linear links the PR to that issue,
   or sub-issue, and marks it done when the PR merges.
-- An agent that finds a problem outside its issue files a new issue from the
-  template, without `agent-ready`, instead of fixing it in the PR.
+- An agent lists a problem outside its issue under Follow-ups instead of
+  fixing it; any issue it files uses the template, without `agent-ready`.
 
 ## Issue template
 

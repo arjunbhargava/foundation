@@ -61,7 +61,7 @@ Check against `reviewable-prs.mdc` and the PR template:
 - One logical change within the 500-line ceiling, or an `Oversize:` first line
   whose category and reason the `large-changes` skill allows.
 - No refactor mixed with a behaviour change, and no drive-by edits. Problems
-  outside the task are reported as issues, not fixed in the PR.
+  outside the task are listed under Follow-ups, not fixed in the PR.
 - The body follows the "PR body" section of `reviewable-prs`, within its word
   limit. Flag padding: pasted output where a link would do, `None`, restating
   the diff, and "why I didn't do X" prose a reviewer wouldn't ask for.

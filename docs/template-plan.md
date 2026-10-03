@@ -517,8 +517,8 @@ merged.
 - Shared state lives in git and Linear only. No shared task files, no shared
   databases or fixed ports, and every external resource name includes the
   branch or run ID.
-- An agent that finds a problem outside its task files a Linear issue instead
-  of fixing it.
+- An agent that finds a problem outside its task lists it under Follow-ups
+  instead of fixing it.
 - Each PR is tested combined with `main` before merging. For now that means
   requiring up-to-date branches; a merge queue replaces it once the
   repository moves to an organization (T4).
