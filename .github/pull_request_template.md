@@ -1,41 +1,24 @@
 <!--
 Sections and their order come from the "PR body" section of
-.cursor/rules/reviewable-prs.mdc. Keep each section short, and write None in a
-section that has nothing rather than removing it. An oversize PR puts
+.cursor/rules/reviewable-prs.mdc. Omit a section that has nothing. Keep the
+body to about 150 words for a PR under 100 changed lines, and at most 300
+otherwise. An oversize PR puts
 "Oversize: <category> — <why it can't be split>" on the first line, above this
 comment.
 -->
 
-## What changes and why
+## What and why
 
-<!-- 2–4 sentences. Link the issue or design doc. When the work has a Linear
-issue, add "Fixes <issue ID>" (for example "Fixes ENG-123"). -->
+<!-- At most 3 sentences. Link the issue; for a Linear issue, add "Fixes ENG-123". -->
 
-## How to review
+## Verified
 
-<!-- Where to start reading, and what is mechanical and can be skimmed. -->
+<!-- Commands and CI run links, one line each, and one line naming the test for each acceptance criterion. -->
 
-## How it was verified
+## Needs a person
 
-<!-- Commands run and their results, and which test covers each acceptance
-criterion (see the testing skill). -->
+<!-- Decisions a person must make, nothing else. -->
 
-## What was not verified, and known limitations
+## Follow-ups
 
-<!-- Include deliberate omissions. -->
-
-## Changes from the plan, and problems found outside the scope
-
-<!-- How the work differs from the agreed plan. Report problems outside the
-task's scope as new issues and link them here, rather than fixing them in this
-PR. -->
-
-## Diagrams
-
-<!-- "updated" (name which ones) or "no structural change". A change to
-components, data flow, state, or external dependencies updates
-docs/architecture.md in this PR. -->
-
-## Risks and follow-ups
-
-<!-- A breaking change lists a follow-up prune-review of the affected area. -->
+<!-- One line each. Filing them in Linear is optional. -->

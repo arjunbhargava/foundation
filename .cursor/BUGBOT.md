@@ -29,10 +29,10 @@ PR breaks.
 
 - Take the acceptance criteria from the PR body, and from the linked issue
   when you can read it. If the PR drops or weakens a criterion from the issue,
-  flag it unless "Changes from the plan" explains why.
+  flag it unless the body says why.
 - Check that the diff meets each criterion as it will be merged. Work the PR
   promises for later doesn't count. If the PR states no criteria, say so, and
-  check the diff against what "What changes and why" claims.
+  check the diff against what "What and why" claims.
 - A bug fix removes the root cause in the shared code, not only the symptom
   on the path the report names (`ponytail.mdc`).
 
@@ -44,9 +44,9 @@ PR breaks.
 
 ## Do the tests prove it?
 
-- Each acceptance criterion has a named test, listed under "How it was
-  verified", that asserts concrete expected behaviour: given these inputs,
-  this output or error (finding F4).
+- Each acceptance criterion has a named test, listed under "Verified", that
+  asserts concrete expected behaviour: given these inputs, this output or
+  error (finding F4).
 - Flag a test that would still pass with the change reverted, or that only
   checks the code runs without error.
 
@@ -62,9 +62,13 @@ Check against `reviewable-prs.mdc` and the PR template:
   whose category and reason the `large-changes` skill allows.
 - No refactor mixed with a behaviour change, and no drive-by edits. Problems
   outside the task are reported as issues, not fixed in the PR.
-- The body has every section of the template, in order.
-- The Diagrams section matches the diff: a change to components, data flow,
-  state, or external dependencies updates `docs/architecture.md`.
+- The body uses the template's sections in order, omits empty ones, and is
+  about 150 words for a PR under 100 changed lines, at most 300 otherwise.
+- Flag padding: pasted output where a link would do, a section that says
+  `None`, text that restates the diff, and "why I didn't do X" prose beyond
+  one sentence a reviewer would otherwise ask for.
+- A change to components, data flow, state, or external dependencies updates
+  `docs/architecture.md`, and the body names the diagrams it changed.
 
 ## Keeping this file current
 
