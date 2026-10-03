@@ -2,6 +2,7 @@
 	"private": true,
 	"devDependencies": {
 		"@biomejs/biome": "2.5.15",
+		"dependency-cruiser": "18.5.0",
 		"typedoc": "0.28.20",
 		"typedoc-plugin-markdown": "4.13.1",
 		"typescript": "6.0.3",

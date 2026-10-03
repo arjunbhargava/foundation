@@ -66,7 +66,7 @@ jobs:
             echo "docs=$(changed docs/)"
             echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)"
             echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)"
-            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json)"
+            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)"
             echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)"
           } >> "$GITHUB_OUTPUT"
 
