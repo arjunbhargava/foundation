@@ -4,13 +4,14 @@
 # replaced by `<=`. It survives when every test still passes, which marks
 # behaviour that no test checks.
 #
-# Usage: .github/scripts/mutate.sh python|rust [base]
+# Usage: .github/scripts/mutate.sh python|rust|typescript [base]
 #
 # Changed means different from the merge base with base (default
 # origin/main), including uncommitted changes. The mutated files are the
 # changed source files, plus every source file of a package whose tests
 # changed, because a changed test can stop checking any code in its package.
-# A change to this script or its workflow mutates every package.
+# A change to this script, its workflow, or stryker.config.json mutates
+# every package.
 #
 # The report goes to stdout and, in GitHub Actions, to the job summary.
 # Surviving mutants don't fail the script: for now, mutation testing reports
@@ -32,8 +33,9 @@ main() {
   case $language in
     python) mutate_python ;;
     rust) mutate_rust ;;
+    typescript) mutate_typescript ;;
     *)
-      echo "error: .github/scripts/mutate.sh mutates python or rust, not '$language'." >&2
+      echo "error: .github/scripts/mutate.sh mutates python, rust, or typescript, not '$language'." >&2
       exit 1
       ;;
   esac
@@ -41,7 +43,7 @@ main() {
 
 mutate_python() {
   local files
-  files=$(files_to_mutate 'src/*.py' tests/)
+  files=$(files_to_mutate tests/ 'src/*.py')
   if [[ -z $files ]]; then
     report Python "" 0 0 ""
     return
@@ -94,7 +96,7 @@ mutate_python() {
 
 mutate_rust() {
   local files crate
-  files=$(for crate in crates/*/; do files_to_mutate "${crate}src/*.rs" "${crate}tests/"; done)
+  files=$(for crate in crates/*/; do files_to_mutate "${crate}tests/" "${crate}src/*.rs"; done)
   if [[ -z $files ]]; then
     report Rust "" 0 0 ""
     return
@@ -134,17 +136,69 @@ mutate_rust() {
   } | report Rust "$files" "$survived_count" "$mutant_count" "$outcome_counts"
 }
 
-# Prints the source files to mutate in one package: all of them if any of its
-# tests changed, and otherwise those that changed. A change to this script or
-# its workflow counts as a change to every package's tests, so that the PR
-# making it runs every step here in CI. In a git pathspec, * also matches /,
+mutate_typescript() {
+  local files package
+  files=$(for package in packages/*/; do files_to_mutate "${package}*.test.ts" "${package}src/*.ts" ":(exclude)${package}*.test.ts"; done)
+  if [[ -z $files ]]; then
+    report TypeScript "" 0 0 ""
+    return
+  fi
+
+  # StrykerJS reads its settings from stryker.config.json, which can't hold
+  # comments, so they are explained here:
+  # - plugins names the vitest runner, which StrykerJS can't find by itself in
+  #   pnpm's node_modules.
+  # - vitest.related false makes its first test run execute every test, not
+  #   only those that import the mutated files. Otherwise, when no test
+  #   imports them, it stops without a report, and untested code goes
+  #   unreported.
+  # - ignorePatterns copies only packages/ into its sandbox, leaving out
+  #   .venv, target/, and mutmut's mutants/, which mutate:python rewrites
+  #   while `mise run mutate` runs both.
+  # - cleanTempDir always deletes the sandbox after a failed run too, as
+  #   well as after a successful one. vitest would otherwise run the copied
+  #   tests in it.
+  # It exits 0 when mutants survive, because the config sets no thresholds.
+  local report_file=reports/mutation/mutation.json
+  rm -f "$report_file"
+  if ! pnpm exec stryker run --mutate "${files//$'\n'/,}"; then
+    echo "error: StrykerJS failed; its output is above." >&2
+    return 1
+  fi
+
+  local mutant_count
+  mutant_count=$(jq '[.files[].mutants[]] | length' "$report_file")
+  if ((mutant_count == 0)); then
+    report TypeScript "$files" 0 0 "StrykerJS found no code to mutate in these files."
+    return
+  fi
+
+  # NoCoverage means no test runs the mutated code.
+  local survivors survived_count status_counts
+  survivors=$(jq '[.files | to_entries[] | .key as $file | .value.mutants[] | select(.status == "Survived" or .status == "NoCoverage") | . + {file: $file}] | sort_by(.file, .location.start.line, .location.start.column)' "$report_file")
+  survived_count=$(jq length <<< "$survivors")
+  status_counts=$(jq -r '[.files[].mutants[].status] | group_by(.) | map("\(length) \(.[0])") | join(", ")' "$report_file")
+  {
+    echo '```text'
+    jq -r '.[] | "\(.file):\(.location.start.line):\(.location.start.column): \(.mutatorName), replaced with \(.replacement // "" | gsub("\\s+"; " ")) (\(.status))"' <<< "$survivors"
+    echo '```'
+  } | report TypeScript "$files" "$survived_count" "$mutant_count" "StrykerJS: $status_counts."
+}
+
+# Prints the source files to mutate in one package, given a pathspec for its
+# tests and then one or more for its sources: all the sources if any of its
+# tests changed, and otherwise those that changed. A change to this script,
+# its workflow, or stryker.config.json, which only mutation testing reads,
+# counts as a change to every package's tests, so that the PR making it runs
+# every step here in CI. In a git pathspec, * also matches /,
 # so src/*.py includes src/foundation/quadrature.py.
 files_to_mutate() {
-  local sources=$1 tests=$2
-  if git diff --quiet "$merge_base" -- "$tests" .github/scripts/mutate.sh .github/workflows/mutation.yml; then
-    git diff --name-only --diff-filter=d "$merge_base" -- "$sources"
+  local tests=$1
+  shift
+  if git diff --quiet "$merge_base" -- "$tests" .github/scripts/mutate.sh .github/workflows/mutation.yml stryker.config.json; then
+    git diff --name-only --diff-filter=d "$merge_base" -- "$@"
   else
-    git ls-files -- "$sources"
+    git ls-files -- "$@"
   fi
 }
 

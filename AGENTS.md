@@ -11,16 +11,16 @@ thing:
 | `mise run fmt` | Format all code in place. |
 | `mise run lint` | Check formatting, lint, and types without changing files. |
 | `mise run lint:python` | Run only the Python checks. |
-| `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory and licence checks. |
+| `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory, ban, licence, and source checks. |
 | `mise run lint:typescript` | Run only the TypeScript checks. |
-| `mise run lint:cpp` | Run only the C and C++ checks: clang-format, and a build with clang-tidy and compiler warnings as errors. |
+| `mise run lint:cpp` | Run only the C and C++ checks: clang-format, a check that no `#include` uses `../`, and a build with clang-tidy and compiler warnings as errors. |
 | `mise run test` | Run all tests. |
 | `mise run test:python` | Run only the Python tests and docstring examples. Arguments after `--` go to pytest: `mise run test:python -- -k trapezoid`. |
 | `mise run test:rust` | Run only the Rust tests and doc-comment examples. Arguments after `--` go to `cargo test`: `mise run test:rust -- energy`. |
 | `mise run test:typescript` | Run only the TypeScript tests. Arguments after `--` go to vitest: `mise run test:typescript -- -t precision`. |
 | `mise run test:cpp` | Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them. Arguments after `--` go to ctest: `mise run test:cpp -- -R chord`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
-| `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python` and `mutate:rust` run one language. `check` doesn't run it, because it's slow. |
+| `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python`, `mutate:rust`, and `mutate:typescript` run one language. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
 | `mise run check` | Run everything CI runs. |
 
@@ -45,8 +45,8 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   template's example, there to prove the checks work; delete it when the
   first real TypeScript code arrives.
 - `package.json`: the TypeScript tools, locked in `pnpm-lock.yaml`. Their
-  settings are in `tsconfig.json` and `biome.json`, and
-  `pnpm-workspace.yaml` lists the packages.
+  settings are in `tsconfig.json`, `biome.json`, and
+  `.dependency-cruiser.cjs`, and `pnpm-workspace.yaml` lists the packages.
 - `cpp/`: the C and C++ code, with public headers in `include/foundation/`,
   sources in `src/`, and tests in `tests/`. `interpolation` is the template's
   example, there to prove the checks work; delete it when the first real C or
@@ -59,6 +59,12 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   first C or C++ dependency picks vcpkg or CMake `FetchContent`, and pins it
   as the `dependencies` rule says. With vcpkg, also add a `vcpkg` entry to
   `.github/dependabot.yml`; Dependabot can't update `FetchContent` pins.
+- Module boundaries, which `mise run lint` checks. Add a project's own:
+  - Python: a contract under `[tool.importlinter]` in `pyproject.toml`.
+  - TypeScript: a rule under `forbidden` in `.dependency-cruiser.cjs`.
+  - Rust: a `deny` entry with `wrappers` under `[bans]` in `deny.toml`.
+  - C and C++: in `CMakeLists.txt`, make a target's include directories and
+    links `PRIVATE` unless its public headers need them.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
   generated from doc comments.
 

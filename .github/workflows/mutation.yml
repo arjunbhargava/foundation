@@ -14,9 +14,11 @@ on:
       - src/**
       - tests/**
       - crates/**
+      - packages/**
       - .github/scripts/mutate.sh
       - .github/scripts/mutate_test.sh
       - .github/workflows/mutation.yml
+      - stryker.config.json
 
 permissions:
   contents: read
@@ -39,9 +41,15 @@ jobs:
           # The base branch's history too, to find where the PR branched off.
           fetch-depth: 0
           persist-credentials: false
-      - run: bash .cursor/install.sh
+      - id: install
+        run: bash .cursor/install.sh
       - run: mise run test:mutate-script
-      - run: mise run mutate:python -- "origin/$GITHUB_BASE_REF"
-      # Runs after a Python failure too, so that it doesn't hide Rust's results.
-      - if: ${{ !cancelled() }}
+      # Each language runs whenever the install succeeded, so that a failure
+      # of the script test or of another language's tool doesn't hide its
+      # results.
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: mise run mutate:python -- "origin/$GITHUB_BASE_REF"
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: mise run mutate:rust -- "origin/$GITHUB_BASE_REF"
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: mise run mutate:typescript -- "origin/$GITHUB_BASE_REF"

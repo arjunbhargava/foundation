@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Checks which files .github/scripts/mutate.sh mutates and what its report
 # says, without running a mutation tool. It runs the script in a temporary
-# git repository with one Python package and one Rust crate, where fake uv
-# and cargo record the files or module globs they are given and print canned
+# git repository with one package in each language, where fake uv, cargo,
+# and pnpm record the files or module globs they are given and print canned
 # results: one surviving and one caught mutant.
 #
 # Usage: .github/scripts/mutate_test.sh
@@ -13,6 +13,9 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 # The report would otherwise go to the real job summary in GitHub Actions.
 unset GITHUB_STEP_SUMMARY
+# git ignores the user's and the system's settings, such as commit signing or
+# a hooks directory, which could make the test repository's commit fail.
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 
 main() {
   make_fake_tools
@@ -25,11 +28,14 @@ main() {
   check rust crates/c/src/x.rs crates/c/src/x.rs "1 of 2 mutants survived"
   check rust crates/c/tests/t.rs $'crates/c/src/lib.rs\ncrates/c/src/x.rs' "1 of 2 mutants survived"
   check rust .github/scripts/mutate.sh $'crates/c/src/lib.rs\ncrates/c/src/x.rs' "1 of 2 mutants survived"
-  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 7 cases."
+  check typescript packages/p/src/a.ts packages/p/src/a.ts "1 of 2 mutants survived"
+  check typescript packages/p/src/a.test.ts $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
+  check typescript stryker.config.json $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
+  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 10 cases."
 }
 
-# Writes fake uv and cargo, which append the module globs or files they are
-# given to $work/tool-arguments, one per line.
+# Writes fake uv, cargo, and pnpm, which append the module globs or files
+# they are given to $work/tool-arguments, one per line.
 make_fake_tools() {
   mkdir "$work/bin"
   cat > "$work/bin/uv" << 'EOF'
@@ -58,16 +64,35 @@ echo '{"total_mutants": 2, "missed": 1, "caught": 1, "timeout": 0, "unviable": 0
 echo 'crates/c/src/x.rs:1:1: replace f with g' > target/mutants.out/missed.txt
 exit 2
 EOF
-  chmod +x "$work/bin/uv" "$work/bin/cargo"
+  # Exits 0, as StrykerJS does when a mutant survives.
+  cat > "$work/bin/pnpm" << 'EOF'
+#!/usr/bin/env bash
+while (($# > 0)); do
+  if [[ $1 == --mutate ]]; then
+    tr , '\n' <<< "$2" >> "$FAKE_TOOL_ARGUMENTS"
+  fi
+  shift
+done
+mkdir -p reports/mutation
+cat > reports/mutation/mutation.json << 'REPORT'
+{"files": {"packages/p/src/a.ts": {"mutants": [
+  {"mutatorName": "EqualityOperator", "replacement": "x <= 2", "status": "Survived", "location": {"start": {"line": 1, "column": 1}}},
+  {"mutatorName": "BooleanLiteral", "replacement": "false", "status": "Killed", "location": {"start": {"line": 2, "column": 1}}}
+]}}}
+REPORT
+EOF
+  chmod +x "$work/bin/uv" "$work/bin/cargo" "$work/bin/pnpm"
   export PATH="$work/bin:$PATH" FAKE_TOOL_ARGUMENTS="$work/tool-arguments"
 }
 
 make_repository() {
-  mkdir -p "$work/repo/.github/scripts" "$work/repo/src/pkg" "$work/repo/tests" "$work/repo/crates/c/src" "$work/repo/crates/c/tests"
+  mkdir -p "$work/repo/.github/scripts" "$work/repo/src/pkg" "$work/repo/tests" \
+    "$work/repo/crates/c/src" "$work/repo/crates/c/tests" "$work/repo/packages/p/src"
   cd "$work/repo"
   cp "$script_dir/mutate.sh" .github/scripts/
   touch src/pkg/__init__.py src/pkg/a.py src/pkg/b.py tests/test_a.py \
-    crates/c/src/lib.rs crates/c/src/x.rs crates/c/tests/t.rs
+    crates/c/src/lib.rs crates/c/src/x.rs crates/c/tests/t.rs \
+    packages/p/src/a.ts packages/p/src/b.ts packages/p/src/a.test.ts stryker.config.json
   git init --quiet
   git add .
   git -c user.name=test -c user.email=test@example.com commit --quiet --message base
