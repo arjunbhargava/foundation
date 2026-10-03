@@ -14,9 +14,11 @@ on:
       - src/**
       - tests/**
       - crates/**
+      - packages/**
       - .github/scripts/mutate.sh
       - .github/scripts/mutate_test.sh
       - .github/workflows/mutation.yml
+      - stryker.config.json
 
 permissions:
   contents: read
@@ -42,6 +44,9 @@ jobs:
       - run: bash .cursor/install.sh
       - run: mise run test:mutate-script
       - run: mise run mutate:python -- "origin/$GITHUB_BASE_REF"
-      # Runs after a Python failure too, so that it doesn't hide Rust's results.
+      # These run after an earlier step fails too, so that one tool's failure
+      # doesn't hide another language's results.
       - if: ${{ !cancelled() }}
         run: mise run mutate:rust -- "origin/$GITHUB_BASE_REF"
+      - if: ${{ !cancelled() }}
+        run: mise run mutate:typescript -- "origin/$GITHUB_BASE_REF"

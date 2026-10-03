@@ -20,6 +20,9 @@ __pycache__/
 # TypeScript
 node_modules/
 *.tsbuildinfo
+# StrykerJS's sandbox copies of packages/ with mutants in them, and its report.
+/.stryker-tmp/
+/reports/mutation/
 
 # Rust
 target/
