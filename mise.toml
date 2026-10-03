@@ -97,7 +97,9 @@ run = "cargo test --locked"
 
 [tasks."test:typescript"]
 description = "Run the TypeScript tests; arguments after -- go to vitest"
-run = "pnpm exec vitest run"
+# An interrupted mutate:typescript leaves StrykerJS's sandbox, a copy of
+# packages/ with mutants in it, in .stryker-tmp/.
+run = "pnpm exec vitest run --exclude '.stryker-tmp/**'"
 
 [tasks."test:cpp"]
 description = "Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them; arguments after -- go to ctest"

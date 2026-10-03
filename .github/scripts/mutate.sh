@@ -154,6 +154,9 @@ mutate_typescript() {
   # - ignorePatterns copies only packages/ into its sandbox, leaving out
   #   .venv, target/, and mutmut's mutants/, which mutate:python rewrites
   #   while `mise run mutate` runs both.
+  # - cleanTempDir always deletes the sandbox after a failed run too, as
+  #   well as after a successful one. vitest would otherwise run the copied
+  #   tests in it.
   # It exits 0 when mutants survive, because the config sets no thresholds.
   local report_file=reports/mutation/mutation.json
   rm -f "$report_file"
