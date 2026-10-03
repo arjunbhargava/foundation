@@ -28,8 +28,9 @@ dependencies. A PR that adds one includes all of these:
      nothing from it is copied into, linked into, or shipped with the
      project. Formatters, linters, test runners, docs generators, and their
      own dependencies are examples. Its licence may be any OSI-approved
-     licence, public domain (including CC0-1.0), or a font licence such as
-     OFL-1.1. Under "What and why", list each licence off the
+     licence, public domain (including CC0-1.0), a font licence such as
+     OFL-1.1, or a Creative Commons licence on data, such as caniuse-lite's
+     CC-BY-4.0 browser-support data. Under "What and why", list each licence off the
      allow-list, including a transitive dependency's, with the dependency
      that brings it in.
 
