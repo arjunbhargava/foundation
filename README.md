@@ -72,7 +72,7 @@ manifest or lockfile:
 | [`dependencies`](.cursor/rules/dependencies.mdc) | A new dependency comes with a one-line reason, an allowed licence, and a committed lockfile. A lockfile merge conflict is resolved by relocking, never by hand. |
 | [`docs-from-source`](.cursor/rules/docs-from-source.mdc) | API reference is generated from doc comments, never written by hand, and each doc comment states the contract a caller needs. |
 | [`ponytail`](.cursor/rules/ponytail.mdc) | The simplest solution that works, once the problem is understood. |
-| [`reviewable-prs`](.cursor/rules/reviewable-prs.mdc) | At most 500 changed lines per PR, one logical change each, and a body that follows the PR template. |
+| [`reviewable-prs`](.cursor/rules/reviewable-prs.mdc) | About 300 changed lines per PR and at most 500, one logical change each, and a short body that follows the PR template. |
 | [`secrets`](.cursor/rules/secrets.mdc) | Secrets come from environment variables, are listed by name in `.env.example`, and never appear in commits or logs. |
 
 Skills in [`.cursor/skills/`](.cursor/skills/) are read only when a task needs

@@ -73,5 +73,5 @@ The most this issue may spend on compute jobs, in US dollars, or 0 if it launche
 
 ## Designs
 
-Links to designs, plans, or related issues, or None.
+Links to designs, plans, or related issues. Delete this section when there are none.
 ```

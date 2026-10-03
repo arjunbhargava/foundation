@@ -1,16 +1,16 @@
 ---
 name: large-changes
 description: >
-  Split a change that exceeds the 500-line PR budget in `reviewable-prs` into
+  Split a change that exceeds the 500-line PR ceiling in `reviewable-prs` into
   stacked PRs, or justify a single oversize PR. Use when a task looks likely to
   exceed 500 changed lines, before starting it.
 ---
 
 # Large changes
 
-When a task exceeds the budget, stack it: plan the sequence of PRs first,
-make each one build and pass tests on its own, and base each branch on the
-previous one. Prefer landing an unused-but-tested piece before the change that
+When a task exceeds the ceiling, stack it: plan the sequence of PRs first,
+aiming for about 300 changed lines each, make each one build and pass tests
+on its own, and base each branch on the previous one. Prefer landing an unused-but-tested piece before the change that
 wires it in.
 
 ## Oversize overrides

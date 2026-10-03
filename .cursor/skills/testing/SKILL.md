@@ -24,7 +24,7 @@ behaviour did help (finding F4 in `docs/template-plan.md`).
 - The test asserts a concrete result: given these inputs, this output or this
   error. A test that only checks the code runs, or that would still pass with
   the change reverted, doesn't cover the criterion.
-- "How it was verified" in the PR body pairs each criterion with its test. A
+- "Verified" in the PR body pairs each criterion with its test. A
   criterion no automated test can check, such as how a page looks, names the
   manual check instead.
 - Use the test runner the language already has. The `ponytail` rule's single
@@ -56,7 +56,7 @@ when it fails.
 
 A test that costs money or calls a live service runs only when a person or the
 issue asks for it, never in normal CI. Mark it `live`, so that `mise run test`
-skips it, and say under "How it was verified" when it ran.
+skips it, and say under "Verified" when it ran.
 
 | Language | Mark the test | Run only the `live` tests |
 |---|---|---|
