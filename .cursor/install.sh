@@ -6,6 +6,11 @@
 #
 # Usage: bash .cursor/install.sh
 #
+# CI's language and docs jobs set MISE_ENABLE_TOOLS, which mise reads, to the
+# tools in mise.toml that they use. The script then installs only those, and
+# skips `mise run setup`, which needs every language's tools; each job runs
+# its own language's setup task instead.
+#
 # Supports macOS and Linux (glibc), each on x86-64 or arm64. Keep it working
 # under bash 3.2, the version macOS ships: no associative arrays.
 #
@@ -89,7 +94,9 @@ else
 fi
 
 "$pinned_mise" install
-"$pinned_mise" run setup
+if [[ -z ${MISE_ENABLE_TOOLS:-} ]]; then
+  "$pinned_mise" run setup
+fi
 
 if [[ $(mise --version 2> /dev/null) != "$mise_version "* ]]; then
   mise_dir=$(dirname "$pinned_mise")
