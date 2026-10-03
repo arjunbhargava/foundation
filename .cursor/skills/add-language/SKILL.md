@@ -23,6 +23,12 @@ first code in the language.
 - [ ] Format, lint, and type checks, with warnings treated as errors. `fmt`
       fixes everything the format check reports, including import order if
       the check covers it.
+- [ ] A module boundary check in `lint:<language>`, with one rule that a
+      plausible mistake in the example breaks, such as library code
+      importing a development-only dependency. Where the build already
+      enforces the rule, as Cargo and CMake do, the build is the check. Add
+      the language to the "Module boundaries" list under "Where code lives"
+      in `AGENTS.md`, naming the file and section its rules go in.
 - [ ] Each tool checks only the files it should. Exclude `.cursor/`, which
       people write: ruff also formats Python code blocks in Markdown, so
       `pyproject.toml` excludes it. Expect overlap at the root: Biome checks
