@@ -36,7 +36,8 @@ defaults:
 jobs:
   changes:
     # Each output is 'true' when the change touches that job's files, or
-    # ci.yml or mise.toml, which define every job. A failed diff also counts
+    # ci.yml, mise.toml, or the block_unlisted_tools script and its test,
+    # which define or affect every job. A failed diff also counts
     # as a change, so an error runs jobs rather than skipping them.
     runs-on: ubuntu-latest
     outputs:
@@ -57,7 +58,7 @@ jobs:
         run: |
           base=${MERGE_GROUP_BASE_SHA:-origin/$GITHUB_BASE_REF}
           changed() {
-            if git diff --quiet "$base...HEAD" -- "$@" .github/workflows/ci.yml mise.toml; then
+            if git diff --quiet "$base...HEAD" -- "$@" .github/workflows/ci.yml mise.toml .github/scripts/block_unlisted_tools.sh .github/scripts/block_unlisted_tools_test.sh; then
               echo false
             else
               echo true
