@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Checks which files scripts/mutate.sh mutates and what its report says,
-# without running a mutation tool. It runs the script in a temporary git
-# repository with one Python package and one Rust crate, where fake uv and
-# cargo record the files or module globs they are given and print canned
+# Checks which files .github/scripts/mutate.sh mutates and what its report
+# says, without running a mutation tool. It runs the script in a temporary
+# git repository with one Python package and one Rust crate, where fake uv
+# and cargo record the files or module globs they are given and print canned
 # results: one surviving and one caught mutant.
 #
-# Usage: scripts/mutate_test.sh
+# Usage: .github/scripts/mutate_test.sh
 set -euo pipefail
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
@@ -24,8 +24,8 @@ main() {
   check python crates/c/src/x.rs "" "no source or test file changed"
   check rust crates/c/src/x.rs crates/c/src/x.rs "1 of 2 mutants survived"
   check rust crates/c/tests/t.rs $'crates/c/src/lib.rs\ncrates/c/src/x.rs' "1 of 2 mutants survived"
-  check rust scripts/mutate.sh $'crates/c/src/lib.rs\ncrates/c/src/x.rs' "1 of 2 mutants survived"
-  echo "scripts/mutate.sh chose the expected files and reported them in all 7 cases."
+  check rust .github/scripts/mutate.sh $'crates/c/src/lib.rs\ncrates/c/src/x.rs' "1 of 2 mutants survived"
+  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 7 cases."
 }
 
 # Writes fake uv and cargo, which append the module globs or files they are
@@ -63,9 +63,9 @@ EOF
 }
 
 make_repository() {
-  mkdir -p "$work/repo/scripts" "$work/repo/src/pkg" "$work/repo/tests" "$work/repo/crates/c/src" "$work/repo/crates/c/tests"
+  mkdir -p "$work/repo/.github/scripts" "$work/repo/src/pkg" "$work/repo/tests" "$work/repo/crates/c/src" "$work/repo/crates/c/tests"
   cd "$work/repo"
-  cp "$script_dir/mutate.sh" scripts/
+  cp "$script_dir/mutate.sh" .github/scripts/
   touch src/pkg/__init__.py src/pkg/a.py src/pkg/b.py tests/test_a.py \
     crates/c/src/lib.rs crates/c/src/x.rs crates/c/tests/t.rs
   git init --quiet
@@ -73,9 +73,10 @@ make_repository() {
   git -c user.name=test -c user.email=test@example.com commit --quiet --message base
 }
 
-# Changes one file, runs scripts/mutate.sh for one language, and fails unless
-# the tool got the expected globs or files and the report has the expected
-# headline. The script must exit 0 although the fake cargo exits 2.
+# Changes one file, runs .github/scripts/mutate.sh for one language, and
+# fails unless the tool got the expected globs or files and the report has
+# the expected headline. The script must exit 0, though the fake cargo
+# exits 2.
 check() {
   local language=$1 changed_file=$2 expected_arguments=$3 expected_headline=$4
   git checkout --quiet -- .
@@ -84,7 +85,7 @@ check() {
   echo "# changed" >> "$changed_file"
 
   local report arguments status=0
-  report=$(scripts/mutate.sh "$language" HEAD) || status=$?
+  report=$(.github/scripts/mutate.sh "$language" HEAD) || status=$?
   if ((status != 0)); then
     echo "FAIL: after a change to $changed_file, mutate.sh $language exited with status $status, not 0." >&2
     exit 1

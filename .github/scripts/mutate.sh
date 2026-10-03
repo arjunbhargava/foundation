@@ -4,7 +4,7 @@
 # replaced by `<=`. It survives when every test still passes, which marks
 # behaviour that no test checks.
 #
-# Usage: scripts/mutate.sh python|rust [base]
+# Usage: .github/scripts/mutate.sh python|rust [base]
 #
 # Changed means different from the merge base with base (default
 # origin/main), including uncommitted changes. The mutated files are the
@@ -19,7 +19,7 @@
 #
 # Keep it working under bash 3.2, the version macOS ships: no mapfile.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 language=${1:-}
 base=${2:-origin/main}
@@ -33,7 +33,7 @@ main() {
     python) mutate_python ;;
     rust) mutate_rust ;;
     *)
-      echo "error: scripts/mutate.sh mutates python or rust, not '$language'." >&2
+      echo "error: .github/scripts/mutate.sh mutates python or rust, not '$language'." >&2
       exit 1
       ;;
   esac
@@ -141,7 +141,7 @@ mutate_rust() {
 # so src/*.py includes src/foundation/quadrature.py.
 files_to_mutate() {
   local sources=$1 tests=$2
-  if git diff --quiet "$merge_base" -- "$tests" scripts/mutate.sh .github/workflows/mutation.yml; then
+  if git diff --quiet "$merge_base" -- "$tests" .github/scripts/mutate.sh .github/workflows/mutation.yml; then
     git diff --name-only --diff-filter=d "$merge_base" -- "$sources"
   else
     git ls-files -- "$sources"
