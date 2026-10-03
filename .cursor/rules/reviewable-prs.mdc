@@ -10,45 +10,47 @@ A PR is reviewable when one person can check it properly in one sitting.
 Defect detection falls off as review size grows (SmartBear/Cisco study:
 sharply above a few hundred lines), so size is a correctness concern, not style.
 
-Budget, counted as `git diff --stat` against the base, excluding lockfiles,
-generated code, and vendored files: **≤ 500 changed lines**. Smaller is better;
-500 is a ceiling, not a target.
+Size, counted as `git diff --stat` against the base, excluding lockfiles,
+generated code, and vendored files: aim for **300 changed lines**, with
+**500 as the ceiling**.
 
-- One logical change per PR. If the title needs "and", split it.
+- One language or one concern per PR. If the title needs "and", split it.
 - Never mix a refactor, rename, or move with a behaviour change. Land the
   mechanical change first, then the behaviour change on top.
-- No drive-by edits (formatting, unrelated fixes, dependency bumps). Note them
-  in the PR body as follow-ups instead.
+- No drive-by edits (formatting, unrelated fixes, dependency bumps). List them
+  under Follow-ups instead.
 - A change that decision D7 in `docs/template-plan.md` says needs an approved
   plan gets one before coding. Read the `plan` skill.
 
-When a task looks likely to exceed the budget, read the `large-changes` skill
+When a task looks likely to exceed 500 lines, read the `large-changes` skill
 before starting it. It covers splitting the work into stacked PRs, and the
 only cases in which one PR may exceed 500 lines.
 
 ## PR body
 
-Start the body from `.github/pull_request_template.md`. Its headings are the
-text before the colon in each item below, in this order. Keep each section no
-longer than it needs to be, and write `None` in a section that has nothing
-rather than removing it.
+Start the body from `.github/pull_request_template.md`, and omit a section
+that has nothing rather than writing `None`. Keep the body to about 150 words
+for a PR under 100 changed lines, and at most 300 otherwise.
 
-1. What changes and why: 2–4 sentences. Link the issue or design doc. When the
-   work has a Linear issue, include `Fixes <issue ID>` (for example
-   `Fixes ENG-123`), which links the PR to the issue.
-2. How to review: where to start reading, what is mechanical and can be skimmed.
-3. How it was verified: commands run and their results, and which test covers
-   each acceptance criterion. Read the `testing` skill when writing or
-   changing tests.
-4. What was not verified, and known limitations: include deliberate omissions.
-5. Changes from the plan, and problems found outside the scope: how the work
-   differs from the agreed plan. Report problems outside the task's scope as
-   new issues and link them, rather than fixing them in this PR.
-6. Diagrams: `updated` (name which ones) or `no structural change`. If the PR
-   changes components, data flow, state, or external dependencies, update
-   `docs/architecture.md` in the same PR, following the `architecture-docs` skill.
-7. Risks and follow-ups: a breaking change lists a follow-up `prune-review` of
-   the affected area.
+1. **What and why**: at most 3 sentences, plus one line per new dependency,
+   ending "(not in the plan)" if the approved plan doesn't name it
+   (`dependencies` rule). Link the issue or design doc, and for a Linear
+   issue include `Fixes <issue ID>` (for example `Fixes ENG-123`).
+2. **Verified**: commands and CI runs, one line each, with links, and one
+   line, not a table, naming the test for each acceptance criterion (`testing`
+   skill). A gap in verification or another difference from the plan gets
+   one line, only when it matters: here, or under Needs a person if a person
+   must accept it.
+3. **Needs a person**: decisions only.
+4. **Follow-ups**: one line each; filing them in Linear is optional. A
+   breaking change lists a `prune-review` of the affected area.
 
-Commit history should read as the review narrative: each commit is one
-coherent step with a message stating why, not just what.
+Link evidence instead of pasting it: showing that a check fails takes one
+line per check, with its run link. No "why I didn't do X" prose: mention a
+rejected option only when a reviewer would otherwise ask, in one sentence.
+Mention diagrams only when they change; a change to components, data flow,
+state, or external dependencies still updates `docs/architecture.md`
+(`architecture-docs` skill).
+
+Commit messages carry the guide to reviewing: each commit is one coherent
+step, with a message stating why, not just what.

@@ -89,7 +89,7 @@ Each language task adds its directory and lists it here.
 - The PR body follows the `reviewable-prs` rule.
 - Before asking a person to review a PR, fix each finding in Bugbot's review
   of the latest push (the `Cursor Bugbot` check), or reply saying why it is
-  wrong. If Bugbot doesn't run, say so under "What was not verified".
+  wrong. If Bugbot doesn't run, say so under "Verified".
 
 ## Cursor Cloud specific instructions
 
