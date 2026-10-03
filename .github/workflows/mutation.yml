@@ -18,6 +18,7 @@ on:
       - .github/scripts/mutate.sh
       - .github/scripts/mutate_test.sh
       - .github/workflows/mutation.yml
+      - stryker.config.json
 
 permissions:
   contents: read

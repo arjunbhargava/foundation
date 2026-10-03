@@ -10,7 +10,8 @@
 # origin/main), including uncommitted changes. The mutated files are the
 # changed source files, plus every source file of a package whose tests
 # changed, because a changed test can stop checking any code in its package.
-# A change to this script or its workflow mutates every package.
+# A change to this script, its workflow, or stryker.config.json mutates
+# every package.
 #
 # The report goes to stdout and, in GitHub Actions, to the job summary.
 # Surviving mutants don't fail the script: for now, mutation testing reports
@@ -186,14 +187,15 @@ mutate_typescript() {
 
 # Prints the source files to mutate in one package, given a pathspec for its
 # tests and then one or more for its sources: all the sources if any of its
-# tests changed, and otherwise those that changed. A change to this script or
-# its workflow counts as a change to every package's tests, so that the PR
-# making it runs every step here in CI. In a git pathspec, * also matches /,
+# tests changed, and otherwise those that changed. A change to this script,
+# its workflow, or stryker.config.json, which only mutation testing reads,
+# counts as a change to every package's tests, so that the PR making it runs
+# every step here in CI. In a git pathspec, * also matches /,
 # so src/*.py includes src/foundation/quadrature.py.
 files_to_mutate() {
   local tests=$1
   shift
-  if git diff --quiet "$merge_base" -- "$tests" .github/scripts/mutate.sh .github/workflows/mutation.yml; then
+  if git diff --quiet "$merge_base" -- "$tests" .github/scripts/mutate.sh .github/workflows/mutation.yml stryker.config.json; then
     git diff --name-only --diff-filter=d "$merge_base" -- "$@"
   else
     git ls-files -- "$@"

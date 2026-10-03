@@ -27,7 +27,8 @@ main() {
   check rust .github/scripts/mutate.sh $'crates/c/src/lib.rs\ncrates/c/src/x.rs' "1 of 2 mutants survived"
   check typescript packages/p/src/a.ts packages/p/src/a.ts "1 of 2 mutants survived"
   check typescript packages/p/src/a.test.ts $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
-  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 9 cases."
+  check typescript stryker.config.json $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
+  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 10 cases."
 }
 
 # Writes fake uv, cargo, and pnpm, which append the module globs or files
@@ -88,7 +89,7 @@ make_repository() {
   cp "$script_dir/mutate.sh" .github/scripts/
   touch src/pkg/__init__.py src/pkg/a.py src/pkg/b.py tests/test_a.py \
     crates/c/src/lib.rs crates/c/src/x.rs crates/c/tests/t.rs \
-    packages/p/src/a.ts packages/p/src/b.ts packages/p/src/a.test.ts
+    packages/p/src/a.ts packages/p/src/b.ts packages/p/src/a.test.ts stryker.config.json
   git init --quiet
   git add .
   git -c user.name=test -c user.email=test@example.com commit --quiet --message base
