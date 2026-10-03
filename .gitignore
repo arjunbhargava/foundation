@@ -15,10 +15,15 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .import_linter_cache/
+# mutmut's copy of the source with mutants in it, and its results.
+/mutants/
 
 # TypeScript
 node_modules/
 *.tsbuildinfo
+# StrykerJS's sandbox copies of packages/ with mutants in them, and its report.
+/.stryker-tmp/
+/reports/mutation/
 
 # Rust
 target/

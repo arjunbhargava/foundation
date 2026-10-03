@@ -316,7 +316,17 @@ F5.
 - Run mutation testing on changed code in CI (F4, F9). At first it reports results
   only; it doesn't block merging. Tools: `cargo-mutants` (Rust), `mutmut`
   (Python), StrykerJS (TypeScript), Mull (C/C++; the least mature).
-- Decide after a month of data whether to make it blocking.
+- Decide after a month of data whether to make it blocking. The data for each
+  PR in that month comes from the runs of `.github/workflows/mutation.yml`:
+  - Each language's counts, from the line
+    `### <Language> mutation testing: <survived> of <total> mutants survived`
+    that starts its report. `gh run list --workflow mutation.yml` lists the
+    runs, and `gh run view <run ID> --log | grep 'mutation testing:'` prints
+    the lines. GitHub keeps logs for 90 days by default.
+  - The job's wall time, from `startedAt` and `completedAt` in
+    `gh run view <run ID> --json jobs`.
+  - For a sample of surviving mutants, whether a person judges each one a gap
+    in the tests or a change that can't alter behaviour.
 
 **T15. Enforce module boundaries.** Needs: T7, T8, T9.
 
