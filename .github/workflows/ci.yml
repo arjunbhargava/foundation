@@ -8,9 +8,11 @@
 #
 # Each job sets MISE_ENABLE_TOOLS to the tools in mise.toml that its commands
 # run, and .cursor/install.sh installs only those. mise ignores a tool missing
-# from the list, so its command runs the runner's own version, or fails if
-# the runner has none. Add a new tool to every job that runs it, including
-# docs, which runs every language's docs tools.
+# from the list, so its command would run the runner's own version. Each job
+# therefore runs .github/scripts/block_unlisted_tools.sh next, which makes
+# a command for an unlisted tool fail with an error naming the tool. Add a new
+# tool to every job that runs it, including docs, which runs every language's
+# docs tools.
 name: CI
 
 on:
@@ -34,7 +36,8 @@ defaults:
 jobs:
   changes:
     # Each output is 'true' when the change touches that job's files, or
-    # ci.yml or mise.toml, which define every job. A failed diff also counts
+    # ci.yml, mise.toml, or the block_unlisted_tools script and its test,
+    # which define or affect every job. A failed diff also counts
     # as a change, so an error runs jobs rather than skipping them.
     runs-on: ubuntu-latest
     outputs:
@@ -55,7 +58,7 @@ jobs:
         run: |
           base=${MERGE_GROUP_BASE_SHA:-origin/$GITHUB_BASE_REF}
           changed() {
-            if git diff --quiet "$base...HEAD" -- "$@" .github/workflows/ci.yml mise.toml; then
+            if git diff --quiet "$base...HEAD" -- "$@" .github/workflows/ci.yml mise.toml .github/scripts/block_unlisted_tools.sh .github/scripts/block_unlisted_tools_test.sh; then
               echo false
             else
               echo true
@@ -115,6 +118,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup
       - run: mise run docs
 
@@ -129,6 +133,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup:python
       - run: mise run lint:python
       - run: mise run test:python
@@ -144,6 +149,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup:rust
       - run: mise run lint:rust
       - run: mise run test:rust
@@ -159,6 +165,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup:typescript
       - run: mise run lint:typescript
       - run: mise run test:typescript
@@ -178,6 +185,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run lint:cpp
       - run: mise run test:cpp
 

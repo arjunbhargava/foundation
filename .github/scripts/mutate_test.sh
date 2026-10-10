@@ -3,7 +3,8 @@
 # says, without running a mutation tool. It runs the script in a temporary
 # git repository with one package in each language, where fake uv, cargo,
 # and pnpm record the files or module globs they are given and print canned
-# results: one surviving and one caught mutant.
+# results: one surviving and one caught mutant, or two caught mutants if
+# FAKE_ALL_KILLED is set.
 #
 # Usage: .github/scripts/mutate_test.sh
 set -euo pipefail
@@ -31,7 +32,11 @@ main() {
   check typescript packages/p/src/a.ts packages/p/src/a.ts "1 of 2 mutants survived"
   check typescript packages/p/src/a.test.ts $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
   check typescript stryker.config.json $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
-  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 10 cases."
+
+  FAKE_ALL_KILLED=1 check python src/pkg/a.py 'pkg.a.x*' "0 of 2 mutants survived"
+  FAKE_ALL_KILLED=1 check rust crates/c/src/x.rs crates/c/src/x.rs "0 of 2 mutants survived"
+  FAKE_ALL_KILLED=1 check typescript packages/p/src/a.ts packages/p/src/a.ts "0 of 2 mutants survived"
+  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 13 cases."
 }
 
 # Writes fake uv, cargo, and pnpm, which append the module globs or files
@@ -43,7 +48,7 @@ make_fake_tools() {
 case "$*" in
   "run mutmut run "*) printf '%s\n' "${@:4}" >> "$FAKE_TOOL_ARGUMENTS" ;;
   "run mutmut results --all true")
-    printf '    pkg.a.x_f__mutmut_1: survived\n    pkg.a.x_f__mutmut_2: killed\n    pkg.b.x_g__mutmut_1: not checked\n'
+    printf '    pkg.a.x_f__mutmut_1: %s\n    pkg.a.x_f__mutmut_2: killed\n    pkg.b.x_g__mutmut_1: not checked\n' "$([[ -n ${FAKE_ALL_KILLED:-} ]] && echo killed || echo survived)"
     ;;
   "run mutmut show "*) echo "# $4: survived" ;;
   *) echo "fake uv: unexpected arguments: $*" >&2; exit 1 ;;
@@ -60,6 +65,11 @@ while (($# > 0)); do
 done
 mkdir -p target/mutants.out
 echo '[{}, {}]' > target/mutants.out/mutants.json
+if [[ -n ${FAKE_ALL_KILLED:-} ]]; then
+  echo '{"total_mutants": 2, "missed": 0, "caught": 2, "timeout": 0, "unviable": 0}' > target/mutants.out/outcomes.json
+  : > target/mutants.out/missed.txt
+  exit 0
+fi
 echo '{"total_mutants": 2, "missed": 1, "caught": 1, "timeout": 0, "unviable": 0}' > target/mutants.out/outcomes.json
 echo 'crates/c/src/x.rs:1:1: replace f with g' > target/mutants.out/missed.txt
 exit 2
@@ -74,9 +84,11 @@ while (($# > 0)); do
   shift
 done
 mkdir -p reports/mutation
-cat > reports/mutation/mutation.json << 'REPORT'
+survivor_status=Survived
+[[ -n ${FAKE_ALL_KILLED:-} ]] && survivor_status=Killed
+cat > reports/mutation/mutation.json << REPORT
 {"files": {"packages/p/src/a.ts": {"mutants": [
-  {"mutatorName": "EqualityOperator", "replacement": "x <= 2", "status": "Survived", "location": {"start": {"line": 1, "column": 1}}},
+  {"mutatorName": "EqualityOperator", "replacement": "x <= 2", "status": "$survivor_status", "location": {"start": {"line": 1, "column": 1}}},
   {"mutatorName": "BooleanLiteral", "replacement": "false", "status": "Killed", "location": {"start": {"line": 2, "column": 1}}}
 ]}}}
 REPORT
