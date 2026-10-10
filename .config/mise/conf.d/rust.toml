@@ -1,5 +1,6 @@
 # Rust's tools and tasks, which mise loads along with mise.toml. Outside CI,
-# mise asks once to trust this file, because it changes a setting.
+# the [settings] table below makes mise ask once to trust the project's
+# config files.
 
 [settings]
 # Installs the Rust toolchain that rust-toolchain.toml names, with rustup.
