@@ -23,7 +23,7 @@ idiomatic_version_file_enable_tools = ["rust"]
 # that runs a tool it doesn't list fails, with an error naming the tool.
 [tools]
 cargo-deny = "0.20.2"
-jq = "1.8.2" # .github/rulesets/apply.sh
+jq = "1.8.2" # .github/rulesets/
 node = "24.21.0"
 pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
 # Move pyproject.toml's uv_build range with this pin. Outside that range, uv
@@ -119,6 +119,10 @@ run = [
   "cmake --preset clang-tidy",
   "cmake --build --preset clang-tidy",
 ]
+
+[tasks."lint:rulesets"]
+description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, approval count, and thread resolution"
+run = ".github/rulesets/check.sh"
 
 [tasks.test]
 description = "Run all tests"
