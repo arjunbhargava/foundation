@@ -42,4 +42,5 @@ if [[ -n $headers_without_file_comment ]]; then
 fi
 doxygen Doxyfile
 
-uv run sphinx-build -W --keep-going -q -b html docs docs/_build/html
+# Sphinx and its extensions are the uv project in docs/, locked in docs/uv.lock.
+uv run --project docs sphinx-build -W --keep-going -q -b html docs docs/_build/html

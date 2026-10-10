@@ -43,8 +43,8 @@ ninja = "1.13.2"
 description = "Install project dependencies"
 depends = ["setup:*"]
 
-# Each setup task fails if the language's lockfile is out of date with its
-# manifest, so CI catches a manifest edited without relocking.
+# Each setup task fails if its lockfile is out of date with its manifest, so
+# CI catches a manifest edited without relocking.
 [tasks."setup:python"]
 description = "Install the Python dependencies that uv.lock pins"
 run = "uv sync --locked"
@@ -56,6 +56,10 @@ run = "cargo fetch --locked"
 [tasks."setup:typescript"]
 description = "Install the TypeScript dependencies that pnpm-lock.yaml pins"
 run = "pnpm install --frozen-lockfile"
+
+[tasks."setup:docs"]
+description = "Install the docs build's tools that docs/uv.lock pins"
+run = "uv sync --locked --project docs"
 
 [tasks.fmt]
 description = "Format all code in place"

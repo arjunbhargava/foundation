@@ -113,8 +113,11 @@ The build also needs the following, which the template already has:
 - For C and C++, add `docs/api/cpp.md` with a Breathe `doxygennamespace`
   directive for each top-level namespace. `doxygenindex` would also list
   every source directory.
-- Declare the Python docs dependencies with the repo's other dev dependencies:
-  `sphinx`, `sphinx-autoapi`, `myst-parser`, `furo`, and `ruff`, plus `breathe` if the repo has C or C++. Put the TypeDoc packages
+- Declare `sphinx`, `sphinx-autoapi`, `myst-parser`, and `furo`, plus
+  `breathe` if the repo has C or C++, in the `dev` group of
+  `docs/pyproject.toml`, a uv project of their own, so that Sphinx doesn't
+  depend on the Python package. `ruff`, which checks Python docstrings,
+  stays with the Python package's dev dependencies. Put the TypeDoc packages
   in `devDependencies`.
 - Configure `ruff` as `[tool.ruff.lint]` in this repository's `pyproject.toml`
   does: select the `D` rules, use the Google convention, ignore `D107`, and

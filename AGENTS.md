@@ -70,7 +70,9 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   CI run through `mise run`, such as `mutate.sh` and `agent_spend.py`. Each
   script is tested by the `_test` file next to it.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
-  generated from doc comments.
+  generated from doc comments. Sphinx and its extensions are a uv project of
+  their own, `docs/pyproject.toml`, locked in `docs/uv.lock`, so that Sphinx
+  doesn't depend on the Python package.
 
 Each language task adds its directory and lists it here.
 
@@ -79,7 +81,9 @@ Each language task adds its directory and lists it here.
 - Pin every tool in `mise.toml`, at an exact version. Don't install tools
   another way. There are four exceptions. Add a Python package, such as
   ruff or pyright, with `mise exec -- uv add --dev <package>`, which pins it
-  in `uv.lock`. Add a TypeScript package, such as typescript (tsc), Biome, or
+  in `uv.lock`, and a docs build tool with
+  `mise exec -- uv add --project docs --dev <package>`, which pins it in
+  `docs/uv.lock`. Add a TypeScript package, such as typescript (tsc), Biome, or
   vitest, with `mise exec -- pnpm add -D -w --save-exact <package>`, which
   pins it in `package.json` and `pnpm-lock.yaml`. The Rust toolchain is
   pinned in `rust-toolchain.toml`, so that Dependabot can update it, and mise
