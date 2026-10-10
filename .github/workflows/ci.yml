@@ -204,6 +204,7 @@ jobs:
       - run: bash .cursor/install.sh
       - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run lint:rulesets
+      - run: mise run test:rulesets
 
   ci-ok:
     # The only required CI check. A skipped job means its files didn't

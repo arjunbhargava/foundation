@@ -178,6 +178,10 @@ run = ".github/scripts/mutate.sh typescript"
 description = "Check which files .github/scripts/mutate.sh mutates and what it reports, with fake mutation tools"
 run = ".github/scripts/mutate_test.sh"
 
+[tasks."test:rulesets"]
+description = "Check the changes .github/rulesets/apply.sh makes with and without --auto, and that check.sh catches broken ruleset files, with a fake gh"
+run = ".github/rulesets/rulesets_test.sh"
+
 [tasks."test:block-unlisted-tools-script"]
 description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
 run = ".github/scripts/block_unlisted_tools_test.sh"
