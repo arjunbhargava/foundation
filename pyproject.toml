@@ -36,6 +36,7 @@ ignore = ["D107"]
 [tool.ruff.lint.per-file-ignores]
 # Tests aren't API reference; their names state the behaviour they check.
 "tests/**" = ["D"]
+".github/scripts/*_test.py" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -64,7 +65,7 @@ forbidden_modules = ["pytest"]
 # -n auto runs tests in parallel, so a test that depends on shared state or on
 # another test's order fails early instead of intermittently later.
 addopts = ["-n", "auto", "--doctest-modules"]
-testpaths = ["src", "tests"]
+testpaths = ["src", "tests", ".github/scripts"]
 strict = true
 filterwarnings = ["error"]
 
