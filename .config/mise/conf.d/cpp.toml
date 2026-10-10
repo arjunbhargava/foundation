@@ -12,6 +12,10 @@ ninja = "1.13.2"
 # From conda-forge, the only source with builds for Linux arm64 and macOS.
 "conda:doxygen" = "1.18.0"
 
+[tasks."fmt:cpp"]
+description = "Format the C and C++ code in place"
+run = 'find cpp -name "*.[ch]" -o -name "*.[ch]pp" | xargs clang-format -i'
+
 [tasks."lint:cpp"]
 description = "Check C and C++ formatting and that no #include uses ../, and build with clang-tidy and compiler warnings as errors"
 run = [

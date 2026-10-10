@@ -2,13 +2,13 @@
 # for example `mise run check`. Each language's tools and tasks are in a file
 # of its own, .config/mise/conf.d/<language>.toml, which mise loads along with
 # this one. That file pins the tools only the language uses, and defines its
-# `lint:<language>`, `test:<language>`, and, if it has dependencies to
-# install, `setup:<language>` tasks, which `lint`, `test`, and `setup` pick
-# up; the language's commands are also in `fmt`. This file pins the tools that
-# more than one language, or the docs build, runs. Python packages, including
-# ruff and pyright, are pinned in uv.lock rather than in mise's files,
-# TypeScript packages, including tsc, Biome, and vitest, in pnpm-lock.yaml,
-# and the Rust toolchain in rust-toolchain.toml.
+# `fmt:<language>`, `lint:<language>`, `test:<language>`, and, if it has
+# dependencies to install, `setup:<language>` tasks, which `fmt`, `lint`,
+# `test`, and `setup` pick up. This file pins the tools that more than one
+# language, or the docs build, runs. Python packages, including ruff and
+# pyright, are pinned in uv.lock rather than in mise's files, TypeScript
+# packages, including tsc, Biome, and vitest, in pnpm-lock.yaml, and the Rust
+# toolchain in rust-toolchain.toml.
 
 # Dependabot can't read this file or those in .config/mise/conf.d/, so bump
 # their pins by hand, to a version that `mise ls-remote <tool>` lists. Only
@@ -40,14 +40,7 @@ run = "uv sync --locked --project docs"
 
 [tasks.fmt]
 description = "Format all code in place"
-run = [
-  "uv run ruff format",
-  "cargo fmt",
-  # check rather than format, so imports are sorted too, as lint:typescript
-  # requires. Lint fixes are left to the author.
-  "pnpm exec biome check --write --linter-enabled=false",
-  'find cpp -name "*.[ch]" -o -name "*.[ch]pp" | xargs clang-format -i',
-]
+depends = ["fmt:*"]
 
 [tasks.lint]
 description = "Check formatting, lint, and types without changing files"

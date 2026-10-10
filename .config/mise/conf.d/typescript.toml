@@ -9,6 +9,12 @@ pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
 description = "Install the TypeScript dependencies that pnpm-lock.yaml pins"
 run = "pnpm install --frozen-lockfile"
 
+[tasks."fmt:typescript"]
+description = "Format the TypeScript code and root JSON files in place, and sort imports"
+# check rather than format, so imports are sorted too, as lint:typescript
+# requires. Lint fixes are left to the author.
+run = "pnpm exec biome check --write --linter-enabled=false"
+
 [tasks."lint:typescript"]
 description = "Check TypeScript formatting, lint, types, and module boundaries"
 run = [

@@ -5,6 +5,10 @@
 description = "Install the Python dependencies that uv.lock pins"
 run = "uv sync --locked"
 
+[tasks."fmt:python"]
+description = "Format the Python code in place"
+run = "uv run ruff format"
+
 [tasks."lint:python"]
 description = "Check Python formatting, lint including docstrings, types, and module boundaries"
 run = [

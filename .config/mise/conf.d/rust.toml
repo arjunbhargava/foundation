@@ -14,6 +14,10 @@ cargo-deny = "0.20.2"
 description = "Download the Rust dependencies that Cargo.lock pins"
 run = "cargo fetch --locked"
 
+[tasks."fmt:rust"]
+description = "Format the Rust code in place"
+run = "cargo fmt"
+
 [tasks."lint:rust"]
 description = "Check Rust formatting, lint including doc comments, and dependencies' advisories, bans, licences, and sources"
 run = [
