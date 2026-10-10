@@ -75,10 +75,11 @@ the template doesn't have yet, which the language's first `live` test adds:
 - **TypeScript:** a root `vitest.config.ts` that defines the tag, since vitest
   fails a test whose tag isn't defined:
   `defineConfig({ test: { tags: [{ name: "live", description: "costs money or calls a live service" }] } })`.
-  Add `--tags-filter '!live'` to `test:typescript` in `mise.toml`, and the new
-  file to the `typescript` output of the `changes` job in `ci.yml`. Vitest
-  combines several `--tags-filter` flags with AND, so the `live` tests run
-  through vitest directly, not `mise run`.
+  Add `--tags-filter '!live'` to `test:typescript` in
+  `.config/mise/conf.d/typescript.toml`, and the new file to the `typescript`
+  output of the `changes` job in `ci.yml`. Vitest combines several
+  `--tags-filter` flags with AND, so the `live` tests run through vitest
+  directly, not `mise run`.
 - **C and C++:** add `"filter": { "exclude": { "label": "^live$" } }` to the
   `sanitizers` test preset in `CMakePresets.json`. `-L live` alone finds no
   tests, because the preset still excludes them; `-LE '^$'` replaces that

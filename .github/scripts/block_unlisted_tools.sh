@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Makes a CI job fail when its commands run a tool that mise.toml pins but the
-# job's MISE_ENABLE_TOOLS leaves out. mise ignores such a tool, so without
+# Makes a CI job fail when its commands run a tool that mise.toml or
+# .config/mise/conf.d/ pins but the job's MISE_ENABLE_TOOLS leaves out. mise ignores such a tool, so without
 # this the command would silently run whatever version the runner has.
 #
 # For each unlisted tool, this writes an executable with the tool's command
@@ -20,8 +20,8 @@ set -euo pipefail
 stub_dir=$RUNNER_TEMP/unlisted-tool-stubs
 mkdir -p "$stub_dir"
 
-# Unsetting MISE_ENABLE_TOOLS makes `mise ls` show every tool in mise.toml, and
-# rust, which rust-toolchain.toml pins.
+# Unsetting MISE_ENABLE_TOOLS makes `mise ls` show every tool in mise.toml and
+# .config/mise/conf.d/, and rust, which rust-toolchain.toml pins.
 for tool in $(env -u MISE_ENABLE_TOOLS mise ls --no-header | awk '{print $1}'); do
   case ",$MISE_ENABLE_TOOLS," in
     *",$tool,"*) continue ;;
@@ -37,7 +37,7 @@ for tool in $(env -u MISE_ENABLE_TOOLS mise ls --no-header | awk '{print $1}'); 
   for command in $commands; do
     cat > "$stub_dir/$command" << EOF
 #!/bin/sh
-echo "::error::$command ran in the $GITHUB_JOB job, but mise.toml pins $tool and MISE_ENABLE_TOOLS for $GITHUB_JOB does not list it, so the runner's own $command would run. Add $tool to MISE_ENABLE_TOOLS in the $GITHUB_JOB job in .github/workflows/ci.yml." >&2
+echo "::error::$command ran in the $GITHUB_JOB job, but mise.toml or .config/mise/conf.d/ pins $tool and MISE_ENABLE_TOOLS for $GITHUB_JOB does not list it, so the runner's own $command would run. Add $tool to MISE_ENABLE_TOOLS in the $GITHUB_JOB job in .github/workflows/ci.yml." >&2
 exit 127
 EOF
     chmod +x "$stub_dir/$command"

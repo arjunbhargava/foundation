@@ -35,7 +35,8 @@ This gives the machine the same tools as CI and cloud agents. The script
 downloads the mise version it pins, checks the download's sha256, and
 installs it to `~/.local/bin` without sudo, unless that version is already on
 your PATH. It then runs `mise install` for the tools pinned in `mise.toml`
-and `mise run setup` for the project's dependencies. It supports macOS and
+and `.config/mise/conf.d/`, and `mise run setup` for the project's
+dependencies. It supports macOS and
 Linux on x86-64 or arm64, and a second run changes nothing. C and C++ also
 need `g++` from the OS: on Ubuntu, `sudo apt-get install g++`; on macOS, the
 Xcode Command Line Tools, which git already needs.
@@ -55,8 +56,9 @@ repository settings, also needs the [GitHub CLI](https://cli.github.com/),
 ## Commands
 
 [mise](https://mise.jdx.dev/) installs the tool versions pinned in
-[`mise.toml`](mise.toml) and runs the shared commands, so people, agents, and
-CI all run the same `mise run <command>`.
+[`mise.toml`](mise.toml) and in one file per language in
+[`.config/mise/conf.d/`](.config/mise/conf.d/), and runs the shared commands
+they define, so people, agents, and CI all run the same `mise run <command>`.
 [`AGENTS.md`](AGENTS.md) lists the commands.
 
 ## Agent instructions
