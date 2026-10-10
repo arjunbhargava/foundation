@@ -9,3 +9,13 @@
 /.dependency-cruiser.cjs @arjunbhargava
 /pyproject.toml          @arjunbhargava
 /CMakeLists.txt          @arjunbhargava
+/biome.json              @arjunbhargava
+/tsconfig.json           @arjunbhargava
+/.clang-tidy             @arjunbhargava
+/.clang-format           @arjunbhargava
+/CMakePresets.json       @arjunbhargava
+/stryker.config.json     @arjunbhargava
+/docs/build.sh           @arjunbhargava
+/docs/conf.py            @arjunbhargava
+/Cargo.toml              @arjunbhargava
+/package.json            @arjunbhargava

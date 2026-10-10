@@ -500,10 +500,10 @@ far:
   required approval, code-owner review kept (so owned paths still need the
   owner), and `required_review_thread_resolution` on, so Bugbot's findings
   block merging until their threads are resolved. `main: checks` is
-  unchanged. `mise.toml` and `AGENTS.md` become owned paths, so an agent PR
-  can't change what CI runs or the agent instructions. First confirm on a
-  scratch PR that GitHub still requires code-owner review when the approval
-  count is 0.
+  unchanged. `mise.toml`, `AGENTS.md`, and the files that configure checks
+  become owned paths, so an agent PR can't change what CI runs, the agent
+  instructions, or a check without the owner. First confirm on a scratch PR
+  that GitHub still requires code-owner review when the approval count is 0.
 - GitHub's native auto-merge, not a custom merge workflow: it already waits
   for every ruleset, and Actions has no trigger for a resolved review thread.
   A workflow turns on auto-merge for an `agent` PR once the `Cursor Bugbot`
@@ -514,7 +514,9 @@ far:
   bypass code-owner review, because the owner is a bypass actor.
 - `docs/auto-mode.md` says what auto mode allows, what still needs the owner,
   and how to audit and revert. Merge commits (D6) make each revert one commit.
-- Open: spend and size limits for an auto-mode task.
+- Limits (owner, 2026-10-10): $500 per day of cloud agent spend to start,
+  checked with `mise run spend` and capped in the Cursor dashboard, and the
+  500-line PR ceiling. `docs/auto-mode.md` gives the details.
 
 ## Order and parallel work
 

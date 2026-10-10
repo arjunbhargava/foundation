@@ -31,10 +31,13 @@ rulesets. `mise run lint:rulesets` fails if they differ in anything else.
 A PR that changes a path in `.github/CODEOWNERS` needs a code owner's
 approval in both modes. Those paths include CI and the rulesets
 (`.github/`), the commands CI runs (`mise.toml`), the agent instructions
-(`.cursor/` and `AGENTS.md`), and the dependency and module-boundary
-configuration. Agent PRs are authored by the owner's account, and GitHub
-doesn't let authors approve their own PRs, so the owner merges these with
-the admin bypass.
+(`.cursor/` and `AGENTS.md`), and the files that configure checks,
+dependencies, and module boundaries, such as `biome.json`, `docs/build.sh`,
+`Cargo.toml`, and `pyproject.toml`. A change to one of those can weaken a
+check or add a dependency, which D7 already requires the owner to approve.
+Agent PRs are authored by the owner's account, and GitHub doesn't let
+authors approve their own PRs, so the owner merges these with the admin
+bypass.
 
 ## Switching auto mode on and off
 
@@ -53,10 +56,15 @@ Active and the other to Disabled.
 
 ## Instruction for worker prompts
 
-Add this line to the prompt of each agent that works in auto mode:
+Add these lines to the prompt of each agent that works in auto mode:
 
-> Resolve each Bugbot review thread after you fix its finding, because an
-> unresolved thread blocks merging.
+> Resolve a Bugbot review thread only after you fix its finding. If you
+> dispute a finding, reply saying why and leave the thread open, so the PR
+> waits for the owner.
+
+An unresolved thread blocks merging. In auto mode, threads are the only gate
+against merging a flawed PR that passes CI, so only the owner closes a
+disputed one.
 
 ## Auditing and reverting
 
@@ -74,11 +82,18 @@ the PR page. To revert one, branch from `main`, run
 `git revert -m 1 <merge commit>`, and open a PR. `-m 1` keeps `main`'s side
 of the merge, which undoes everything the PR changed.
 
-## Open items
+## Limits
 
-The owner hasn't yet chosen:
-
-- Spend and size limits for an auto-mode task. `pr-size` still fails a PR
-  above 500 changed lines, unless its description starts with `Oversize:`.
-- Whether a worker may resolve a thread it answered instead of fixing, which
-  lets it overrule Bugbot.
+- **Spend: $500 per day** across all cloud agent runs on this repository.
+  It counts cloud agent runs only, as `mise run spend` counts them, not
+  editor or Bugbot usage. It is a starting value, to revise with
+  `mise run spend` data. The repository can't stop a run partway through, so
+  the real cap is the spend limit the owner sets in the Cursor dashboard. The
+  orchestrator checks the day's spend at each pause with
+  `mise run spend -- --since "$(date -u +%F)"`, whose "All N cloud agent
+  runs" row is the total since 00:00 UTC. That total includes every cloud
+  agent run on the team's account, so while other repositories run agents
+  too, it overstates this repository's spend.
+- **Size: 500 changed lines per PR**, the ceiling `pr-size` enforces in both
+  modes. A PR whose description starts with `Oversize:` passes `pr-size`, and
+  Bugbot then checks that the `large-changes` skill allows it.
