@@ -115,8 +115,8 @@ The build also needs the following, which the template already has:
   every source directory.
 - Declare `sphinx`, `sphinx-autoapi`, `myst-parser`, and `furo`, plus
   `breathe` if the repo has C or C++, in the `dev` group of
-  `docs/pyproject.toml`, a uv project of their own, so that the docs build
-  doesn't need the Python package. `ruff`, which checks Python docstrings,
+  `docs/pyproject.toml`, a uv project of their own, so that Sphinx doesn't
+  depend on the Python package. `ruff`, which checks Python docstrings,
   stays with the Python package's dev dependencies. Put the TypeDoc packages
   in `devDependencies`.
 - Configure `ruff` as `[tool.ruff.lint]` in this repository's `pyproject.toml`

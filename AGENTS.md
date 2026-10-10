@@ -71,8 +71,8 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   script is tested by the `_test` file next to it.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
   generated from doc comments. Sphinx and its extensions are a uv project of
-  their own, `docs/pyproject.toml`, locked in `docs/uv.lock`, so that the
-  docs build doesn't need the Python package.
+  their own, `docs/pyproject.toml`, locked in `docs/uv.lock`, so that Sphinx
+  doesn't depend on the Python package.
 
 Each language task adds its directory and lists it here.
 

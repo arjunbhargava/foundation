@@ -1,6 +1,7 @@
-# The tools docs/build.sh runs to build the documentation site. They are a uv
-# project of their own, separate from the Python package in the root
-# pyproject.toml, so that a project without Python can still build its docs.
+# Sphinx and its extensions, which docs/build.sh runs to build the
+# documentation site. They are a uv project of their own, separate from the
+# Python package in the root pyproject.toml, so that Sphinx doesn't depend on
+# that package, which a project may not have.
 [project]
 name = "docs"
 version = "0.1.0"
