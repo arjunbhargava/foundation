@@ -6,8 +6,9 @@
 # changes and runs only when that output is 'true', and add the job to
 # ci-ok's needs. Jobs run tools through the shared `mise run` commands.
 #
-# Each job sets MISE_ENABLE_TOOLS to the tools in mise.toml that its commands
-# run, and .cursor/install.sh installs only those. mise ignores a tool missing
+# Each job sets MISE_ENABLE_TOOLS to the tools that mise.toml and
+# .config/mise/conf.d/ pin and its commands run, and .cursor/install.sh
+# installs only those. mise ignores a tool missing
 # from the list, so its command would run the runner's own version. Each job
 # therefore runs .github/scripts/block_unlisted_tools.sh next, which makes
 # a command for an unlisted tool fail with an error naming the tool. Add a new
@@ -39,6 +40,9 @@ jobs:
     # ci.yml, mise.toml, or the block_unlisted_tools script and its test,
     # which define or affect every job. A failed diff also counts
     # as a change, so an error runs jobs rather than skipping them.
+    # install-script's files include every language's mise file, because
+    # that job is the only one that installs the tools on Linux arm64 and
+    # macOS.
     runs-on: ubuntu-latest
     outputs:
       install-script: ${{ steps.diff.outputs.install-script }}
@@ -65,12 +69,12 @@ jobs:
             fi
           }
           {
-            echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)"
+            echo "install-script=$(changed .cursor/install.sh .cursor/environment.json .config/mise/conf.d/)"
             echo "docs=$(changed docs/)"
-            echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)"
-            echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)"
-            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)"
-            echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)"
+            echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version .config/mise/conf.d/python.toml)"
+            echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
+            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
+            echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
           } >> "$GITHUB_OUTPUT"
 
   install-script:
