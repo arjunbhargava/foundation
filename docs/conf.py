@@ -54,4 +54,5 @@ html_theme_options = {
         "color-brand-content": "#d97757",
     },
 }
-exclude_patterns = ["_build"]
+# .venv is the environment of the docs build's own uv project, docs/pyproject.toml.
+exclude_patterns = ["_build", ".venv"]
