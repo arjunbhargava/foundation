@@ -1,0 +1,38 @@
+# Rust's tools and tasks, which mise loads along with mise.toml. Outside CI,
+# mise asks once to trust this file, because it changes a setting.
+
+[settings]
+# Installs the Rust toolchain that rust-toolchain.toml names, with rustup.
+idiomatic_version_file_enable_tools = ["rust"]
+
+# Pinned as the comment above [tools] in mise.toml says.
+[tools]
+cargo-deny = "0.20.2"
+
+[tasks."setup:rust"]
+description = "Download the Rust dependencies that Cargo.lock pins"
+run = "cargo fetch --locked"
+
+[tasks."lint:rust"]
+description = "Check Rust formatting, lint including doc comments, and dependencies' advisories, bans, licences, and sources"
+run = [
+  "cargo fmt --check",
+  "cargo clippy --locked --all-targets -- -D warnings",
+  "cargo deny --locked check advisories bans licenses sources",
+]
+
+[tasks."test:rust"]
+description = "Run the Rust tests and doc-comment examples; arguments after -- go to cargo test"
+run = "cargo test --locked"
+
+[tasks."mutate:rust"]
+description = "Mutation-test the changed Rust code with cargo-mutants; an argument after -- replaces origin/main as the base"
+# Pinned on this task rather than under [tools], so that only this task
+# installs it. It is a GitHub release binary, which avoids building it with
+# `cargo install` (about a minute). The release has binaries for x86_64
+# Linux and macOS only, so Apple Silicon runs the macOS one under Rosetta,
+# and on arm64 Linux this task fails with "no matching asset": there, run
+# `cargo install --locked cargo-mutants@27.1.0` and call
+# .github/scripts/mutate.sh rust directly.
+tools = { "github:sourcefrog/cargo-mutants" = { version = "27.1.0", platforms = { macos-arm64 = { asset_pattern = "cargo-mutants-x86_64-apple-darwin.tar.gz" } } } }
+run = ".github/scripts/mutate.sh rust"

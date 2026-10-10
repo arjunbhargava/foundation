@@ -1,0 +1,39 @@
+# C and C++'s tools and tasks, which mise loads along with mise.toml. The
+# compiler, g++, comes from the OS; see AGENTS.md.
+
+# Pinned as the comment above [tools] in mise.toml says.
+[tools]
+cmake = "4.4.3"
+ninja = "1.13.2"
+# The PyPI wheels: self-contained, with clang's built-in headers, which
+# clang-tidy needs. Keep both on one LLVM version.
+"pipx:clang-format" = "22.1.8"
+"pipx:clang-tidy" = "22.1.8"
+# From conda-forge, the only source with builds for Linux arm64 and macOS.
+"conda:doxygen" = "1.18.0"
+
+[tasks."lint:cpp"]
+description = "Check C and C++ formatting and that no #include uses ../, and build with clang-tidy and compiler warnings as errors"
+run = [
+  'find cpp -name "*.[ch]" -o -name "*.[ch]pp" | xargs clang-format --dry-run --Werror',
+  # CMake keeps a target's PRIVATE include directories, and those of its
+  # PRIVATE dependencies, off other targets' search paths. A quoted include
+  # with ../ is found relative to the including file instead, so it would
+  # reach any header in the repository.
+  '''
+  if grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<][^">]*\.\./' cpp; then
+    echo "error: the #include lines above use ../, which bypasses the include directories CMake gives each target. Include the header by its path under an include directory of a target this one links, such as foundation/interpolation.hpp." >&2
+    exit 1
+  fi
+  ''',
+  "cmake --preset clang-tidy",
+  "cmake --build --preset clang-tidy",
+]
+
+[tasks."test:cpp"]
+description = "Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them; arguments after -- go to ctest"
+run = [
+  "cmake --preset sanitizers",
+  "cmake --build --preset sanitizers",
+  "ctest --preset sanitizers",
+]
