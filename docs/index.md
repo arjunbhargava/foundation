@@ -10,6 +10,7 @@ reference.
 :maxdepth: 1
 
 architecture
+auto-mode
 linear
 template-plan
 ```
