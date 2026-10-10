@@ -152,10 +152,13 @@ run = ".github/scripts/mutate.sh python"
 [tasks."mutate:rust"]
 description = "Mutation-test the changed Rust code with cargo-mutants; an argument after -- replaces origin/main as the base"
 # Pinned on this task rather than under [tools], so that only this task
-# installs it. cargo-mutants publishes no binary for arm64 Linux or macOS, so
-# mise builds it from source with `cargo install --locked`, which takes about
-# a minute.
-tools = { "cargo:cargo-mutants" = "27.1.0" }
+# installs it. It is a GitHub release binary, which avoids building it with
+# `cargo install` (about a minute). The release has binaries for x86_64
+# Linux and macOS only, so Apple Silicon runs the macOS one under Rosetta,
+# and on arm64 Linux this task fails with "no matching asset": there, run
+# `cargo install --locked cargo-mutants@27.1.0` and call
+# .github/scripts/mutate.sh rust directly.
+tools = { "github:sourcefrog/cargo-mutants" = { version = "27.1.0", platforms = { macos-arm64 = { asset_pattern = "cargo-mutants-x86_64-apple-darwin.tar.gz" } } } }
 run = ".github/scripts/mutate.sh rust"
 
 [tasks."mutate:typescript"]
