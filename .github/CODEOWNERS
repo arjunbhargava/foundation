@@ -2,6 +2,8 @@
 # code owner review. Add each public interface file here when it is created.
 /.cursor/                @arjunbhargava
 /.github/                @arjunbhargava
+/mise.toml               @arjunbhargava
+/AGENTS.md               @arjunbhargava
 /deny.toml               @arjunbhargava
 /docs/architecture.md    @arjunbhargava
 /.dependency-cruiser.cjs @arjunbhargava
