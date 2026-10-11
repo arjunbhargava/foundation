@@ -56,11 +56,13 @@ main() {
     '.base.ref = "stacked-base"' "[$reviewed]" true ""
   expect_merge_calls fails_when_github_refuses_to_list_bugbot_check_runs \
     . unreadable true "" fails
+  expect_merge_calls turns_auto_merge_off_then_fails_when_github_refuses_to_list_bugbot_check_runs \
+    '.auto_merge = {"merge_method": "merge"}' unreadable true "$turn_off" fails
 
   if ((failures > 0)); then
     exit 1
   fi
-  echo "auto_merge.sh made the expected gh pr merge calls in all 14 cases."
+  echo "auto_merge.sh made the expected gh pr merge calls in all 15 cases."
 }
 
 # Puts first on PATH a gh that answers auto_merge.sh's requests from the files

@@ -18,7 +18,8 @@
 # Needs GITHUB_REPOSITORY, which GitHub Actions sets, and gh authenticated
 # with a token that can read check runs and merge PRs: in Actions, GH_TOKEN
 # with checks: read, contents: write, and pull-requests: write. It fails if a
-# request fails, rather than waiting for a review it can't see.
+# request fails; if GitHub refuses to list Bugbot's check runs, it first turns
+# auto-merge off, as it does when Bugbot hasn't reviewed.
 set -euo pipefail
 
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set; set it to the repository as owner/name}"
@@ -52,20 +53,27 @@ update_auto_merge() {
     return
   fi
 
-  local head_sha auto_merge_on bugbot_check_runs
+  local head_sha auto_merge_on bugbot_check_runs check_runs_refused=false
   head_sha=$(jq -r .head.sha <<< "$pr")
   auto_merge_on=$(jq '.auto_merge != null' <<< "$pr")
-  # Fetched here rather than inside a condition, where set -e doesn't apply, so
-  # that a refused request fails the run instead of reading as no review.
-  bugbot_check_runs=$(gh api --method GET "repos/$GITHUB_REPOSITORY/commits/$head_sha/check-runs" \
-    -f app_id="$bugbot_app_id" -f check_name="Cursor Bugbot")
-  reason=$(reason_to_wait "$pr" "$bugbot_check_runs")
+  # A refused request leaves Bugbot's review unknown, so auto-merge goes off,
+  # as for no review, and then the run fails, so that someone sees why.
+  if bugbot_check_runs=$(gh api --method GET "repos/$GITHUB_REPOSITORY/commits/$head_sha/check-runs" \
+    -f app_id="$bugbot_app_id" -f check_name="Cursor Bugbot"); then
+    reason=$(reason_to_wait "$pr" "$bugbot_check_runs")
+  else
+    check_runs_refused=true
+    reason="GitHub refused to list Bugbot's check runs on $head_sha; the job's token needs checks: read"
+  fi
   if [[ -n $reason ]]; then
     if [[ $auto_merge_on == true ]]; then
       gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --disable-auto
       echo "PR #$number: turned auto-merge off, because $reason."
     else
       echo "PR #$number: auto-merge stays off, because $reason."
+    fi
+    if [[ $check_runs_refused == true ]]; then
+      return 1
     fi
     return
   fi
