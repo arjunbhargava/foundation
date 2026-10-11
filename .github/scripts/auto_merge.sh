@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# Turns GitHub's auto-merge on for each agent PR given once Bugbot has
+# reviewed the PR's head commit, and off while it hasn't, so that a PR never
+# merges before Bugbot's findings on its latest commit can block it
+# (docs/auto-mode.md). .github/workflows/auto-merge.yml runs it.
+#
+# A PR this script doesn't manage is left alone: one that isn't open, was
+# opened by Dependabot, comes from a fork, merges into a branch other than the
+# default branch, or has no agent label. For the others, auto-merge is turned
+# off while the PR is a draft or Bugbot hasn't finished reviewing its head
+# commit. Otherwise it is turned on, with a merge commit (D6 in
+# docs/template-plan.md), unless the repository's "Allow auto-merge" setting
+# is off. When the PR already meets every requirement, gh merges it at once
+# instead of turning on auto-merge.
+#
+# Usage: .github/scripts/auto_merge.sh <PR number>...
+#
+# Needs GITHUB_REPOSITORY, which GitHub Actions sets, and gh authenticated
+# with a token that can merge PRs: in Actions, GH_TOKEN with contents: write
+# and pull-requests: write.
+set -euo pipefail
+
+: "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set; set it to the repository as owner/name}"
+
+# The Cursor GitHub App, which reports the Cursor Bugbot check. Another app
+# or a workflow can name a check "Cursor Bugbot", but can't report it as this
+# app.
+bugbot_app_id=1210556
+
+main() {
+  local repository
+  repository=$(gh api "repos/$GITHUB_REPOSITORY")
+  local number
+  for number in "$@"; do
+    update_auto_merge "$number" "$repository"
+  done
+}
+
+# Turns auto-merge on or off for one PR, or leaves it alone, and prints what
+# it did and why. Arguments: the PR's number, and the repository as JSON from
+# the REST API.
+update_auto_merge() {
+  local number=$1 repository=$2
+  local pr
+  pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$number")
+
+  local reason
+  reason=$(reason_to_leave_alone "$pr" "$(jq -r .default_branch <<< "$repository")")
+  if [[ -n $reason ]]; then
+    echo "PR #$number: left alone, because $reason."
+    return
+  fi
+
+  local head_sha auto_merge_on
+  head_sha=$(jq -r .head.sha <<< "$pr")
+  auto_merge_on=$(jq '.auto_merge != null' <<< "$pr")
+  reason=$(reason_to_wait "$pr" "$head_sha")
+  if [[ -n $reason ]]; then
+    if [[ $auto_merge_on == true ]]; then
+      gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --disable-auto
+      echo "PR #$number: turned auto-merge off, because $reason."
+    else
+      echo "PR #$number: auto-merge stays off, because $reason."
+    fi
+    return
+  fi
+
+  if [[ $(jq .allow_auto_merge <<< "$repository") != true ]]; then
+    echo "PR #$number: left alone, because \"Allow auto-merge\" is off in Settings > General > Pull Requests."
+    return
+  fi
+  if [[ $auto_merge_on == true ]]; then
+    echo "PR #$number: auto-merge is already on."
+    return
+  fi
+  gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --auto --merge --match-head-commit "$head_sha"
+  echo "PR #$number: Bugbot has reviewed $head_sha, so auto-merge is on, or the PR is merged if it already met every requirement."
+}
+
+# Prints why this script doesn't manage the PR, or nothing if it does.
+# Arguments: the PR as JSON from the REST API, and the default branch.
+reason_to_leave_alone() {
+  jq -r --arg repository "$GITHUB_REPOSITORY" --arg default_branch "$2" '
+    if .state != "open" then "it is \(.state)"
+    elif .user.login == "dependabot[bot]" then "Dependabot opened it"
+    elif .head.repo.full_name != $repository then "it comes from a fork"
+    elif .base.ref != $default_branch then "it merges into \(.base.ref), not \($default_branch)"
+    elif (any(.labels[]; .name == "agent") | not) then "it has no agent label"
+    else empty
+    end' <<< "$1"
+}
+
+# Prints why the PR mustn't merge yet, or nothing if it may. Arguments: the PR
+# as JSON from the REST API, and its head commit.
+reason_to_wait() {
+  if [[ $(jq .draft <<< "$1") == true ]]; then
+    echo "it is a draft"
+  elif ! bugbot_reviewed "$2"; then
+    echo "Bugbot hasn't finished reviewing its head commit, $2"
+  fi
+}
+
+# Succeeds if Bugbot's latest run on the commit finished a review. Bugbot
+# reports the conclusion neutral both when it posts findings and when its run
+# is cancelled, so only the summary tells a review from a cancelled run.
+# Argument: the commit's SHA.
+bugbot_reviewed() {
+  gh api --method GET "repos/$GITHUB_REPOSITORY/commits/$1/check-runs" \
+    -f app_id="$bugbot_app_id" -f check_name="Cursor Bugbot" |
+    jq -e '.check_runs | max_by(.id) |
+      .status == "completed" and (.output.summary // "" | contains("Bugbot completed review"))' > /dev/null
+}
+
+main "$@"
