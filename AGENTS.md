@@ -14,14 +14,17 @@ thing:
 | `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory, ban, licence, and source checks. |
 | `mise run lint:typescript` | Run only the TypeScript checks. |
 | `mise run lint:cpp` | Run only the C and C++ checks: clang-format, a check that no `#include` uses `../`, and a build with clang-tidy and compiler warnings as errors. |
+| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON and that the two review rulesets differ only in name, approval count, and thread resolution. |
 | `mise run test` | Run all tests. |
 | `mise run test:python` | Run only the Python tests and docstring examples. Arguments after `--` go to pytest: `mise run test:python -- -k trapezoid`. |
 | `mise run test:rust` | Run only the Rust tests and doc-comment examples. Arguments after `--` go to `cargo test`: `mise run test:rust -- energy`. |
 | `mise run test:typescript` | Run only the TypeScript tests. Arguments after `--` go to vitest: `mise run test:typescript -- -t precision`. |
 | `mise run test:cpp` | Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them. Arguments after `--` go to ctest: `mise run test:cpp -- -R chord`. |
+| `mise run test:rulesets` | Check the changes `.github/rulesets/apply.sh` makes with and without `--auto`, and that `lint:rulesets` catches broken ruleset files, with a fake `gh`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 | `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python`, `mutate:rust`, and `mutate:typescript` run one language. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
+| `mise run spend` | Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs `CURSOR_ADMIN_API_KEY`. Arguments after `--` go to the script: `mise run spend -- --since 2026-09-26`. |
 | `mise run check` | Run everything CI runs. |
 
 Run `mise run check` before opening a PR; it must pass. It checks every
@@ -65,8 +68,13 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   - Rust: a `deny` entry with `wrappers` under `[bans]` in `deny.toml`.
   - C and C++: in `CMakeLists.txt`, make a target's include directories and
     links `PRIVATE` unless its public headers need them.
+- `.github/scripts/`: the repository's own tooling, which people, agents, and
+  CI run through `mise run`, such as `mutate.sh` and `agent_spend.py`. Each
+  script is tested by the `_test` file next to it.
 - `docs/`: hand-written pages. `docs/build.sh` adds the API reference,
-  generated from doc comments.
+  generated from doc comments. Sphinx and its extensions are a uv project of
+  their own, `docs/pyproject.toml`, locked in `docs/uv.lock`, so that Sphinx
+  doesn't depend on the Python package.
 
 Each language task adds its directory and lists it here.
 
@@ -75,7 +83,9 @@ Each language task adds its directory and lists it here.
 - Pin every tool in `mise.toml`, at an exact version. Don't install tools
   another way. There are four exceptions. Add a Python package, such as
   ruff or pyright, with `mise exec -- uv add --dev <package>`, which pins it
-  in `uv.lock`. Add a TypeScript package, such as typescript (tsc), Biome, or
+  in `uv.lock`, and a docs build tool with
+  `mise exec -- uv add --project docs --dev <package>`, which pins it in
+  `docs/uv.lock`. Add a TypeScript package, such as typescript (tsc), Biome, or
   vitest, with `mise exec -- pnpm add -D -w --save-exact <package>`, which
   pins it in `package.json` and `pnpm-lock.yaml`. The Rust toolchain is
   pinned in `rust-toolchain.toml`, so that Dependabot can update it, and mise

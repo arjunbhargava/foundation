@@ -8,9 +8,11 @@
 #
 # Each job sets MISE_ENABLE_TOOLS to the tools in mise.toml that its commands
 # run, and .cursor/install.sh installs only those. mise ignores a tool missing
-# from the list, so its command runs the runner's own version, or fails if
-# the runner has none. Add a new tool to every job that runs it, including
-# docs, which runs every language's docs tools.
+# from the list, so its command would run the runner's own version. Each job
+# therefore runs .github/scripts/block_unlisted_tools.sh next, which makes
+# a command for an unlisted tool fail with an error naming the tool. Add a new
+# tool to every job that runs it, including docs, which runs every language's
+# docs tools.
 name: CI
 
 on:
@@ -34,7 +36,8 @@ defaults:
 jobs:
   changes:
     # Each output is 'true' when the change touches that job's files, or
-    # ci.yml or mise.toml, which define every job. A failed diff also counts
+    # ci.yml, mise.toml, or the block_unlisted_tools script and its test,
+    # which define or affect every job. A failed diff also counts
     # as a change, so an error runs jobs rather than skipping them.
     runs-on: ubuntu-latest
     outputs:
@@ -44,6 +47,7 @@ jobs:
       rust: ${{ steps.diff.outputs.rust }}
       typescript: ${{ steps.diff.outputs.typescript }}
       cpp: ${{ steps.diff.outputs.cpp }}
+      rulesets: ${{ steps.diff.outputs.rulesets }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,7 +59,7 @@ jobs:
         run: |
           base=${MERGE_GROUP_BASE_SHA:-origin/$GITHUB_BASE_REF}
           changed() {
-            if git diff --quiet "$base...HEAD" -- "$@" .github/workflows/ci.yml mise.toml; then
+            if git diff --quiet "$base...HEAD" -- "$@" .github/workflows/ci.yml mise.toml .github/scripts/block_unlisted_tools.sh .github/scripts/block_unlisted_tools_test.sh; then
               echo false
             else
               echo true
@@ -68,6 +72,7 @@ jobs:
             echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)"
             echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)"
             echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)"
+            echo "rulesets=$(changed .github/rulesets/)"
           } >> "$GITHUB_OUTPUT"
 
   install-script:
@@ -115,6 +120,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup
       - run: mise run docs
 
@@ -129,6 +135,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup:python
       - run: mise run lint:python
       - run: mise run test:python
@@ -144,6 +151,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup:rust
       - run: mise run lint:rust
       - run: mise run test:rust
@@ -159,6 +167,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup:typescript
       - run: mise run lint:typescript
       - run: mise run test:typescript
@@ -178,8 +187,24 @@ jobs:
         with:
           persist-credentials: false
       - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run lint:cpp
       - run: mise run test:cpp
+
+  rulesets:
+    needs: changes
+    if: needs.changes.outputs.rulesets == 'true'
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: jq
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run lint:rulesets
+      - run: mise run test:rulesets
 
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
@@ -194,6 +219,7 @@ jobs:
       - rust
       - typescript
       - cpp
+      - rulesets
     if: always()
     runs-on: ubuntu-latest
     steps:

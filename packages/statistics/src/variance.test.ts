@@ -22,3 +22,21 @@ test("estimateVariance keeps its precision when the values share a large offset"
 		`estimateVariance returned ${variance}`,
 	).toBeLessThanOrEqual(VARIANCE_TOLERANCE);
 });
+
+test("estimateVariance accepts exactly 2 values", () => {
+	// Deviations from the mean, 2, are -1 and 1: (1 + 1) / (2 - 1) = 2.
+	expect(estimateVariance([1, 3])).toBe(2);
+});
+
+test.each([
+	{ values: [], count: 0 },
+	{ values: [5], count: 1 },
+])(
+	"estimateVariance rejects $count values with a RangeError that states the count",
+	({ values, count }) => {
+		expect(() => estimateVariance(values)).toThrow(RangeError);
+		expect(() => estimateVariance(values)).toThrow(
+			`estimateVariance needs at least 2 values, got ${count}`,
+		);
+	},
+);

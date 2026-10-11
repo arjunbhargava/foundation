@@ -489,7 +489,8 @@ projects that use the template.
 
 **T23. Auto mode for exploratory tasks.** Needs: T13.
 
-**Deferred** (owner, 2026-10-03) until a project needs it.
+**In progress** (owner, 2026-10-10). The first PR adds the review ruleset,
+the CODEOWNERS entries, and `docs/auto-mode.md`; the two workflows follow.
 
 Some tasks need several rounds of exploration, and waiting for a person's
 review on each round stalls them. In auto mode, a repository's agent PRs merge
@@ -499,9 +500,11 @@ far:
 - `.github/rulesets/apply.sh --auto` applies a second review ruleset with no
   required approval, code-owner review kept (so owned paths still need the
   owner), and `required_review_thread_resolution` on, so Bugbot's findings
-  block until fixed or answered. `main: checks` is unchanged. First confirm
-  on a scratch PR that GitHub still requires code-owner review when the
-  approval count is 0.
+  block merging until their threads are resolved. `main: checks` is
+  unchanged. `mise.toml`, `AGENTS.md`, and the files that configure checks
+  become owned paths, so an agent PR can't change what CI runs, the agent
+  instructions, or a check without the owner. First confirm on a scratch PR
+  that GitHub still requires code-owner review when the approval count is 0.
 - GitHub's native auto-merge, not a custom merge workflow: it already waits
   for every ruleset, and Actions has no trigger for a resolved review thread.
   A workflow turns on auto-merge for an `agent` PR once the `Cursor Bugbot`
@@ -510,12 +513,15 @@ far:
   `main`. It needs a GitHub App token: updates made with `GITHUB_TOKEN` start
   no workflows, so `ci-ok` would never report, and the owner's token would
   bypass code-owner review, because the owner is a bypass actor.
-- A short page on what auto mode allows, what still needs the owner, and how
-  to audit and revert. Merge commits (D6) make each revert one commit.
-- Open: spend and size limits for an auto-mode task.
+- `docs/auto-mode.md` says what auto mode allows, what still needs the owner,
+  and how to audit and revert. Merge commits (D6) make each revert one commit.
+- Limits (owner, 2026-10-10): $500 per day of cloud agent spend to start,
+  checked with `mise run spend` and capped in the Cursor dashboard, and the
+  500-line PR ceiling. `docs/auto-mode.md` gives the details.
 
 **T25. Track agent spend.** Needs: **(person)** a Cursor Admin API key in
-the cloud-agent secret `CURSOR_ADMIN_API_KEY`.
+the cloud-agent secret `CURSOR_ADMIN_API_KEY`. **Done** in #35 (`mise run
+spend`).
 
 - The agent API's agent and run records have no token or cost fields. The
   Admin API's usage events (`POST /teams/filtered-usage-events`) do.
@@ -534,7 +540,7 @@ T1 ─┬─ T2
     │                  ├─ T9 ─┘
     │                  └─ T16 (also needs D4, D8)
     ├─ T5 ─┬─ T13 ─┬─ T24
-    │      │       ├─ T23 (deferred)
+    │      │       ├─ T23
     │      └─ T17 ─┴─ T22
     └─ T10 ─┬─ T11
             └─ T12 ── T20

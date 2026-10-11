@@ -19,10 +19,11 @@ idiomatic_version_file_enable_tools = ["rust"]
 # version and checksums are pinned in .cursor/install.sh.
 #
 # Each CI job installs only the tools its MISE_ENABLE_TOOLS names in
-# .github/workflows/ci.yml, so add a new tool to every job that runs it.
+# .github/workflows/ci.yml, so add a new tool to every job that runs it. A job
+# that runs a tool it doesn't list fails, with an error naming the tool.
 [tools]
 cargo-deny = "0.20.2"
-jq = "1.8.2" # .github/rulesets/apply.sh
+jq = "1.8.2" # .github/rulesets/
 node = "24.21.0"
 pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
 # Move pyproject.toml's uv_build range with this pin. Outside that range, uv
@@ -42,8 +43,8 @@ ninja = "1.13.2"
 description = "Install project dependencies"
 depends = ["setup:*"]
 
-# Each setup task fails if the language's lockfile is out of date with its
-# manifest, so CI catches a manifest edited without relocking.
+# Each setup task fails if its lockfile is out of date with its manifest, so
+# CI catches a manifest edited without relocking.
 [tasks."setup:python"]
 description = "Install the Python dependencies that uv.lock pins"
 run = "uv sync --locked"
@@ -55,6 +56,10 @@ run = "cargo fetch --locked"
 [tasks."setup:typescript"]
 description = "Install the TypeScript dependencies that pnpm-lock.yaml pins"
 run = "pnpm install --frozen-lockfile"
+
+[tasks."setup:docs"]
+description = "Install the docs build's tools that docs/uv.lock pins"
+run = "uv sync --locked --project docs"
 
 [tasks.fmt]
 description = "Format all code in place"
@@ -77,6 +82,10 @@ run = [
   "uv run ruff format --check",
   "uv run ruff check",
   "uv run pyright --warnings",
+  # Pyright skips dot directories, even files named on its command line, so
+  # .github/scripts/ is a project of its own, whose pyrightconfig.json takes
+  # the settings in pyproject.toml.
+  "uv run pyright --warnings --project .github/scripts",
   "uv run lint-imports",
 ]
 
@@ -115,6 +124,10 @@ run = [
   "cmake --build --preset clang-tidy",
 ]
 
+[tasks."lint:rulesets"]
+description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, approval count, and thread resolution"
+run = ".github/rulesets/check.sh"
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -152,10 +165,13 @@ run = ".github/scripts/mutate.sh python"
 [tasks."mutate:rust"]
 description = "Mutation-test the changed Rust code with cargo-mutants; an argument after -- replaces origin/main as the base"
 # Pinned on this task rather than under [tools], so that only this task
-# installs it. cargo-mutants publishes no binary for arm64 Linux or macOS, so
-# mise builds it from source with `cargo install --locked`, which takes about
-# a minute.
-tools = { "cargo:cargo-mutants" = "27.1.0" }
+# installs it. It is a GitHub release binary, which avoids building it with
+# `cargo install` (about a minute). The release has binaries for x86_64
+# Linux and macOS only, so Apple Silicon runs the macOS one under Rosetta,
+# and on arm64 Linux this task fails with "no matching asset": there, run
+# `cargo install --locked cargo-mutants@27.1.0` and call
+# .github/scripts/mutate.sh rust directly.
+tools = { "github:sourcefrog/cargo-mutants" = { version = "27.1.0", platforms = { macos-arm64 = { asset_pattern = "cargo-mutants-x86_64-apple-darwin.tar.gz" } } } }
 run = ".github/scripts/mutate.sh rust"
 
 [tasks."mutate:typescript"]
@@ -166,9 +182,21 @@ run = ".github/scripts/mutate.sh typescript"
 description = "Check which files .github/scripts/mutate.sh mutates and what it reports, with fake mutation tools"
 run = ".github/scripts/mutate_test.sh"
 
+[tasks."test:rulesets"]
+description = "Check the changes .github/rulesets/apply.sh makes with and without --auto, and that check.sh catches broken ruleset files, with a fake gh"
+run = ".github/rulesets/rulesets_test.sh"
+
+[tasks."test:block-unlisted-tools-script"]
+description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
+run = ".github/scripts/block_unlisted_tools_test.sh"
+
 [tasks.docs]
 description = "Build the documentation site"
 run = "docs/build.sh"
+
+[tasks.spend]
+description = "Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs CURSOR_ADMIN_API_KEY; arguments after -- go to the script, such as --since 2026-09-26"
+run = "uv run python .github/scripts/agent_spend.py"
 
 [tasks.check]
 description = "Run everything CI runs; must pass before opening a PR"
