@@ -52,7 +52,7 @@ repository installs. This is where each version lives:
 | Python | `.python-version`, which uv installs | uv, in `mise.toml` | `uv.lock`, from the `dev` group in `pyproject.toml` |
 | TypeScript | Node, in `mise.toml` | pnpm, in `mise.toml` | `pnpm-lock.yaml`, from exact `devDependencies` in `package.json` |
 | Rust | `rust-toolchain.toml`, with clippy and rustfmt, which mise installs | cargo, from the toolchain | cargo-deny, in `mise.toml` |
-| C and C++ | The compiler, `g++`, from the OS | None | CMake, Ninja, clang-format, clang-tidy, and Doxygen in `mise.toml`; Breathe in `uv.lock` |
+| C and C++ | The compiler, `g++`, from the OS | None | CMake, Ninja, clang-format, clang-tidy, and Doxygen in `mise.toml`; Breathe in `docs/uv.lock` |
 
 - [ ] Each of the new language's versions in one file, chosen as above.
       Delete any second pin a tool writes, such as the `packageManager` and
