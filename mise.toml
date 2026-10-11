@@ -21,7 +21,7 @@
 # .github/workflows/ci.yml, so add a new tool to every job that runs it. A job
 # that runs a tool it doesn't list fails, with an error naming the tool.
 [tools]
-jq = "1.8.2" # .github/rulesets/apply.sh
+jq = "1.8.2" # .github/rulesets/
 # Python's tasks, the docs build, `spend`, and mise's installs of the pipx:
 # tools in cpp.toml all run uv.
 # Move pyproject.toml's uv_build range with this pin. Outside that range, uv
@@ -46,6 +46,10 @@ depends = ["fmt:*"]
 description = "Check formatting, lint, and types without changing files"
 depends = ["lint:*"]
 
+[tasks."lint:rulesets"]
+description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, approval count, and thread resolution"
+run = ".github/rulesets/check.sh"
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -57,6 +61,10 @@ depends = ["mutate:*"]
 [tasks."test:mutate-script"]
 description = "Check which files .github/scripts/mutate.sh mutates and what it reports, with fake mutation tools"
 run = ".github/scripts/mutate_test.sh"
+
+[tasks."test:rulesets"]
+description = "Check the changes .github/rulesets/apply.sh makes with and without --auto, and that check.sh catches broken ruleset files, with a fake gh"
+run = ".github/rulesets/rulesets_test.sh"
 
 [tasks."test:block-unlisted-tools-script"]
 description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
