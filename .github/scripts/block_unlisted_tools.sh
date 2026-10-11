@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Makes a CI job fail when its commands run a tool that mise.toml or
-# .config/mise/conf.d/ pins but the job's MISE_ENABLE_TOOLS leaves out. mise ignores such a tool, so without
-# this the command would silently run whatever version the runner has.
+# .config/mise/conf.d/ pins but the job's MISE_ENABLE_TOOLS leaves out. mise
+# ignores such a tool, so without this the command would silently run
+# whatever version the runner has.
 #
 # For each unlisted tool, this writes an executable with the tool's command
 # name that prints an error naming the tool and the list to edit, then exits

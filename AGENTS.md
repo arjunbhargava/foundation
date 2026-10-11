@@ -81,7 +81,8 @@ Each language task adds its directory and lists it here.
 
 - Pin every tool at an exact version: in its language's
   `.config/mise/conf.d/<language>.toml`, or in `mise.toml` if more than one
-  language, or the docs build, runs it. Don't install tools another way. There are four exceptions. Add a Python package, such as
+  language, or the docs build, runs it. Don't install tools another way.
+  There are four exceptions. Add a Python package, such as
   ruff or pyright, with `mise exec -- uv add --dev <package>`, which pins it
   in `uv.lock`, and a docs build tool with
   `mise exec -- uv add --project docs --dev <package>`, which pins it in
