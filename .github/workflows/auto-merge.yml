@@ -42,6 +42,7 @@ jobs:
       group: auto-merge-${{ github.event.pull_request.head.ref || github.event.check_run.check_suite.head_branch }}
     runs-on: ubuntu-latest
     permissions:
+      checks: read # read Bugbot's check run; needed in a private repository
       contents: write # merging writes to main
       pull-requests: write # turn auto-merge on and off
     steps:

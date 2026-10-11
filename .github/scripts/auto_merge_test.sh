@@ -54,16 +54,20 @@ main() {
     '.head.repo.full_name = "fork/r"' "[$reviewed]" true ""
   expect_merge_calls leaves_prs_into_other_branches_alone \
     '.base.ref = "stacked-base"' "[$reviewed]" true ""
+  expect_merge_calls fails_when_github_refuses_to_list_bugbot_check_runs \
+    . unreadable true "" fails
 
   if ((failures > 0)); then
     exit 1
   fi
-  echo "auto_merge.sh made the expected gh pr merge calls in all 13 cases."
+  echo "auto_merge.sh made the expected gh pr merge calls in all 14 cases."
 }
 
 # Puts first on PATH a gh that answers auto_merge.sh's requests from the files
 # in $FAKE_GH_CASE, and appends each `gh pr merge` call to its merge-calls
-# file. Only the head commit, "new", has Bugbot check runs.
+# file. Only the head commit, "new", has Bugbot check runs. Without a
+# check-runs file, it refuses that request as GitHub does a token without
+# checks: read in a private repository.
 make_fake_gh() {
   mkdir "$work/bin"
   cat > "$work/bin/gh" << 'EOF'
@@ -72,7 +76,8 @@ case "$*" in
   "api repos/o/r") cat "$FAKE_GH_CASE/repository.json" ;;
   "api repos/o/r/pulls/7") cat "$FAKE_GH_CASE/pr.json" ;;
   "api --method GET repos/o/r/commits/new/check-runs -f app_id=1210556 -f check_name=Cursor Bugbot")
-    cat "$FAKE_GH_CASE/check-runs.json" ;;
+    cat "$FAKE_GH_CASE/check-runs.json" 2> /dev/null ||
+      { echo "gh: Resource not accessible by integration (HTTP 403)" >&2; exit 1; } ;;
   "pr merge "*) echo "gh $*" >> "$FAKE_GH_CASE/merge-calls" ;;
   *) echo "fake gh: unexpected call: gh $*" >&2; exit 1 ;;
 esac
@@ -82,23 +87,29 @@ EOF
 }
 
 # Arguments: the case's name; a jq filter that turns the agent PR into the
-# case's PR; Bugbot's check runs on the head commit, as a JSON array; the
-# repository's allow_auto_merge setting; and the `gh pr merge` calls expected,
-# one per line.
+# case's PR; Bugbot's check runs on the head commit, as a JSON array, or
+# "unreadable"; the repository's allow_auto_merge setting; the `gh pr merge`
+# calls expected, one per line; and whether the script "succeeds", the
+# default, or "fails".
 expect_merge_calls() {
-  local name=$1 pr_filter=$2 check_runs=$3 allow_auto_merge=$4 expected=$5
+  local name=$1 pr_filter=$2 check_runs=$3 allow_auto_merge=$4 expected=$5 expected_outcome=${6:-succeeds}
   local case_dir=$work/$name
   mkdir "$case_dir"
   echo "{\"default_branch\": \"main\", \"allow_auto_merge\": $allow_auto_merge}" > "$case_dir/repository.json"
   jq "$pr_filter" <<< "$agent_pr" > "$case_dir/pr.json"
-  echo "{\"check_runs\": $check_runs}" > "$case_dir/check-runs.json"
+  if [[ $check_runs != unreadable ]]; then
+    echo "{\"check_runs\": $check_runs}" > "$case_dir/check-runs.json"
+  fi
   touch "$case_dir/merge-calls"
 
-  local status=0 output calls
+  local status=0 output calls outcome=succeeds
   output=$(FAKE_GH_CASE=$case_dir GITHUB_REPOSITORY=o/r "$script" 7 2>&1) || status=$?
+  if ((status != 0)); then
+    outcome=fails
+  fi
   calls=$(cat "$case_dir/merge-calls")
-  if ((status != 0)) || [[ $calls != "$expected" ]]; then
-    fail "$name: auto_merge.sh exited with status $status, printed:
+  if [[ $outcome != "$expected_outcome" || $calls != "$expected" ]]; then
+    fail "$name: auto_merge.sh exited with status $status (expected: it $expected_outcome), printed:
 $output
 and made these gh pr merge calls:
 ${calls:-(none)}

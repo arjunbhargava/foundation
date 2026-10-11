@@ -16,8 +16,9 @@
 # Usage: .github/scripts/auto_merge.sh <PR number>...
 #
 # Needs GITHUB_REPOSITORY, which GitHub Actions sets, and gh authenticated
-# with a token that can merge PRs: in Actions, GH_TOKEN with contents: write
-# and pull-requests: write.
+# with a token that can read check runs and merge PRs: in Actions, GH_TOKEN
+# with checks: read, contents: write, and pull-requests: write. It fails if a
+# request fails, rather than waiting for a review it can't see.
 set -euo pipefail
 
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set; set it to the repository as owner/name}"
@@ -51,10 +52,14 @@ update_auto_merge() {
     return
   fi
 
-  local head_sha auto_merge_on
+  local head_sha auto_merge_on bugbot_check_runs
   head_sha=$(jq -r .head.sha <<< "$pr")
   auto_merge_on=$(jq '.auto_merge != null' <<< "$pr")
-  reason=$(reason_to_wait "$pr" "$head_sha")
+  # Fetched here rather than inside a condition, where set -e doesn't apply, so
+  # that a refused request fails the run instead of reading as no review.
+  bugbot_check_runs=$(gh api --method GET "repos/$GITHUB_REPOSITORY/commits/$head_sha/check-runs" \
+    -f app_id="$bugbot_app_id" -f check_name="Cursor Bugbot")
+  reason=$(reason_to_wait "$pr" "$bugbot_check_runs")
   if [[ -n $reason ]]; then
     if [[ $auto_merge_on == true ]]; then
       gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --disable-auto
@@ -90,25 +95,23 @@ reason_to_leave_alone() {
     end' <<< "$1"
 }
 
-# Prints why the PR mustn't merge yet, or nothing if it may. Arguments: the PR
-# as JSON from the REST API, and its head commit.
+# Prints why the PR mustn't merge yet, or nothing if it may. Arguments: the PR,
+# and Bugbot's check runs on its head commit, as JSON from the REST API.
 reason_to_wait() {
   if [[ $(jq .draft <<< "$1") == true ]]; then
     echo "it is a draft"
   elif ! bugbot_reviewed "$2"; then
-    echo "Bugbot hasn't finished reviewing its head commit, $2"
+    echo "Bugbot hasn't finished reviewing its head commit, $(jq -r .head.sha <<< "$1")"
   fi
 }
 
-# Succeeds if Bugbot's latest run on the commit finished a review. Bugbot
+# Succeeds if the latest of Bugbot's check runs finished a review. Bugbot
 # reports the conclusion neutral both when it posts findings and when its run
 # is cancelled, so only the summary tells a review from a cancelled run.
-# Argument: the commit's SHA.
+# Argument: Bugbot's check runs on a commit, as JSON from the REST API.
 bugbot_reviewed() {
-  gh api --method GET "repos/$GITHUB_REPOSITORY/commits/$1/check-runs" \
-    -f app_id="$bugbot_app_id" -f check_name="Cursor Bugbot" |
-    jq -e '.check_runs | max_by(.id) |
-      .status == "completed" and (.output.summary // "" | contains("Bugbot completed review"))' > /dev/null
+  jq -e '.check_runs | max_by(.id) |
+    .status == "completed" and (.output.summary // "" | contains("Bugbot completed review"))' <<< "$1" > /dev/null
 }
 
 main "$@"
