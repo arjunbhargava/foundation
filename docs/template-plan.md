@@ -486,18 +486,37 @@ projects that use the template.
 - Repeat after each model upgrade, and remove instructions that no longer
   help.
 
-**T23. Auto mode for exploratory tasks.** Needs: T13, T22.
+**T23. Auto mode for exploratory tasks.** Needs: T13.
+
+**In progress** (owner, 2026-10-10). The first PR adds the review ruleset,
+the CODEOWNERS entries, and `docs/auto-mode.md`; the two workflows follow.
 
 Some tasks need several rounds of exploration, and waiting for a person's
-review on each round stalls them. In auto mode, PRs for a task marked as
-exploratory merge without a person's approval, with CI and Bugbot as the
-gate. Design first, covering:
+review on each round stalls them. In auto mode, a repository's agent PRs merge
+without a person's approval, with CI and Bugbot as the gate. The design so
+far:
 
-- How a task is marked for auto mode, and who can mark it.
-- What replaces the required approval in the `main: review` ruleset (T4, D6)
-  for those PRs, without weakening it for others.
-- Spend and size limits for an auto-mode task.
-- How a person audits auto-merged work afterwards.
+- `.github/rulesets/apply.sh --auto` applies a second review ruleset with no
+  required approval, code-owner review kept (so owned paths still need the
+  owner), and `required_review_thread_resolution` on, so Bugbot's findings
+  block merging until their threads are resolved. `main: checks` is
+  unchanged. `mise.toml`, `AGENTS.md`, and the files that configure checks
+  become owned paths, so an agent PR can't change what CI runs, the agent
+  instructions, or a check without the owner. First confirm on a scratch PR
+  that GitHub still requires code-owner review when the approval count is 0.
+- GitHub's native auto-merge, not a custom merge workflow: it already waits
+  for every ruleset, and Actions has no trigger for a resolved review thread.
+  A workflow turns on auto-merge for an `agent` PR once the `Cursor Bugbot`
+  check completes, because before then there are no threads to block it.
+- After each merge, a workflow updates the open agent PRs that are behind
+  `main`. It needs a GitHub App token: updates made with `GITHUB_TOKEN` start
+  no workflows, so `ci-ok` would never report, and the owner's token would
+  bypass code-owner review, because the owner is a bypass actor.
+- `docs/auto-mode.md` says what auto mode allows, what still needs the owner,
+  and how to audit and revert. Merge commits (D6) make each revert one commit.
+- Limits (owner, 2026-10-10): $500 per day of cloud agent spend to start,
+  checked with `mise run spend` and capped in the Cursor dashboard, and the
+  500-line PR ceiling. `docs/auto-mode.md` gives the details.
 
 ## Order and parallel work
 
@@ -508,7 +527,8 @@ T1 ─┬─ T2
     │                  ├─ T9 ─┘
     │                  └─ T16 (also needs D4, D8)
     ├─ T5 ─┬─ T13 ─┬─ T24
-    │      └─ T17 ─┴─ T22 ── T23
+    │      │       ├─ T23
+    │      └─ T17 ─┴─ T22
     └─ T10 ─┬─ T11
             └─ T12 ── T20
 T18 needs everything above except T16, T22, and T23.

@@ -47,6 +47,7 @@ jobs:
       rust: ${{ steps.diff.outputs.rust }}
       typescript: ${{ steps.diff.outputs.typescript }}
       cpp: ${{ steps.diff.outputs.cpp }}
+      rulesets: ${{ steps.diff.outputs.rulesets }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -71,6 +72,7 @@ jobs:
             echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)"
             echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)"
             echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)"
+            echo "rulesets=$(changed .github/rulesets/)"
           } >> "$GITHUB_OUTPUT"
 
   install-script:
@@ -189,6 +191,21 @@ jobs:
       - run: mise run lint:cpp
       - run: mise run test:cpp
 
+  rulesets:
+    needs: changes
+    if: needs.changes.outputs.rulesets == 'true'
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: jq
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run lint:rulesets
+      - run: mise run test:rulesets
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
@@ -202,6 +219,7 @@ jobs:
       - rust
       - typescript
       - cpp
+      - rulesets
     if: always()
     runs-on: ubuntu-latest
     steps:
