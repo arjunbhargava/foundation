@@ -489,7 +489,7 @@ projects that use the template.
 **T23. Auto mode for exploratory tasks.** Needs: T13.
 
 **In progress** (owner, 2026-10-10). PR 1 (#38) added the review ruleset, the
-CODEOWNERS entries, and `docs/auto-mode.md`, and PR 2 the auto-merge
+CODEOWNERS entries, and `docs/auto-mode.md`, and PR 2 (#43) the auto-merge
 workflow. PR 3, the branch-update workflow, is left.
 
 Some tasks need several rounds of exploration, and waiting for a person's
