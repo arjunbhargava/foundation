@@ -2,7 +2,8 @@
 # The rulesets require only the ci-ok job, so adding a job never needs a
 # ruleset change.
 #
-# To add a language: add an output to the changes job, add a job that needs
+# To add a language: add an output to the changes job that calls
+# language_changed with the language's manifest first, add a job that needs
 # changes and runs only when that output is 'true', and add the job to
 # ci-ok's needs. Jobs run tools through the shared `mise run` commands.
 #
@@ -40,6 +41,8 @@ jobs:
     # ci.yml, mise.toml, or the block_unlisted_tools script and its test,
     # which define or affect every job. A failed diff also counts
     # as a change, so an error runs jobs rather than skipping them.
+    # A language's output is 'false' when its manifest is missing, so a
+    # project without the language skips its job.
     # install-script's files include every language's mise file, because
     # that job is the only one that installs the tools on Linux arm64 and
     # macOS.
@@ -69,13 +72,22 @@ jobs:
               echo true
             fi
           }
+          # The first argument is the language's manifest, which is also one
+          # of its files.
+          language_changed() {
+            if [[ -f $1 ]]; then
+              changed "$@"
+            else
+              echo false
+            fi
+          }
           {
             echo "install-script=$(changed .cursor/install.sh .cursor/environment.json .config/mise/conf.d/)"
             echo "docs=$(changed docs/)"
-            echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version .config/mise/conf.d/python.toml)"
-            echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
-            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
-            echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
+            echo "python=$(language_changed pyproject.toml '*.py' uv.lock .python-version .config/mise/conf.d/python.toml)"
+            echo "rust=$(language_changed Cargo.toml crates/ Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
+            echo "typescript=$(language_changed package.json packages/ pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
+            echo "cpp=$(language_changed CMakeLists.txt cpp/ CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
             echo "rulesets=$(changed .github/rulesets/)"
           } >> "$GITHUB_OUTPUT"
 
@@ -212,7 +224,7 @@ jobs:
 
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
-    # change, and counts as passing. always(), not !cancelled(): GitHub treats
+    # change or its language's manifest is missing, and counts as passing. always(), not !cancelled(): GitHub treats
     # a skipped required check as passing, so this job must still run, and
     # fail, when the run is cancelled.
     needs:
