@@ -2,7 +2,10 @@
 # Tests the scripts in .github/rulesets/ without calling GitHub. apply.sh runs
 # with --dry-run against a fake gh that lists canned existing rulesets, and
 # each case compares the changes apply.sh would make with the expected ones.
-# check.sh runs on copies of the ruleset files, each broken in one way.
+# Each case runs apply.sh in a copy of this directory, as a project has it
+# (without template-checks.json) or as the template repository has it (with
+# one), so the test gives the same result in both. check.sh runs on copies of
+# the ruleset files, each broken in one way.
 #
 # Usage: mise run test:rulesets
 set -euo pipefail
@@ -14,28 +17,40 @@ failures=0
 
 main() {
   make_fake_gh
+  local project=$work/project-rulesets template=$work/template-rulesets
+  mkdir "$project"
+  cp "$rulesets_dir/apply.sh" "$rulesets_dir"/main-*.json "$project/"
+  cp -R "$project" "$template"
+  echo '{"name": "main: template checks"}' > "$template/template-checks.json"
   local checks='{"id": 1, "name": "main: checks"}'
   local review='{"id": 2, "name": "main: review"}'
   local auto='{"id": 3, "name": "main: review (auto mode)"}'
 
-  expect_changes default_mode_makes_the_same_changes_as_before_auto_mode "[$checks, $review]" '
+  expect_changes default_mode_makes_the_same_changes_as_before_auto_mode "$project" "[$checks, $review]" '
 Would allow only merge commits: PATCH repos/o/r
 Would update ruleset "main: checks" (id 1): PUT repos/o/r/rulesets/1
 Would update ruleset "main: review" (id 2): PUT repos/o/r/rulesets/2
 Would turn on secret scanning with push protection: PATCH repos/o/r'
 
-  expect_changes auto_mode_creates_its_ruleset_then_disables_main_review "[$checks, $review]" '
+  expect_changes auto_mode_creates_its_ruleset_then_disables_main_review "$project" "[$checks, $review]" '
 Would allow only merge commits: PATCH repos/o/r
 Would update ruleset "main: checks" (id 1): PUT repos/o/r/rulesets/1
 Would create ruleset "main: review (auto mode)": POST repos/o/r/rulesets
 Would disable ruleset "main: review" (id 2): PUT repos/o/r/rulesets/2
 Would turn on secret scanning with push protection: PATCH repos/o/r' --auto
 
-  expect_changes default_mode_switches_back_from_auto_mode "[$checks, $review, $auto]" '
+  expect_changes default_mode_switches_back_from_auto_mode "$project" "[$checks, $review, $auto]" '
 Would allow only merge commits: PATCH repos/o/r
 Would update ruleset "main: checks" (id 1): PUT repos/o/r/rulesets/1
 Would update ruleset "main: review" (id 2): PUT repos/o/r/rulesets/2
 Would disable ruleset "main: review (auto mode)" (id 3): PUT repos/o/r/rulesets/3
+Would turn on secret scanning with push protection: PATCH repos/o/r'
+
+  expect_changes template_repository_creates_the_template_checks_ruleset "$template" "[$checks, $review]" '
+Would allow only merge commits: PATCH repos/o/r
+Would update ruleset "main: checks" (id 1): PUT repos/o/r/rulesets/1
+Would create ruleset "main: template checks": POST repos/o/r/rulesets
+Would update ruleset "main: review" (id 2): PUT repos/o/r/rulesets/2
 Would turn on secret scanning with push protection: PATCH repos/o/r'
 
   if ! "$rulesets_dir/check.sh" > /dev/null; then
@@ -62,7 +77,7 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   if ((failures > 0)); then
     exit 1
   fi
-  echo "apply.sh made the expected changes in all 3 cases, and check.sh passed the committed rulesets and failed all 6 broken ones."
+  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 6 broken ones."
 }
 
 # Puts first on PATH a gh that answers only apply.sh's request for the existing
@@ -80,14 +95,14 @@ EOF
   PATH=$work/bin:$PATH
 }
 
-# Arguments: the case's name, the existing rulesets as a JSON array, the
-# "Would ..." lines apply.sh --dry-run must print, after a leading newline,
-# and apply.sh's other options.
+# Arguments: the case's name, the directory whose apply.sh runs, the existing
+# rulesets as a JSON array, the "Would ..." lines apply.sh --dry-run must
+# print, after a leading newline, and apply.sh's other options.
 expect_changes() {
-  local name=$1 existing=$2 expected=${3#$'\n'}
-  shift 3
+  local name=$1 directory=$2 existing=$3 expected=${4#$'\n'}
+  shift 4
   local status=0 output changes
-  output=$(FAKE_EXISTING_RULESETS=$existing "$rulesets_dir/apply.sh" --dry-run "$@" o/r 2>&1) || status=$?
+  output=$(FAKE_EXISTING_RULESETS=$existing "$directory/apply.sh" --dry-run "$@" o/r 2>&1) || status=$?
   changes=$(grep '^Would' <<< "$output" || true)
   if ((status != 0)) || [[ $changes != "$expected" ]]; then
     fail "$name: apply.sh exited with status $status and printed:
