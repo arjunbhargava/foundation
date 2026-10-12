@@ -1,0 +1,64 @@
+# The template's own tasks, which mise loads along with mise.toml. Only the
+# template repository has this file: copier.yml leaves it out of projects.
+
+[tasks."template:check"]
+description = "Check that the project Copier creates with every language equals the repository root, apart from the template's own files"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+# --vcs-ref=HEAD makes copier read the working tree, including uncommitted
+# changes and untracked files that git doesn't ignore.
+copier copy --quiet --defaults --vcs-ref=HEAD \
+  --data python=true --data rust=true --data typescript=true --data cpp=true \
+  . "$work/project"
+rm "$work/project/.copier-answers.yml"
+
+# Copy the files copier read, except the template's own files, which
+# _exclude in copier.yml also lists, and templates (*.jinja), which the
+# project has rendered instead.
+mkdir "$work/root"
+git ls-files --cached --others --exclude-standard | sort -u | while read -r file; do
+  case $file in
+    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | *.jinja) ;;
+    *) if [[ -e $file ]]; then printf '%s\n' "$file"; fi ;;
+  esac
+done | tar -cf - -T - | tar -xf - -C "$work/root"
+
+if ! diff -r "$work/root" "$work/project"; then
+  echo "error: the project Copier creates with every language differs from the repository root as shown above (root first), but the root must be that project. List a file only the root has in _exclude in copier.yml and in this task in .config/mise/conf.d/template.toml; for a file that differs, make its root copy equal its .jinja template's render." >&2
+  exit 1
+fi
+echo "The project Copier creates with every language equals the repository root, apart from the template's own files."
+'''
+
+[tasks."lint:template"]
+description = "Run template:check, so that lint and check include it"
+depends = ["template:check"]
+
+[tasks."test:template"]
+description = "Check that Copier refuses to create a project with no language, and writes nothing"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+name=copier_refuses_a_project_with_no_language_and_writes_nothing
+
+status=0
+copier copy --quiet --defaults --vcs-ref=HEAD \
+  --data python=false --data rust=false --data typescript=false --data cpp=false \
+  . "$work/project" 2> "$work/stderr" || status=$?
+if ((status == 0)) || ! grep -q "No language was chosen" "$work/stderr"; then
+  echo "FAIL: $name: copier exited with status $status and printed the output below; expected a non-zero status and the error from the validator of cpp in copier.yml." >&2
+  cat "$work/stderr" >&2
+  exit 1
+fi
+if [[ -e $work/project ]]; then
+  echo "FAIL: $name: copier refused, but wrote $work/project." >&2
+  exit 1
+fi
+echo "$name: passed."
+'''
