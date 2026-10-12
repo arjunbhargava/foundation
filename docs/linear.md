@@ -4,6 +4,7 @@ Work is planned as Linear issues, and Cursor cloud agents turn each issue into
 one pull request (PR). This page is for people and agents who file issues or
 pick them up. The repository owner sets up the Linear and Cursor settings
 these conventions rely on (task T17 in [the template plan](template-plan.md)).
+Testing changes here for auto mode.
 
 ## Filing an issue
 
