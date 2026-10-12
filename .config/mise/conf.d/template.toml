@@ -61,7 +61,7 @@ description = "Run template:check, so that lint and check include it"
 depends = ["template:check"]
 
 [tasks."test:template"]
-description = "Check that Copier refuses to create a project with no language, and writes nothing"
+description = "Check that Copier refuses a project with no language and writes nothing, and that a project with one language has only that language's files, names, and Dependabot entries"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -82,5 +82,76 @@ if [[ -e $work/project ]]; then
   echo "FAIL: $name: copier refused, but wrote $work/project." >&2
   exit 1
 fi
+echo "$name: passed."
+
+# What each language adds to a project: its files, which _exclude in
+# copier.yml leaves out of a project without it (keep each list equal to its
+# block there), its name in AGENTS.md and README.md, and its entries in
+# .github/dependabot.yml.
+language_files() {
+  case $1 in
+    python) echo pyproject.toml uv.lock .python-version src tests .config/mise/conf.d/python.toml docs/api/python.md ;;
+    rust) echo Cargo.toml Cargo.lock rust-toolchain.toml crates .config/mise/conf.d/rust.toml docs/api/rust.md .github/workflows/rust-advisories.yml ;;
+    typescript) echo package.json pnpm-lock.yaml pnpm-workspace.yaml packages tsconfig.json biome.json .dependency-cruiser.cjs stryker.config.json .config/mise/conf.d/typescript.toml docs/api/typescript.md ;;
+    cpp) echo CMakeLists.txt cpp CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml docs/api/cpp.md ;;
+  esac
+}
+language_name() {
+  case $1 in
+    python) echo Python ;;
+    rust) echo Rust ;;
+    typescript) echo TypeScript ;;
+    cpp) echo C++ ;;
+  esac
+}
+language_dependabot_entries() {
+  case $1 in
+    python) echo "uv /" ;;
+    rust) printf '%s\n' "cargo /" "rust-toolchain /" ;;
+    typescript) echo "npm /" ;;
+  esac
+}
+
+# Prints each entry of a dependabot.yml as "<ecosystem> <directory>", one
+# line per directory, sorted.
+dependabot_entries() {
+  awk '
+    $2 == "package-ecosystem:" { ecosystem = $3 }
+    $1 == "directory:" { print ecosystem, $2 }
+    $1 == "directories:" { gsub(/[][,]/, ""); for (i = 2; i <= NF; i++) print ecosystem, $i }
+  ' "$1" | sort
+}
+
+name=a_single_language_project_has_only_its_language_files_names_and_dependabot_entries
+languages="python rust typescript cpp"
+for language in $languages; do
+  project=$work/$language
+  copier copy --quiet --defaults --vcs-ref=HEAD --data "$language=true" . "$project"
+  for path in $(language_files "$language"); do
+    if [[ ! -e $project/$path ]]; then
+      echo "FAIL: $name: the $language project lacks $path, one of its own files." >&2
+      exit 1
+    fi
+  done
+  for other in $languages; do
+    if [[ $other == "$language" ]]; then continue; fi
+    for path in $(language_files "$other"); do
+      if [[ -e $project/$path ]]; then
+        echo "FAIL: $name: the $language project has $path, a file of $other. Add it to the $other block of _exclude in copier.yml." >&2
+        exit 1
+      fi
+    done
+    if grep -nF "$(language_name "$other")" "$project/AGENTS.md" "$project/README.md" >&2; then
+      echo "FAIL: $name: the $language project's AGENTS.md or README.md names $(language_name "$other") on the lines above. Put those lines inside an if block for $other in the .jinja twin." >&2
+      exit 1
+    fi
+  done
+  expected_entries=$({ printf '%s\n' "github-actions /" "uv /docs"; language_dependabot_entries "$language"; } | sort)
+  actual_entries=$(dependabot_entries "$project/.github/dependabot.yml")
+  if [[ $actual_entries != "$expected_entries" ]]; then
+    printf "FAIL: %s: the %s project's .github/dependabot.yml has these entries:\n%s\nIt should have these:\n%s\n" "$name" "$language" "$actual_entries" "$expected_entries" >&2
+    exit 1
+  fi
+done
 echo "$name: passed."
 '''
