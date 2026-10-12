@@ -21,7 +21,14 @@ if [[ -e $stub_dir/uv ]]; then
   exit 1
 fi
 
-for blocked in cmake cargo clang-format; do
+# Every project pins jq and pipx:copier in mise.toml. Only one with Rust pins
+# rust, whose commands are cargo and rustc rather than its name.
+blocked_commands=(jq copier)
+if [[ -f rust-toolchain.toml ]]; then
+  blocked_commands+=(cargo)
+fi
+
+for blocked in "${blocked_commands[@]}"; do
   status=0
   message=$("$stub_dir/$blocked" 2>&1) || status=$?
   if ((status == 0)) || [[ $message != *"$blocked"* || $message != *"MISE_ENABLE_TOOLS"* || $message != *"test-job job in .github/workflows/ci.yml"* ]]; then
@@ -30,4 +37,4 @@ for blocked in cmake cargo clang-format; do
   fi
 done
 
-echo "block_unlisted_tools.sh blocked cmake, cargo, and clang-format, and left uv alone."
+echo "block_unlisted_tools.sh blocked ${blocked_commands[*]}, and left uv alone."

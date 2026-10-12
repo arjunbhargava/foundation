@@ -4,8 +4,11 @@
 #
 #   1. Merge commits become the only merge method (D6). Both review rulesets
 #      allow only merge commits too, but admins can bypass them.
-#   2. main-checks.json and one review ruleset are each created, or updated
-#      if a ruleset with the same name exists. The review ruleset is
+#   2. main-checks.json, template-checks.json if it exists, and one review
+#      ruleset are each created, or updated if a ruleset with the same name
+#      exists. Only the template repository has template-checks.json, which
+#      requires the template-ok check of .github/workflows/template.yml;
+#      copier.yml leaves both out of projects. The review ruleset is
 #      main-review.json, or main-review-auto.json with --auto
 #      (docs/auto-mode.md). In the JSON, integration_id 15368 is the GitHub
 #      Actions app, so only Actions can report the required checks, and
@@ -26,8 +29,9 @@
 #
 # Switching to a merge queue, which GitHub offers only to repositories owned
 # by an organization:
-#   1. In main-checks.json, set strict_required_status_checks_policy to false
-#      and add this rule. Apart from merge_method, the values are GitHub's
+#   1. In main-checks.json, and in template-checks.json if it exists, set
+#      strict_required_status_checks_policy to false. Add this rule to
+#      main-checks.json. Apart from merge_method, the values are GitHub's
 #      defaults.
 #        { "type": "merge_queue", "parameters": {
 #            "merge_method": "MERGE", "grouping_strategy": "ALLGREEN",
@@ -80,7 +84,12 @@ existing_ruleset_id() {
   jq -r --arg name "$(jq -r .name "$1")" '.[] | select(.name == $name) | .id' <<< "$existing_rulesets"
 }
 
-for file in main-checks.json "$review_file"; do
+ruleset_files=(main-checks.json)
+if [[ -f template-checks.json ]]; then
+  ruleset_files+=(template-checks.json)
+fi
+ruleset_files+=("$review_file")
+for file in "${ruleset_files[@]}"; do
   name=$(jq -r .name "$file")
   id=$(existing_ruleset_id "$file")
   if [[ -n $id ]]; then

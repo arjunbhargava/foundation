@@ -22,8 +22,15 @@
 # that runs a tool it doesn't list fails, with an error naming the tool.
 [tools]
 jq = "1.8.2" # .github/rulesets/
+# Creates a project from the template and pulls template updates into it; see
+# README.md. mise installs it with uv.
+# ponytail: mise's pipx: backend pins copier but not the packages it depends
+# on, so a new release of one of them can change copier's behaviour. If that
+# happens, give copier a uv project and lockfile of its own, as
+# docs/pyproject.toml does for Sphinx.
+"pipx:copier" = "9.18.2"
 # Python's tasks, the docs build, `spend`, and mise's installs of the pipx:
-# tools in cpp.toml all run uv.
+# tools, copier and those in cpp.toml, all run uv.
 # Move pyproject.toml's uv_build range with this pin. Outside that range, uv
 # fetches uv_build from PyPI instead of building with its built-in copy.
 uv = "0.12.21"

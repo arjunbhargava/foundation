@@ -1,0 +1,99 @@
+# Copier's settings for creating a project from this repository (decision D1
+# in docs/template-plan.md); README.md says how. The repository root is the
+# project with every language. Each question below adds one language, and
+# _exclude leaves out the files of each language a project doesn't use.
+# `mise run template:check` checks that a project with every language equals
+# the root, and .github/workflows/template.yml runs `mise run check` in a
+# project with every language and in one with each language alone.
+
+python:
+  type: bool
+  default: false
+  help: Use Python?
+
+rust:
+  type: bool
+  default: false
+  help: Use Rust?
+
+typescript:
+  type: bool
+  default: false
+  help: Use TypeScript?
+
+cpp:
+  type: bool
+  default: false
+  help: Use C and C++?
+  # This question is the last, so the validator sees every answer. Without a
+  # language, the docs build fails, because its API pages are the languages'
+  # pages.
+  validator: >-
+    {% if not (python or rust or typescript or cpp) %}
+    No language was chosen. Answer yes for at least one of python, rust,
+    typescript, and cpp, for example with --data python=true.
+    {% endif %}
+
+_exclude:
+  # Copier's defaults, which setting _exclude replaces.
+  - copier.yml
+  - copier.yaml
+  - "~*"
+  - "*.py[co]"
+  - __pycache__
+  - .git
+  - .DS_Store
+  - .svn
+  # The template's own checks. Keep this list equal to the one in
+  # template:check in .config/mise/conf.d/template.toml.
+  - /.config/mise/conf.d/template.toml
+  - /.github/workflows/template.yml
+  - /.github/rulesets/template-checks.json
+  # Each language's files: its manifest and the files listed with it in the
+  # changes job of .github/workflows/ci.yml, its API page, and its workflows.
+  # Each line of a block is one pattern. A leading / matches only at the
+  # root, so that /tests leaves cpp/tests alone, and /uv.lock docs/uv.lock.
+  - |
+    {% if not python %}
+    /pyproject.toml
+    /uv.lock
+    /.python-version
+    /src
+    /tests
+    /.config/mise/conf.d/python.toml
+    /docs/api/python.md
+    {% endif %}
+  - |
+    {% if not rust %}
+    /Cargo.toml
+    /Cargo.lock
+    /rust-toolchain.toml
+    /crates
+    /.config/mise/conf.d/rust.toml
+    /docs/api/rust.md
+    /.github/workflows/rust-advisories.yml
+    {% endif %}
+  - |
+    {% if not typescript %}
+    /package.json
+    /pnpm-lock.yaml
+    /pnpm-workspace.yaml
+    /packages
+    /tsconfig.json
+    /biome.json
+    /.dependency-cruiser.cjs
+    /stryker.config.json
+    /.config/mise/conf.d/typescript.toml
+    /docs/api/typescript.md
+    {% endif %}
+  - |
+    {% if not cpp %}
+    /CMakeLists.txt
+    /cpp
+    /CMakePresets.json
+    /.clang-format
+    /.clang-tidy
+    /Doxyfile
+    /.config/mise/conf.d/cpp.toml
+    /docs/api/cpp.md
+    {% endif %}
