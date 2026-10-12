@@ -22,6 +22,7 @@ the same thing:
 | `mise run test:typescript` | Run only the TypeScript tests. Arguments after `--` go to vitest: `mise run test:typescript -- -t precision`. |
 | `mise run test:cpp` | Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them. Arguments after `--` go to ctest: `mise run test:cpp -- -R chord`. |
 | `mise run test:rulesets` | Check the changes `.github/rulesets/apply.sh` makes with and without `--auto`, and that `lint:rulesets` catches broken ruleset files, with a fake `gh`. |
+| `mise run test:auto-merge-script` | Check when `.github/scripts/auto_merge.sh` turns auto-merge on and off, and which PRs it leaves alone, with a fake `gh`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 | `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python`, `mutate:rust`, and `mutate:typescript` run one language. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
