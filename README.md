@@ -18,10 +18,52 @@ the order it lands in.
 
 ## Start a project
 
-Projects will be created with [Copier](https://copier.readthedocs.io/), which
-can later pull template updates into them (decision D1 in the plan). Until
-that lands, copy this repository and delete what the project doesn't use.
-Then add the repository to Linear as [`docs/linear.md`](docs/linear.md) says.
+A project is created from this template with
+[Copier](https://copier.readthedocs.io/), which can later pull template
+updates into it (decision D1 in the plan). With
+[mise](https://mise.jdx.dev/) on your PATH, run this, with the uv and copier
+versions that `mise.toml` pins:
+
+```sh
+mise exec uv@0.12.21 pipx:copier@9.18.2 -- copier copy gh:arjunbhargava/foundation my-project
+```
+
+Copier asks one yes/no question per language: Python, Rust, TypeScript, and
+C and C++. The project gets the files of each language you answer yes to,
+and Copier refuses to create one with none. To answer without prompts, pass
+`--defaults` and a `--data` option per language, such as
+`--data python=true`. Then set up the project and commit it, because
+`copier update` needs a git repository:
+
+```sh
+cd my-project
+git init
+bash .cursor/install.sh
+mise run check
+git add -A
+git commit -m "Create the project from the foundation template"
+```
+
+Then create its GitHub repository, push, run
+[`.github/rulesets/apply.sh`](.github/rulesets/apply.sh) to apply the
+repository settings, and add the repository to Linear as
+[`docs/linear.md`](docs/linear.md) says.
+
+## Pull template updates
+
+Projects follow the template's `main` branch, which has no release tags. In
+a project with no uncommitted changes, run:
+
+```sh
+mise exec -- copier update --defaults
+```
+
+`--defaults` keeps the answers recorded in `.copier-answers.yml`. To add a
+language, also pass its answer, such as `--data rust=true`. Copier applies
+the template's changes since the project was created or last updated, and
+marks each conflict with the project's own changes between `<<<<<<<` and
+`>>>>>>>` lines in the file. Resolve them, rerun `bash .cursor/install.sh`
+for any new tools, run `mise run check`, and commit.
 
 ## Set up a local machine
 
