@@ -11,7 +11,28 @@ permissions:
   contents: read
 
 jobs:
+  languages:
+    # CodeQL fails on a language with no code, so analyze's matrix gets only
+    # the languages whose manifest exists, and actions, for the workflows
+    # every project has.
+    runs-on: ubuntu-latest
+    outputs:
+      languages: ${{ steps.list.outputs.languages }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: list
+        run: |
+          languages='"actions"'
+          if [[ -f pyproject.toml ]]; then languages+=', "python"'; fi
+          if [[ -f Cargo.toml ]]; then languages+=', "rust"'; fi
+          if [[ -f package.json ]]; then languages+=', "javascript-typescript"'; fi
+          if [[ -f CMakeLists.txt ]]; then languages+=', "c-cpp"'; fi
+          echo "languages=[$languages]" >> "$GITHUB_OUTPUT"
+
   analyze:
+    needs: languages
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,9 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # CodeQL fails on a language with no code, so each language task adds
-        # its own: javascript-typescript, rust, or c-cpp.
-        language: [actions, python, rust, javascript-typescript, c-cpp]
+        language: ${{ fromJSON(needs.languages.outputs.languages) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
