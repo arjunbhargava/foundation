@@ -13,10 +13,15 @@
 #      (docs/auto-mode.md). In the JSON, integration_id 15368 is the GitHub
 #      Actions app, so only Actions can report the required checks, and
 #      actor_id 5 with actor_type RepositoryRole is the admin role.
-#   3. The other review ruleset, if it exists, is disabled. It is disabled
+#   3. Without --auto, if the auto-mode ruleset exists, each approval by
+#      github-actions[bot] on an open PR is dismissed: main: review would count
+#      it as a person's, so a PR that auto mode held back on an unresolved
+#      review thread would merge. After step 2, approve-agent-prs.yml gives no
+#      new ones.
+#   4. The other review ruleset, if it exists, is disabled. It is disabled
 #      after step 2, so a failure between the two leaves both in force rather
 #      than neither.
-#   4. Secret scanning and push protection are turned on. This step is last
+#   5. Secret scanning and push protection are turned on. This step is last
 #      because it fails on a private repository without GitHub Secret
 #      Protection, and the steps before it still apply.
 #
@@ -99,7 +104,26 @@ for file in "${ruleset_files[@]}"; do
   fi
 done
 
+# Dismisses each approval by github-actions[bot] on an open PR (step 3).
+dismiss_approval_workflow_approvals() {
+  local open_prs number approval_ids review_id
+  open_prs=$(gh api --paginate --slurp "repos/$repo/pulls?state=open" | jq -r 'flatten[].number')
+  for number in $open_prs; do
+    approval_ids=$(gh api --paginate --slurp "repos/$repo/pulls/$number/reviews" |
+      jq -r 'flatten[] | select(.user.login == "github-actions[bot]" and .state == "APPROVED") | .id')
+    for review_id in $approval_ids; do
+      apply "dismiss the approval github-actions[bot] gave PR #$number (review $review_id)" PUT \
+        "repos/$repo/pulls/$number/reviews/$review_id/dismissals" << 'EOF'
+{ "message": "Auto mode is off, so this PR needs a person's approval (docs/auto-mode.md).", "event": "DISMISS" }
+EOF
+    done
+  done
+}
+
 unused_id=$(existing_ruleset_id "$unused_review_file")
+if [[ -n $unused_id && $unused_review_file == main-review-auto.json ]]; then
+  dismiss_approval_workflow_approvals
+fi
 if [[ -n $unused_id ]]; then
   apply "disable ruleset \"$(jq -r .name "$unused_review_file")\" (id $unused_id)" PUT "repos/$repo/rulesets/$unused_id" << 'EOF'
 { "enforcement": "disabled" }
