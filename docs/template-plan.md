@@ -491,8 +491,8 @@ projects that use the template.
 
 **In progress** (owner, 2026-10-10). PR 1 (#38) added the review ruleset, the
 CODEOWNERS entries, and `docs/auto-mode.md`, PR 2 (#43) the auto-merge
-workflow, and PR 3 the approval workflow. PR 4, the branch-update workflow,
-is left.
+workflow, and PR 3 (#50) the approval workflow. PR 4, the branch-update
+workflow, is left.
 
 Some tasks need several rounds of exploration, and waiting for a person's
 review on each round stalls them. In auto mode, a repository's agent PRs merge
