@@ -21,9 +21,11 @@ set -euo pipefail
 stub_dir=$RUNNER_TEMP/unlisted-tool-stubs
 mkdir -p "$stub_dir"
 
-# Unsetting MISE_ENABLE_TOOLS makes `mise ls` show every tool in mise.toml and
-# .config/mise/conf.d/, and rust, which rust-toolchain.toml pins.
-for tool in $(env -u MISE_ENABLE_TOOLS mise ls --no-header | awk '{print $1}'); do
+# Unsetting MISE_ENABLE_TOOLS makes `mise ls --current` show every tool in
+# mise.toml and .config/mise/conf.d/, and rust, which rust-toolchain.toml pins,
+# whether installed or not. Without --current it would also show tools
+# installed on the machine that the project doesn't pin.
+for tool in $(env -u MISE_ENABLE_TOOLS mise ls --current --no-header | awk '{print $1}'); do
   case ",$MISE_ENABLE_TOOLS," in
     *",$tool,"*) continue ;;
   esac

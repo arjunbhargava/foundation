@@ -1,0 +1,264 @@
+# The template's own tasks, which mise loads along with mise.toml. Only the
+# template repository has this file: copier.yml leaves it out of projects.
+
+[tasks."template:check"]
+description = "Check that the project Copier creates with every language equals the repository root, apart from the template's own files"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+# --vcs-ref=HEAD makes copier read the working tree, including uncommitted
+# changes and untracked files that git doesn't ignore.
+copier copy --quiet --defaults --vcs-ref=HEAD \
+  --data python=true --data rust=true --data typescript=true --data cpp=true \
+  . "$work/project"
+rm "$work/project/.copier-answers.yml"
+
+# Copy the files copier read, except the template's own files, which
+# _exclude in copier.yml also lists, and templates (*.jinja), which the
+# project has rendered instead.
+mkdir "$work/root"
+git ls-files --cached --others --exclude-standard | sort -u | while read -r file; do
+  case $file in
+    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | *.jinja) ;;
+    *) if [[ -e $file ]]; then printf '%s\n' "$file"; fi ;;
+  esac
+done | tar -cf - -T - | tar -xf - -C "$work/root"
+
+if ! diff -r "$work/root" "$work/project"; then
+  echo "error: the project Copier creates with every language differs from the repository root as shown above (root first), but the root must be that project. List a file only the root has in _exclude in copier.yml and in this task in .config/mise/conf.d/template.toml; for a file with a .jinja twin, edit the twin and run \`mise run template:sync\`." >&2
+  exit 1
+fi
+echo "The project Copier creates with every language equals the repository root, apart from the template's own files."
+'''
+
+[tasks."template:sync"]
+description = "Render each .jinja twin with every language into its root copy, such as AGENTS.md.jinja into AGENTS.md"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+copier copy --quiet --defaults --vcs-ref=HEAD \
+  --data python=true --data rust=true --data typescript=true --data cpp=true \
+  . "$work/project"
+
+# A twin is a .jinja file whose root copy exists; the answers file's
+# template has none.
+git ls-files --cached --others --exclude-standard '*.jinja' | while read -r twin; do
+  root_copy=${twin%.jinja}
+  if [[ -e $root_copy ]]; then
+    cp "$work/project/$root_copy" "$root_copy"
+    echo "Rendered $twin into $root_copy."
+  fi
+done
+'''
+
+[tasks."lint:template"]
+description = "Run template:check, so that lint and check include it"
+depends = ["template:check"]
+
+[tasks."template:check-update"]
+description = "Check that copier update gives a project what a new copy gives: each variant created from origin/main and updated to the working tree, and a Python project given Rust; needs origin/main, so check doesn't run it"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+# copier update needs each project committed, and CI's git has no identity.
+export GIT_AUTHOR_NAME=template-check GIT_AUTHOR_EMAIL=template-check@localhost
+export GIT_COMMITTER_NAME=$GIT_AUTHOR_NAME GIT_COMMITTER_EMAIL=$GIT_AUTHOR_EMAIL
+
+# copier update rereads the commit a project was created from, so the
+# working tree must be a commit: make it one in a clone that shares this
+# repository's objects. The template's path must be absolute, because copier
+# records it in each project.
+template=$work/template
+git clone --quiet --shared --no-checkout . "$template"
+git -C "$template" --work-tree="$PWD" add --all
+git -C "$template" --work-tree="$PWD" commit --quiet --allow-empty --message "The working tree"
+working_tree=$(git -C "$template" rev-parse HEAD)
+main=$(git rev-parse origin/main)
+
+# create <project> <commit> <copier options>: create a project and commit it.
+create() {
+  local project=$1 commit=$2
+  shift 2
+  copier copy --quiet --defaults --vcs-ref="$commit" "$@" "$template" "$project"
+  git -C "$project" init --quiet
+  git -C "$project" add --all
+  git -C "$project" commit --quiet --message "Create the project"
+}
+
+failures=0
+# expect_equal <test name> <updated project> <new project>
+expect_equal() {
+  if diff -r --exclude=.git "$2" "$3"; then
+    echo "$1: passed."
+  else
+    echo "FAIL: $1: the updated project differs from the new one as shown above (updated first)." >&2
+    failures=$((failures + 1))
+  fi
+  rm -rf "$2" "$3"
+}
+
+name=a_project_created_from_main_and_updated_equals_one_created_from_the_working_tree
+for languages in "python rust typescript cpp" python rust typescript cpp; do
+  data=$(printf -- '--data %s=true ' $languages)
+  create "$work/updated" "$main" $data
+  copier update --quiet --defaults --vcs-ref="$working_tree" "$work/updated"
+  create "$work/new" "$working_tree" $data
+  expect_equal "$name ($languages)" "$work/updated" "$work/new"
+done
+
+name=adding_rust_to_a_python_project_with_copier_update_equals_a_new_python_and_rust_project
+create "$work/updated" "$working_tree" --data python=true
+copier update --quiet --defaults --vcs-ref="$working_tree" --data rust=true "$work/updated"
+create "$work/new" "$working_tree" --data python=true --data rust=true
+expect_equal "$name" "$work/updated" "$work/new"
+exit $((failures > 0))
+'''
+
+[tasks."test:template"]
+description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; and that a project with one language has only that language's files, names, and Dependabot entries"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+name=copier_refuses_a_project_with_no_language_and_writes_nothing
+
+status=0
+copier copy --quiet --defaults --vcs-ref=HEAD \
+  --data python=false --data rust=false --data typescript=false --data cpp=false \
+  . "$work/project" 2> "$work/stderr" || status=$?
+if ((status == 0)) || ! grep -q "No language was chosen" "$work/stderr"; then
+  echo "FAIL: $name: copier exited with status $status and printed the output below; expected a non-zero status and the error from the validator of cpp in copier.yml." >&2
+  cat "$work/stderr" >&2
+  exit 1
+fi
+if [[ -e $work/project ]]; then
+  echo "FAIL: $name: copier refused, but wrote $work/project." >&2
+  exit 1
+fi
+echo "$name: passed."
+
+# template:check can't see which file Copier used while a twin's render
+# equals its root copy, so this test copies the template and adds a line to
+# each twin that its root copy lacks.
+name=copier_renders_each_twin_in_place_of_its_root_copy
+mkdir "$work/template"
+git ls-files --cached --others --exclude-standard | while read -r file; do
+  if [[ -e $file ]]; then printf '%s\n' "$file"; fi
+done | tar -cf - -T - | tar -xf - -C "$work/template"
+# A twin is a .jinja file whose root copy exists, as in template:sync.
+twins=$(git ls-files --cached --others --exclude-standard '*.jinja' | while read -r twin; do
+  if [[ -e ${twin%.jinja} ]]; then printf '%s\n' "$twin"; fi
+done)
+if [[ -z $twins ]]; then
+  echo "FAIL: $name: found no .jinja twin with a root copy, but AGENTS.md, README.md, and .github/dependabot.yml each have one." >&2
+  exit 1
+fi
+marker="This line is only in the twin."
+for twin in $twins; do
+  printf '%s\n' "$marker" >> "$work/template/$twin"
+done
+copier copy --quiet --defaults --data python=true "$work/template" "$work/twins"
+for twin in $twins; do
+  if [[ $(tail -n 1 "$work/twins/${twin%.jinja}") != "$marker" ]]; then
+    echo "FAIL: $name: the project's ${twin%.jinja} is its root copy, not the render of $twin." >&2
+    exit 1
+  fi
+done
+echo "$name: passed."
+
+# template:sync reads the template from git, so this test runs it in a git
+# repository made from the copy of the template whose twins end with the
+# marker. MISE_TRUSTED_CONFIG_PATHS lets mise read that repository's tasks.
+name=template_sync_writes_each_twin_render_over_its_root_copy
+git -C "$work/template" init --quiet
+git -C "$work/template" add --all
+git -C "$work/template" -c user.name=template-test -c user.email=template-test@localhost \
+  commit --quiet --message "The template, with a line added to each twin"
+MISE_TRUSTED_CONFIG_PATHS=$work/template mise --cd "$work/template" run template:sync > /dev/null
+for twin in $twins; do
+  if [[ $(tail -n 1 "$work/template/${twin%.jinja}") != "$marker" ]]; then
+    echo "FAIL: $name: after template:sync, ${twin%.jinja} lacks the line that $twin ends with." >&2
+    exit 1
+  fi
+done
+echo "$name: passed."
+
+# What each language adds to a project: its files, which _exclude in
+# copier.yml leaves out of a project without it (keep each list equal to its
+# block there), its name in AGENTS.md and README.md, and its entries in
+# .github/dependabot.yml.
+language_files() {
+  case $1 in
+    python) echo pyproject.toml uv.lock .python-version src tests .config/mise/conf.d/python.toml docs/api/python.md ;;
+    rust) echo Cargo.toml Cargo.lock rust-toolchain.toml crates .config/mise/conf.d/rust.toml docs/api/rust.md .github/workflows/rust-advisories.yml ;;
+    typescript) echo package.json pnpm-lock.yaml pnpm-workspace.yaml packages tsconfig.json biome.json .dependency-cruiser.cjs stryker.config.json .config/mise/conf.d/typescript.toml docs/api/typescript.md ;;
+    cpp) echo CMakeLists.txt cpp CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml docs/api/cpp.md ;;
+  esac
+}
+language_name() {
+  case $1 in
+    python) echo Python ;;
+    rust) echo Rust ;;
+    typescript) echo TypeScript ;;
+    cpp) echo C++ ;;
+  esac
+}
+language_dependabot_entries() {
+  case $1 in
+    python) echo "uv /" ;;
+    rust) printf '%s\n' "cargo /" "rust-toolchain /" ;;
+    typescript) echo "npm /" ;;
+  esac
+}
+
+# Prints each entry of a dependabot.yml as "<ecosystem> <directory>", one
+# line per directory, sorted.
+dependabot_entries() {
+  awk '
+    $2 == "package-ecosystem:" { ecosystem = $3 }
+    $1 == "directory:" { print ecosystem, $2 }
+    $1 == "directories:" { gsub(/[][,]/, ""); for (i = 2; i <= NF; i++) print ecosystem, $i }
+  ' "$1" | sort
+}
+
+name=a_single_language_project_has_only_its_language_files_names_and_dependabot_entries
+languages="python rust typescript cpp"
+for language in $languages; do
+  project=$work/$language
+  copier copy --quiet --defaults --vcs-ref=HEAD --data "$language=true" . "$project"
+  for path in $(language_files "$language"); do
+    if [[ ! -e $project/$path ]]; then
+      echo "FAIL: $name: the $language project lacks $path, one of its own files." >&2
+      exit 1
+    fi
+  done
+  for other in $languages; do
+    if [[ $other == "$language" ]]; then continue; fi
+    for path in $(language_files "$other"); do
+      if [[ -e $project/$path ]]; then
+        echo "FAIL: $name: the $language project has $path, a file of $other. Add it to the $other block of _exclude in copier.yml." >&2
+        exit 1
+      fi
+    done
+    if grep -nF "$(language_name "$other")" "$project/AGENTS.md" "$project/README.md" >&2; then
+      echo "FAIL: $name: the $language project's AGENTS.md or README.md names $(language_name "$other") on the lines above. Put those lines inside an if block for $other in the .jinja twin." >&2
+      exit 1
+    fi
+  done
+  expected_entries=$({ printf '%s\n' "github-actions /" "uv /docs"; language_dependabot_entries "$language"; } | sort)
+  actual_entries=$(dependabot_entries "$project/.github/dependabot.yml")
+  if [[ $actual_entries != "$expected_entries" ]]; then
+    printf "FAIL: %s: the %s project's .github/dependabot.yml has these entries:\n%s\nIt should have these:\n%s\n" "$name" "$language" "$actual_entries" "$expected_entries" >&2
+    exit 1
+  fi
+done
+echo "$name: passed."
+'''
