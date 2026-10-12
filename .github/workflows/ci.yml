@@ -240,9 +240,10 @@ jobs:
 
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
-    # change or its language's manifest is missing, and counts as passing. always(), not !cancelled(): GitHub treats
-    # a skipped required check as passing, so this job must still run, and
-    # fail, when the run is cancelled.
+    # change or its language's manifest is missing, and counts as passing.
+    # always(), not !cancelled(): GitHub treats a skipped required check as
+    # passing, so this job must still run, and fail, when the run is
+    # cancelled.
     needs:
       - changes
       - install-script
