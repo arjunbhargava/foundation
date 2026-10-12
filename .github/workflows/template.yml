@@ -1,7 +1,9 @@
 # Checks the Copier template that copier.yml defines. template-tasks checks
-# that the project with every language equals the repository root, and that
-# Copier refuses a project with no language. Each variant job creates a
-# project, as README.md says, and runs `mise run check` in it. Only the
+# that the project with every language equals the repository root, that
+# Copier refuses a project with no language, that a project with one language
+# has only that language, and that `copier update` gives a project what a
+# new copy gives. Each variant job creates a project, as README.md says, and
+# runs `mise run check` in it. Only the
 # template repository has this workflow: copier.yml leaves it out of
 # projects. The template-checks ruleset requires only template-ok.
 name: Template
@@ -33,10 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # template:check-update creates projects from origin/main.
+          fetch-depth: 0
           persist-credentials: false
       - run: bash .cursor/install.sh
       - run: mise run template:check
       - run: mise run test:template
+      - run: mise run template:check-update
 
   variant:
     # The project is created outside the checkout, so that mise doesn't also

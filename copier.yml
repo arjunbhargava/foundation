@@ -8,6 +8,12 @@
 # this, and .github/workflows/template.yml runs them and `mise run check` in
 # a project with every language and in one with each language alone.
 
+# Removes the line break after a {% ... %} tag and the indentation before
+# it, so that a tag on a line of its own leaves no blank line.
+_envops:
+  trim_blocks: true
+  lstrip_blocks: true
+
 python:
   type: bool
   default: false
@@ -36,6 +42,23 @@ cpp:
     typescript, and cpp, for example with --data python=true.
     {% endif %}
 
+# Not a question: the chosen languages' names as one phrase, such as "Python
+# and Rust", for the .jinja twins. Copier neither asks nor records it.
+language_names:
+  type: str
+  when: false
+  default: >-
+    {%- set names = [] -%}
+    {%- if python %}{% set names = names + ["Python"] %}{% endif -%}
+    {%- if rust %}{% set names = names + ["Rust"] %}{% endif -%}
+    {%- if typescript %}{% set names = names + ["TypeScript"] %}{% endif -%}
+    {%- if cpp %}{% set names = names + ["C and C++"] %}{% endif -%}
+    {%- if names | length > 2 -%}
+    {{ names[:-1] | join(", ") }}, and {{ names[-1] }}
+    {%- else -%}
+    {{ names | join(" and ") }}
+    {%- endif -%}
+
 _exclude:
   # Copier's defaults, which setting _exclude replaces.
   - copier.yml
@@ -53,6 +76,7 @@ _exclude:
   - /.github/rulesets/template-checks.json
   # Each language's files: its manifest and the files listed with it in the
   # changes job of .github/workflows/ci.yml, its API page, and its workflows.
+  # Keep each block equal to the language's list in test:template.
   # Each line of a block is one pattern. A leading / matches only at the
   # root, so that /tests leaves cpp/tests alone, and /uv.lock docs/uv.lock.
   - |
