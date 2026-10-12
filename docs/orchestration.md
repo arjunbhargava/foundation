@@ -5,9 +5,9 @@ one worker agent per task, watches the workers' pull requests (PRs), and
 reports to the owner. This page is the standing instruction set for every
 orchestrator, and for the owner who starts one. It covers how to launch
 workers so the owner can see them, how to keep spend from growing without
-bound, and how to hand an orchestration to a fresh agent. It works together
-with [auto mode](auto-mode.md), which decides how PRs merge, and with
-[the template plan](template-plan.md), which holds the task list.
+bound, and how to hand an orchestration to a fresh agent. It doesn't depend
+on any one project: the project's own plan or issue tracker holds the task
+list, and [auto mode](auto-mode.md) decides how PRs merge.
 
 ## Terms
 
@@ -41,7 +41,7 @@ jq -n --rawfile prompt worker-prompt.md '{
   prompt: {text: $prompt},
   model: {id: "claude-sonnet-5-5",
           params: [{id: "reasoning_effort", value: "high"}]},
-  repos: [{url: "https://github.com/arjunbhargava/foundation",
+  repos: [{url: "https://github.com/<owner>/<repository>",
            startingRef: "main"}],
   autoCreatePR: true
 }' | curl -s -u "$CURSOR_API_KEY:" -H 'Content-Type: application/json' \
@@ -67,6 +67,9 @@ jq -n --rawfile prompt worker-prompt.md '{
 
 ### Which model
 
+These are the defaults. A project may route other models by the scope of the
+work; record each addition in this table.
+
 | Task | Model id | Parameters |
 |---|---|---|
 | Design work: plans, rulesets, CI security, changes spanning several areas | `claude-opus-5-5` | `effort=xhigh`, `fast=false` |
@@ -74,9 +77,9 @@ jq -n --rawfile prompt worker-prompt.md '{
 | Orchestrator | `claude-sonnet-5-5` | `reasoning_effort=high` |
 
 A Sonnet worker that fails twice on the same CI failure or Bugbot finding is
-relaunched on Opus from its branch. Do not start on Opus "to be safe": in the
-7 days to 2026-10-12, `mise run spend` shows each Opus worker costing $9 to
-$16, and the Sonnet orchestrator $11.54 over 38 events.
+relaunched on Opus from its branch. Do not start on Opus "to be safe". In one
+project's `mise run spend` report for the 7 days to 2026-10-12, each Opus
+worker cost $9 to $16, and a Sonnet orchestrator cost $11.54 over 38 events.
 
 ### What a worker prompt contains
 
@@ -99,9 +102,8 @@ The orchestrator finds its own bcId with the `cursor-cloud` `run-info` tool.
 
 A cloud agent's cost is dominated by cache-read tokens: on each step, the
 model re-reads its whole context. A long-lived agent therefore costs more per
-step as its context grows. In the same spend report, the orchestrator that
-ran 38 events read about 13.3 million cache-read tokens, about 350,000 per
-event. The rules below keep each context short and each wait free.
+step as its context grows. In that report, the orchestrator that ran 38
+events read about 13.3 million cache-read tokens, about 350,000 per event. The rules below keep each context short and each wait free.
 
 - **Hand off, don't grow.** Start a fresh orchestrator after about 5 merges,
   or when the context is large, whichever comes first (see
@@ -114,8 +116,8 @@ event. The rules below keep each context short and each wait free.
   a full diff only for owned paths (the paths in `.github/CODEOWNERS`) and
   for anything that changes rules or policy.
 - **Keep prompts short** and point to files instead of pasting them.
-- **Limit concurrency.** At most 5 open agent PRs (D9 in the plan), because
-  the owner's review time is the bottleneck.
+- **Limit concurrency.** Keep the open agent PRs within the project's
+  limit (5 by default), because the owner's review time is the bottleneck.
 - **Check spend at each pause**, and tell the owner the totals:
   `mise run spend -- --since "$(date -u +%F)"`. The total counts every
   repository's agents. `/teams/spend` must be compared as `spendCents` plus
@@ -156,8 +158,8 @@ Hand off when the [cost rules](#cost) say so, or when the orchestrator has
 finished the work it was given. The handoff is a prompt for a fresh Sonnet
 orchestrator, in this order:
 
-1. **Role and read-first list**: this page, `AGENTS.md`, and the plan
-   sections the work needs. Nothing else up front.
+1. **Role and read-first list**: this page, `AGENTS.md`, and the parts
+   of the project's plan the work needs. Nothing else up front.
 2. **State, with the date**: what has merged, what is open (PR numbers and
    workers' bcIds), what is deferred and why.
 3. **Decisions already made**, so the new orchestrator doesn't ask again.
@@ -179,7 +181,7 @@ for the owner to review. This page holds what doesn't change.
   is rate limited per IP address and sometimes answers "rate limit exceeded";
   when it does, use `gh` if its token still works.
 - **A merge by auto-merge starts no workflows on `main`**, so CodeQL on `main`
-  goes stale until the GitHub App token exists (T23, PR 3).
+  goes stale until a GitHub App token exists for the repository.
 - **A Sonnet worker stuck on one finding** costs more each retry; relaunch on
   Opus after the second failure.
 - **A stale branch.** GitHub has shown a PR as "clean" while behind `main`.

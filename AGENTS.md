@@ -76,8 +76,8 @@ language the template has: Python, Rust, TypeScript, and C and C++.
   their own, `docs/pyproject.toml`, locked in `docs/uv.lock`, so that Sphinx
   doesn't depend on the Python package.
 - `docs/orchestration.md`: how an orchestrator agent launches workers, limits
-  cost, and hands off to a fresh orchestrator. Read it when asked to
-  coordinate other agents.
+  cost, and hands off to a fresh orchestrator. Before you launch or message
+  any other agent, read it and the `orchestrate` skill.
 
 Each language task adds its directory and lists it here.
 
