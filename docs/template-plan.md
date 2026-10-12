@@ -76,6 +76,7 @@ a person has recorded a different choice here.
 | D8 | Cost limit for one agent-launched compute job before asking a person | **Decided:** no per-job limit for now; total agent compute spend at most $10,000 per day | Enforce the daily cap with the provider's budget controls (T16), not only the rule. Revisit the per-job limit when T16 lands. |
 | D9 | Open agent PRs allowed per reviewer | **Decided:** 5, raised from 3 on 2026-10-02 | People review everything, so review time, not agent count, limits throughput. The owner raised it to 5 after Stage 2, because 3 made progress too slow. Adjust from data. |
 | D10 | Cursor plan | Ask the owner | Team pools of the team's own GPU machines for agents need the Enterprise plan. |
+| D11 | Which model each agent runs on | **Decided (2026-10-03):** design work (plans, rulesets, CI security, and changes that span several areas, such as T18) runs on Claude Opus 5.5 at xhigh effort. The orchestrator, and tasks with checkable acceptance criteria and a local change, run on Claude Sonnet 5.5 at high effort. A Sonnet task that fails twice on the same CI failure or Bugbot finding is relaunched on Opus from its branch. | Spends the most capable model only where a mistake is costly. Revisit with T25's data: a cheaper model saves money only if it doesn't add review rounds. |
 
 ## The work
 
@@ -524,6 +525,18 @@ far:
   checked with `mise run spend` and capped in the Cursor dashboard, and the
   500-line PR ceiling. `docs/auto-mode.md` gives the details.
 
+**T25. Track agent spend.** Needs: **(person)** a Cursor Admin API key in
+the cloud-agent secret `CURSOR_ADMIN_API_KEY`. **Done** in #35 (`mise run
+spend`).
+
+- The agent API's agent and run records have no token or cost fields. The
+  Admin API's usage events (`POST /teams/filtered-usage-events`) do.
+- A script reports tokens and cost per agent run, or per day and model if
+  usage events don't identify the run. The orchestrator runs it at each pause
+  and gives the totals to the owner.
+- Done when: a report covering the last week's agents matches the dashboard's
+  totals.
+
 ## Order and parallel work
 
 ```text
@@ -538,6 +551,7 @@ T1 ─┬─ T2
     └─ T10 ─┬─ T11
             └─ T12 ── T20
 T18 needs everything above except T16, T22, and T23.
+T25 needs only the admin key.
 ```
 
 Right after T1, four tasks (T2, T3, T5, T10) can start at once. Keep the
@@ -551,6 +565,10 @@ merged.
 - A planner (a person, or an agent using `decompose` once T12 exists) creates
   the tasks. Workers don't coordinate with each other; they report back
   through the PR description.
+- An orchestrating agent hands off to a fresh one, with a written summary of
+  the state, after every few merges. Each turn resends its whole context, so
+  the cost of a turn grows with every message it has received. Workers report
+  back once, when their PR is ready or blocked.
 - Shared state lives in git and Linear only. No shared task files, no shared
   databases or fixed ports, and every external resource name includes the
   branch or run ID.
