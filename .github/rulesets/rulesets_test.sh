@@ -39,10 +39,11 @@ Would create ruleset "main: review (auto mode)": POST repos/o/r/rulesets
 Would disable ruleset "main: review" (id 2): PUT repos/o/r/rulesets/2
 Would turn on secret scanning with push protection: PATCH repos/o/r' --auto
 
-  expect_changes default_mode_switches_back_from_auto_mode "$project" "[$checks, $review, $auto]" '
+  expect_changes default_mode_switches_back_from_auto_mode_dismissing_only_the_bots_approvals "$project" "[$checks, $review, $auto]" '
 Would allow only merge commits: PATCH repos/o/r
 Would update ruleset "main: checks" (id 1): PUT repos/o/r/rulesets/1
 Would update ruleset "main: review" (id 2): PUT repos/o/r/rulesets/2
+Would dismiss the approval github-actions[bot] gave PR #7 (review 11): PUT repos/o/r/pulls/7/reviews/11/dismissals
 Would disable ruleset "main: review (auto mode)" (id 3): PUT repos/o/r/rulesets/3
 Would turn on secret scanning with push protection: PATCH repos/o/r'
 
@@ -64,12 +65,15 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   expect_check_error check_fails_when_auto_mode_drops_thread_resolution main-review-auto.json \
     "$(with_review_setting main-review-auto.json required_review_thread_resolution false)" \
     "must set require_code_owner_review and required_review_thread_resolution to true"
-  expect_check_error check_fails_when_auto_mode_requires_an_approval main-review-auto.json \
-    "$(with_review_setting main-review-auto.json required_approving_review_count 1)" \
-    "main-review-auto.json must set required_approving_review_count to 0"
+  expect_check_error check_fails_when_auto_mode_requires_no_approval main-review-auto.json \
+    "$(with_review_setting main-review-auto.json required_approving_review_count 0)" \
+    "main-review-auto.json must set required_approving_review_count to 1"
   expect_check_error check_fails_when_review_mode_requires_no_approval main-review.json \
     "$(with_review_setting main-review.json required_approving_review_count 0)" \
     "main-review.json must set required_approving_review_count to at least 1"
+  expect_check_error check_fails_when_the_review_rulesets_differ_in_approval_count main-review.json \
+    "$(with_review_setting main-review.json required_approving_review_count 2)" \
+    "differ in the lines above"
   expect_check_error check_fails_when_review_mode_requires_thread_resolution main-review.json \
     "$(with_review_setting main-review.json required_review_thread_resolution true)" \
     "main-review.json must set required_review_thread_resolution to false"
@@ -77,17 +81,25 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   if ((failures > 0)); then
     exit 1
   fi
-  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 6 broken ones."
+  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 7 broken ones."
 }
 
-# Puts first on PATH a gh that answers only apply.sh's request for the existing
-# rulesets, with the JSON array in FAKE_EXISTING_RULESETS.
+# Puts first on PATH a gh that answers only apply.sh's requests: the existing
+# rulesets, with the JSON array in FAKE_EXISTING_RULESETS, and one open PR,
+# 7. PR 7's reviews are a person's approval and a dismissed approval by
+# github-actions[bot] on the first page, and an approval by
+# github-actions[bot], review 11, on the second.
 make_fake_gh() {
   mkdir "$work/bin"
   cat > "$work/bin/gh" << 'EOF'
 #!/bin/sh
 case "$*" in
   *"/rulesets?includes_parents=false"*) printf '%s\n' "$FAKE_EXISTING_RULESETS" ;;
+  "api --paginate --slurp repos/o/r/pulls?state=open") echo '[[{"number": 7}]]' ;;
+  "api --paginate --slurp repos/o/r/pulls/7/reviews")
+    echo '[[{"id": 12, "user": {"login": "a-collaborator"}, "state": "APPROVED"},
+      {"id": 13, "user": {"login": "github-actions[bot]"}, "state": "DISMISSED"}],
+      [{"id": 11, "user": {"login": "github-actions[bot]"}, "state": "APPROVED"}]]' ;;
   *) echo "fake gh: unexpected call: gh $*" >&2; exit 1 ;;
 esac
 EOF
