@@ -81,14 +81,14 @@ files rather than recreating them: `docs/build.sh`, `docs/conf.py`,
 `docs/index.md`, the pages in `docs/api/`, and, for C and C++, `Doxyfile`. A
 repository without them copies them from the template repository, then sets
 `project` in `docs/conf.py` and fixes the source paths. In `docs/build.sh` and
-`docs/conf.py`, a comment naming the language starts each language's block.
+`docs/conf.py`, a comment naming the language starts each language's block,
+which runs only when the language's manifest exists.
 
-- **Remove a language** the repository doesn't use: delete its blocks in
-  `docs/build.sh` and `docs/conf.py`, and its entry in `docs/index.md`. Rust
-  and C and C++ also have a page in `docs/api/` to delete, and C and C++ have
-  `Doxyfile`.
-- **Add back one of the four:** copy its blocks from the template
-  repository's files.
+- **Remove a language** the repository doesn't use: delete its page in
+  `docs/api/`, and for C and C++, `Doxyfile`. Its blocks skip themselves once
+  its manifest is gone.
+- **Add back one of the four:** copy its page in `docs/api/` from the
+  template repository.
 - **Add another language:** start from the `docs/build.sh` block of the
   language with the same integration, TypeScript's for Markdown or Rust's for
   embedded HTML, and gate it with the generator's warnings-as-errors mode.
@@ -101,10 +101,11 @@ The build also needs the following, which the template already has:
 
 - `docs/index.md` has two toctrees. The "Explanation" toctree lists
   `architecture` and other hand-written pages. The "API reference" toctree
-  lists `Python <api/python/<pkg>/index>`, `api/rust`,
-  `TypeScript <_generated/ts/index>`, and `api/cpp`, for whichever languages
-  the repo has. The labels name the language, because those two pages are
-  titled with the package's name.
+  globs `api/*`, so it lists each page in `docs/api/`: one per language,
+  titled with the language's name.
+- For Python and TypeScript, add a stub page whose toctree lists the
+  generated pages, `python/<pkg>/index` in `docs/api/python.md` and
+  `/_generated/ts/index` in `docs/api/typescript.md`.
 - For each embedded-HTML language, add a stub page such as `docs/api/rust.md`
   that links to each crate with an HTML link,
   `<a href="rust/<crate>/index.html">`. A Markdown link fails the build

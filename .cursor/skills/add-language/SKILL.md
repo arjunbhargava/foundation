@@ -115,7 +115,8 @@ instead. This is where each version lives:
       `mise exec -- which <tool>` for each tool the job's commands call: each
       must resolve inside mise's directory. Rust's tools resolve to rustup's
       proxies in `~/.cargo/bin` instead, which read `rust-toolchain.toml`.
-- [ ] Its language in the matrix in `.github/workflows/codeql.yml`.
+- [ ] Its language in the `languages` job in `.github/workflows/codeql.yml`,
+      listed when its manifest exists.
 - [ ] Its package ecosystem in `.github/dependabot.yml`, with the weekly
       schedule and 7-day `cooldown` that every entry has. A language with no
       package manager has no ecosystem: say under "Where code lives" in
@@ -131,8 +132,8 @@ instead. This is where each version lives:
 - [ ] Its directory and config files under "Where code lives" in
       `AGENTS.md`.
 - [ ] The language, and its example, in the lines that list them: the status
-      line in `README.md`, the sentence below the Commands table in
-      `AGENTS.md`, and the status line in `docs/architecture.md`.
+      line in `README.md` and the sentence below the Commands table in
+      `AGENTS.md`.
 
 ## Show each check failing
 
