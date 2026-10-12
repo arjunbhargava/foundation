@@ -60,6 +60,67 @@ done
 description = "Run template:check, so that lint and check include it"
 depends = ["template:check"]
 
+[tasks."template:check-update"]
+description = "Check that copier update gives a project what a new copy gives: each variant created from origin/main and updated to the working tree, and a Python project given Rust; needs origin/main, so check doesn't run it"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+# copier update needs each project committed, and CI's git has no identity.
+export GIT_AUTHOR_NAME=template-check GIT_AUTHOR_EMAIL=template-check@localhost
+export GIT_COMMITTER_NAME=$GIT_AUTHOR_NAME GIT_COMMITTER_EMAIL=$GIT_AUTHOR_EMAIL
+
+# copier update rereads the commit a project was created from, so the
+# working tree must be a commit: make it one in a clone that shares this
+# repository's objects. The template's path must be absolute, because copier
+# records it in each project.
+template=$work/template
+git clone --quiet --shared --no-checkout . "$template"
+git -C "$template" --work-tree="$PWD" add --all
+git -C "$template" --work-tree="$PWD" commit --quiet --allow-empty --message "The working tree"
+working_tree=$(git -C "$template" rev-parse HEAD)
+main=$(git rev-parse origin/main)
+
+# create <project> <commit> <copier options>: create a project and commit it.
+create() {
+  local project=$1 commit=$2
+  shift 2
+  copier copy --quiet --defaults --vcs-ref="$commit" "$@" "$template" "$project"
+  git -C "$project" init --quiet
+  git -C "$project" add --all
+  git -C "$project" commit --quiet --message "Create the project"
+}
+
+failures=0
+# expect_equal <test name> <updated project> <new project>
+expect_equal() {
+  if diff -r --exclude=.git "$2" "$3"; then
+    echo "$1: passed."
+  else
+    echo "FAIL: $1: the updated project differs from the new one as shown above (updated first)." >&2
+    failures=$((failures + 1))
+  fi
+  rm -rf "$2" "$3"
+}
+
+name=a_project_created_from_main_and_updated_equals_one_created_from_the_working_tree
+for languages in "python rust typescript cpp" python rust typescript cpp; do
+  data=$(printf -- '--data %s=true ' $languages)
+  create "$work/updated" "$main" $data
+  copier update --quiet --defaults --vcs-ref="$working_tree" "$work/updated"
+  create "$work/new" "$working_tree" $data
+  expect_equal "$name ($languages)" "$work/updated" "$work/new"
+done
+
+name=adding_rust_to_a_python_project_with_copier_update_equals_a_new_python_and_rust_project
+create "$work/updated" "$working_tree" --data python=true
+copier update --quiet --defaults --vcs-ref="$working_tree" --data rust=true "$work/updated"
+create "$work/new" "$working_tree" --data python=true --data rust=true
+expect_equal "$name" "$work/updated" "$work/new"
+exit $((failures > 0))
+'''
+
 [tasks."test:template"]
 description = "Check that Copier refuses a project with no language and writes nothing, and that a project with one language has only that language's files, names, and Dependabot entries"
 run = '''
