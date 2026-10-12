@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Sets up a machine to match CI: installs the pinned mise if it is missing,
-# then the tools and dependencies that mise.toml lists. People run it once
-# after cloning, CI jobs run it first, and cloud agents run it from
-# environment.json. Safe to rerun: a second run downloads nothing.
+# then the tools and dependencies that mise.toml and .config/mise/conf.d/
+# list. People run it once after cloning, CI jobs run it first, and cloud
+# agents run it from environment.json. Safe to rerun: a second run downloads
+# nothing.
 #
 # Usage: bash .cursor/install.sh
 #
 # CI's language and docs jobs set MISE_ENABLE_TOOLS, which mise reads, to the
-# tools in mise.toml that they use. The script then installs only those, and
+# pinned tools that they use. The script then installs only those, and
 # skips `mise run setup`, which needs every language's tools; each job runs
 # its own language's setup task instead.
 #
