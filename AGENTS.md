@@ -65,7 +65,7 @@ language the project has: Python, Rust, TypeScript, and C and C++.
   first C or C++ dependency picks vcpkg or CMake `FetchContent`, and pins it
   as the `dependencies` rule says. With vcpkg, also add a `vcpkg` entry to
   `.github/dependabot.yml`; Dependabot can't update `FetchContent` pins.
-- Module boundaries, which `mise run lint` checks. Add a project's own:
+- Module boundaries, which `mise run lint` checks. Add a project's own boundaries:
   - Python: a contract under `[tool.importlinter]` in `pyproject.toml`.
   - TypeScript: a rule under `forbidden` in `.dependency-cruiser.cjs`.
   - Rust: a `deny` entry with `wrappers` under `[bans]` in `deny.toml`.
