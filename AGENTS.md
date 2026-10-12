@@ -1,7 +1,7 @@
 # Agent instructions
 
 ## Commands
-
+testing auto mode
 `mise.toml` defines the shared commands, and each language's file in
 `.config/mise/conf.d/` defines that language's, so people, agents, and CI run
 the same thing:
