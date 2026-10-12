@@ -1,0 +1,195 @@
+# Orchestrating long-running agent work
+
+An orchestrator is a Cursor cloud agent that splits a plan into tasks, launches
+one worker agent per task, watches the workers' pull requests (PRs), and
+reports to the owner. This page is the standing instruction set for every
+orchestrator, and for the owner who starts one. It covers how to launch
+workers so the owner can see them, how to keep spend from growing without
+bound, and how to hand an orchestration to a fresh agent. It works together
+with [auto mode](auto-mode.md), which decides how PRs merge, and with
+[the template plan](template-plan.md), which holds the task list.
+
+## Terms
+
+- **Owner**: the person who merges PRs and sets the limits. Usually on a phone.
+- **Orchestrator**: the cloud agent described above. It writes no feature
+  code.
+- **Worker**: a cloud agent that does one task on one branch and opens one PR.
+- **Handoff**: the orchestrator's state written as a prompt, which starts a
+  fresh orchestrator so the old one's context stops costing money.
+- **bcId**: a cloud agent's id, such as `bc-489632bd-...`. Its page is
+  `https://cursor.com/agents/<bcId>`.
+
+## Launch workers through the API
+
+Launch each worker as a top-level cloud agent, with the Cursor API. Do not use
+a subagent for a task that produces a PR.
+
+- A top-level agent has its own bcId, page, transcript, branch, and PR. The
+  owner can open it, read it, and stop it. A subagent runs inside the
+  orchestrator's run, so the owner sees it only through the orchestrator's
+  transcript.
+- A top-level agent has its own context. Its cost doesn't grow the
+  orchestrator's context (see [Cost](#cost)).
+
+Use a subagent only for a short, read-only question whose answer is a few
+lines, such as "which files call this function". If the answer would be
+longer than the question that asked it, launch a worker instead.
+
+```sh
+jq -n --rawfile prompt worker-prompt.md '{
+  prompt: {text: $prompt},
+  model: {id: "claude-sonnet-5-5",
+          params: [{id: "reasoning_effort", value: "high"}]},
+  repos: [{url: "https://github.com/arjunbhargava/foundation",
+           startingRef: "main"}],
+  autoCreatePR: true
+}' | curl -s -u "$CURSOR_API_KEY:" -H 'Content-Type: application/json' \
+       -d @- https://api.cursor.com/v1/agents
+```
+
+- Build the body with `jq --rawfile`, so that the prompt's quotes and
+  newlines are escaped. `CURSOR_API_KEY` is a cloud agent secret; never print
+  it.
+- `startingRef` is the branch the worker starts from. A stacked PR starts from
+  `main` after the PR below it merges.
+- Send a follow-up to a worker with
+  `POST https://api.cursor.com/v1/agents/<bcId>/runs` and
+  `{"prompt": {"text": "..."}}`. The API answers `agent_busy` while the worker
+  has an active run. Retry every 20 to 30 seconds, in a shell loop in a tmux
+  session, which costs no model tokens.
+- Record each launch where the owner can find it: put the worker's task,
+  bcId, and page URL in the orchestrator's next message to the owner.
+- Cursor's documentation doesn't say whether API-launched agents show in the
+  sidebar list. The owner has seen them disappear when deselected. Until
+  that's solved, the links in the orchestrator's messages are the way to open
+  a worker.
+
+### Which model
+
+| Task | Model id | Parameters |
+|---|---|---|
+| Design work: plans, rulesets, CI security, changes spanning several areas | `claude-opus-5-5` | `effort=xhigh`, `fast=false` |
+| Routine work with checkable acceptance criteria | `claude-sonnet-5-5` | `reasoning_effort=high` |
+| Orchestrator | `claude-sonnet-5-5` | `reasoning_effort=high` |
+
+A Sonnet worker that fails twice on the same CI failure or Bugbot finding is
+relaunched on Opus from its branch. Do not start on Opus "to be safe": in the
+7 days to 2026-10-12, `mise run spend` shows each Opus worker costing $9 to
+$16, and the Sonnet orchestrator $11.54 over 38 events.
+
+### What a worker prompt contains
+
+A worker prompt is short, because the worker reads the repository itself.
+
+1. The task, as a pointer to its ID in the plan or issue, plus any fact a
+   reader of the plan wouldn't have (decisions made in chat).
+2. "Done when": the checkable acceptance criteria.
+3. For auto mode, the review-thread instruction in
+   [auto-mode.md](auto-mode.md).
+4. The report-back instruction: wait for CI and the Cursor Bugbot check on the
+   final commit, fix or answer each finding, then
+   `POST {"prompt":{"text":"<task> worker on branch <b>: <PR URL or blocker>"}}`
+   to `https://api.cursor.com/v1/agents/<orchestrator bcId>/runs`, retrying
+   every 60 seconds on `409 agent_busy` for up to 30 minutes.
+
+The orchestrator finds its own bcId with the `cursor-cloud` `run-info` tool.
+
+## Cost
+
+A cloud agent's cost is dominated by cache-read tokens: on each step, the
+model re-reads its whole context. A long-lived agent therefore costs more per
+step as its context grows. In the same spend report, the orchestrator that
+ran 38 events read about 13.3 million cache-read tokens, about 350,000 per
+event. The rules below keep each context short and each wait free.
+
+- **Hand off, don't grow.** Start a fresh orchestrator after about 5 merges,
+  or when the context is large, whichever comes first (see
+  [Handoff](#handoff)).
+- **Wait without the model.** After subscribing to a PR with
+  `subscribe_github_pr`, end the turn. Events arrive as follow-ups. Don't poll
+  GitHub in a loop of model steps. Ignore routine push, ready-for-review,
+  and synchronize events.
+- **Read only what a decision needs.** Use the PR's JSON and file list. Read
+  a full diff only for owned paths (the paths in `.github/CODEOWNERS`) and
+  for anything that changes rules or policy.
+- **Keep prompts short** and point to files instead of pasting them.
+- **Limit concurrency.** At most 5 open agent PRs (D9 in the plan), because
+  the owner's review time is the bottleneck.
+- **Check spend at each pause**, and tell the owner the totals:
+  `mise run spend -- --since "$(date -u +%F)"`. The total counts every
+  repository's agents. `/teams/spend` must be compared as `spendCents` plus
+  `includedSpendCents`.
+- **The real cap is in the Cursor dashboard.** The repository can't stop a run
+  partway through. The starting limit is $500 per day across cloud agent
+  runs (see [auto mode's limits](auto-mode.md#limits)). When the day's total
+  is within $50 of the limit, launch nothing new and ask the owner.
+- **Compute jobs on other machines** follow the `compute-cost` rule, not this
+  page.
+
+## Watching workers and reporting to the owner
+
+- **One PR per worker, one subscription per PR.** Subscribe when the worker
+  reports its PR. The subscription closes itself when the PR merges.
+- **After each merge**, tell every other open worker to merge `origin/main`
+  with a merge commit. Then launch the next stacked worker from the new
+  `main`.
+- **Before launching two workers whose PRs may touch the same files**, test
+  them with `git merge-tree --write-tree --name-only <branchA> <branchB>`.
+- **A worker that doesn't report.** If a worker's PR is open but no report
+  arrived within 30 minutes after its last push, read the worker's page and
+  the PR. A report is a convenience; the PR is the record.
+- **Before telling the owner a PR is ready**, check it against its "Done
+  when". Say: head SHA, CI result, size, what changed, decisions needed,
+  merge order, and conflicts with other open PRs. Say plainly what you did
+  not check.
+- **Owner messages** are short, written for a phone, and number each manual
+  step with its URL, tap by tap. Workers open drafts, so each step list
+  starts with marking the PR "Ready for review".
+- **In auto mode**, a worker resolves a Bugbot thread only after fixing it. A
+  disputed thread stays open for the owner. The orchestrator never merges a
+  PR or enables auto-merge itself.
+
+## Handoff
+
+Hand off when the [cost rules](#cost) say so, or when the orchestrator has
+finished the work it was given. The handoff is a prompt for a fresh Sonnet
+orchestrator, in this order:
+
+1. **Role and read-first list**: this page, `AGENTS.md`, and the plan
+   sections the work needs. Nothing else up front.
+2. **State, with the date**: what has merged, what is open (PR numbers and
+   workers' bcIds), what is deferred and why.
+3. **Decisions already made**, so the new orchestrator doesn't ask again.
+4. **Queue**, in order, with the condition that frees each item.
+5. **Owner's open items**, to mention at natural pauses without nagging.
+6. **Standing rules that this page doesn't hold.**
+
+Then send each in-flight worker a follow-up with the new orchestrator's bcId,
+and stop. Don't contact the previous orchestrator from the new one.
+
+The handoff lives in chat, not in the repository: it changes with every
+merge, and a committed copy would be out of date within an hour and add a PR
+for the owner to review. This page holds what doesn't change.
+
+## Failure modes seen so far
+
+- **API token expiry.** The `gh` token may expire after about an hour. For
+  read-only PR information, use the public REST API with `curl` instead. It
+  is rate limited per IP address and sometimes answers "rate limit exceeded";
+  when it does, use `gh` if its token still works.
+- **A merge by auto-merge starts no workflows on `main`**, so CodeQL on `main`
+  goes stale until the GitHub App token exists (T23, PR 3).
+- **A Sonnet worker stuck on one finding** costs more each retry; relaunch on
+  Opus after the second failure.
+- **A stale branch.** GitHub has shown a PR as "clean" while behind `main`.
+  The owner's checklist includes confirming the Merge button on such a
+  branch.
+
+## Decisions still open
+
+| # | Question | Proposed default |
+|---|---|---|
+| O1 | Where the owner sees a list of workers that survives deselecting them | Links in each orchestrator message now; a Slack message or a pinned issue per launch once the owner picks one |
+| O2 | A cap on concurrent Opus workers | 2, because each costs $9 to $16 per task and design tasks need the owner's attention |
+| O3 | Whether an orchestrator may launch a worker without asking, once auto mode is on | Yes for tasks already in the queue; ask for a new task |
