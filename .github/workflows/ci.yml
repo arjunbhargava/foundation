@@ -56,6 +56,7 @@ jobs:
       cpp: ${{ steps.diff.outputs.cpp }}
       rulesets: ${{ steps.diff.outputs.rulesets }}
       auto-merge-script: ${{ steps.diff.outputs.auto-merge-script }}
+      approve-agent-prs-script: ${{ steps.diff.outputs.approve-agent-prs-script }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -91,6 +92,8 @@ jobs:
             echo "cpp=$(language_changed CMakeLists.txt cpp/ CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
             echo "rulesets=$(changed .github/rulesets/)"
             echo "auto-merge-script=$(changed .github/scripts/auto_merge.sh .github/scripts/auto_merge_test.sh)"
+            # The script reads the review rulesets' names from their files.
+            echo "approve-agent-prs-script=$(changed .github/scripts/approve_agent_prs.sh .github/scripts/approve_agent_prs_test.sh .github/rulesets/main-review.json .github/rulesets/main-review-auto.json)"
           } >> "$GITHUB_OUTPUT"
 
   install-script:
@@ -238,6 +241,20 @@ jobs:
       - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run test:auto-merge-script
 
+  approve-agent-prs-script:
+    needs: changes
+    if: needs.changes.outputs.approve-agent-prs-script == 'true'
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: jq
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run test:approve-agent-prs-script
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change or its language's manifest is missing, and counts as passing.
@@ -254,6 +271,7 @@ jobs:
       - cpp
       - rulesets
       - auto-merge-script
+      - approve-agent-prs-script
     if: always()
     runs-on: ubuntu-latest
     steps:
