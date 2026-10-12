@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Checks that .github/scripts/block_unlisted_tools.sh blocks a tool that
-# mise.toml pins and MISE_ENABLE_TOOLS leaves out, with an error that names the
-# tool and the list to edit, and leaves a listed tool alone. It needs mise on
-# PATH, but not the tools mise.toml pins.
+# mise.toml or .config/mise/conf.d/ pins and MISE_ENABLE_TOOLS leaves out,
+# with an error that names the tool and the list to edit, and leaves a listed
+# tool alone. It needs mise on PATH, but not the tools mise pins.
 #
 # Usage: .github/scripts/block_unlisted_tools_test.sh
 set -euo pipefail

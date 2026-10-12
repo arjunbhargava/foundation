@@ -30,10 +30,10 @@ rulesets. `mise run lint:rulesets` fails if they differ in anything else.
 
 A PR that changes a path in `.github/CODEOWNERS` needs a code owner's
 approval in both modes. Those paths include CI and the rulesets
-(`.github/`), the commands CI runs (`mise.toml`), the agent instructions
-(`.cursor/` and `AGENTS.md`), and the files that configure checks,
-dependencies, and module boundaries, such as `biome.json`, `docs/build.sh`,
-`Cargo.toml`, and `pyproject.toml`. A change to one of those can weaken a
+(`.github/`), the commands CI runs (`mise.toml` and `.config/mise/`), the
+agent instructions (`.cursor/` and `AGENTS.md`), and the files that configure
+checks, dependencies, and module boundaries, such as `biome.json`,
+`docs/build.sh`, `Cargo.toml`, and `pyproject.toml`. A change to one of those can weaken a
 check or add a dependency, which D7 already requires the owner to approve.
 Agent PRs are authored by the owner's account, and GitHub doesn't let
 authors approve their own PRs, so the owner merges these with the admin
