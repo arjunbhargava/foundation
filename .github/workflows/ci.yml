@@ -6,8 +6,9 @@
 # changes and runs only when that output is 'true', and add the job to
 # ci-ok's needs. Jobs run tools through the shared `mise run` commands.
 #
-# Each job sets MISE_ENABLE_TOOLS to the tools in mise.toml that its commands
-# run, and .cursor/install.sh installs only those. mise ignores a tool missing
+# Each job sets MISE_ENABLE_TOOLS to the tools that mise.toml and
+# .config/mise/conf.d/ pin and its commands run, and .cursor/install.sh
+# installs only those. mise ignores a tool missing
 # from the list, so its command would run the runner's own version. Each job
 # therefore runs .github/scripts/block_unlisted_tools.sh next, which makes
 # a command for an unlisted tool fail with an error naming the tool. Add a new
@@ -39,6 +40,9 @@ jobs:
     # ci.yml, mise.toml, or the block_unlisted_tools script and its test,
     # which define or affect every job. A failed diff also counts
     # as a change, so an error runs jobs rather than skipping them.
+    # install-script's files include every language's mise file, because
+    # that job is the only one that installs the tools on Linux arm64 and
+    # macOS.
     runs-on: ubuntu-latest
     outputs:
       install-script: ${{ steps.diff.outputs.install-script }}
@@ -47,6 +51,8 @@ jobs:
       rust: ${{ steps.diff.outputs.rust }}
       typescript: ${{ steps.diff.outputs.typescript }}
       cpp: ${{ steps.diff.outputs.cpp }}
+      rulesets: ${{ steps.diff.outputs.rulesets }}
+      auto-merge-script: ${{ steps.diff.outputs.auto-merge-script }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -65,12 +71,14 @@ jobs:
             fi
           }
           {
-            echo "install-script=$(changed .cursor/install.sh .cursor/environment.json)"
+            echo "install-script=$(changed .cursor/install.sh .cursor/environment.json .config/mise/conf.d/)"
             echo "docs=$(changed docs/)"
-            echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version)"
-            echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml)"
-            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs)"
-            echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile)"
+            echo "python=$(changed '*.py' pyproject.toml uv.lock .python-version .config/mise/conf.d/python.toml)"
+            echo "rust=$(changed crates/ Cargo.toml Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
+            echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
+            echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
+            echo "rulesets=$(changed .github/rulesets/)"
+            echo "auto-merge-script=$(changed .github/scripts/auto_merge.sh .github/scripts/auto_merge_test.sh)"
           } >> "$GITHUB_OUTPUT"
 
   install-script:
@@ -189,6 +197,35 @@ jobs:
       - run: mise run lint:cpp
       - run: mise run test:cpp
 
+  rulesets:
+    needs: changes
+    if: needs.changes.outputs.rulesets == 'true'
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: jq
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run lint:rulesets
+      - run: mise run test:rulesets
+
+  auto-merge-script:
+    needs: changes
+    if: needs.changes.outputs.auto-merge-script == 'true'
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: jq
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run test:auto-merge-script
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
@@ -202,6 +239,8 @@ jobs:
       - rust
       - typescript
       - cpp
+      - rulesets
+      - auto-merge-script
     if: always()
     runs-on: ubuntu-latest
     steps:

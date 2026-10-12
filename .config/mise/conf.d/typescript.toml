@@ -1,0 +1,35 @@
+# TypeScript's tools and tasks, which mise loads along with mise.toml.
+
+# Pinned as the comment above [tools] in mise.toml says.
+[tools]
+node = "24.21.0"
+pnpm = "12.8.1" # The only pin: package.json has no packageManager field.
+
+[tasks."setup:typescript"]
+description = "Install the TypeScript dependencies that pnpm-lock.yaml pins"
+run = "pnpm install --frozen-lockfile"
+
+[tasks."fmt:typescript"]
+description = "Format the TypeScript code and root JSON files in place, and sort imports"
+# check rather than format, so imports are sorted too, as lint:typescript
+# requires. Lint fixes are left to the author.
+run = "pnpm exec biome check --write --linter-enabled=false"
+
+[tasks."lint:typescript"]
+description = "Check TypeScript formatting, lint, types, and module boundaries"
+run = [
+  "pnpm exec biome ci --error-on-warnings",
+  "pnpm exec tsc",
+  # err-long prints each broken rule's comment, which says what to do.
+  "pnpm exec depcruise packages --output-type err-long",
+]
+
+[tasks."test:typescript"]
+description = "Run the TypeScript tests; arguments after -- go to vitest"
+# An interrupted mutate:typescript leaves StrykerJS's sandbox, a copy of
+# packages/ with mutants in it, in .stryker-tmp/.
+run = "pnpm exec vitest run --exclude '.stryker-tmp/**'"
+
+[tasks."mutate:typescript"]
+description = "Mutation-test the changed TypeScript code with StrykerJS; an argument after -- replaces origin/main as the base"
+run = ".github/scripts/mutate.sh typescript"

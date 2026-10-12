@@ -2,23 +2,27 @@
 
 ## Commands
 
-`mise.toml` defines every command, so people, agents, and CI run the same
-thing:
+`mise.toml` defines the shared commands, and each language's file in
+`.config/mise/conf.d/` defines that language's, so people, agents, and CI run
+the same thing:
 
 | Command | What it does |
 |---|---|
 | `mise run setup` | Install project dependencies. |
-| `mise run fmt` | Format all code in place. |
+| `mise run fmt` | Format all code in place. `fmt:python`, `fmt:rust`, `fmt:typescript`, and `fmt:cpp` format one language. |
 | `mise run lint` | Check formatting, lint, and types without changing files. |
 | `mise run lint:python` | Run only the Python checks. |
 | `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory, ban, licence, and source checks. |
 | `mise run lint:typescript` | Run only the TypeScript checks. |
 | `mise run lint:cpp` | Run only the C and C++ checks: clang-format, a check that no `#include` uses `../`, and a build with clang-tidy and compiler warnings as errors. |
+| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON and that the two review rulesets differ only in name, approval count, and thread resolution. |
 | `mise run test` | Run all tests. |
 | `mise run test:python` | Run only the Python tests and docstring examples. Arguments after `--` go to pytest: `mise run test:python -- -k trapezoid`. |
 | `mise run test:rust` | Run only the Rust tests and doc-comment examples. Arguments after `--` go to `cargo test`: `mise run test:rust -- energy`. |
 | `mise run test:typescript` | Run only the TypeScript tests. Arguments after `--` go to vitest: `mise run test:typescript -- -t precision`. |
 | `mise run test:cpp` | Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them. Arguments after `--` go to ctest: `mise run test:cpp -- -R chord`. |
+| `mise run test:rulesets` | Check the changes `.github/rulesets/apply.sh` makes with and without `--auto`, and that `lint:rulesets` catches broken ruleset files, with a fake `gh`. |
+| `mise run test:auto-merge-script` | Check when `.github/scripts/auto_merge.sh` turns auto-merge on and off, and which PRs it leaves alone, with a fake `gh`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 | `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:python`, `mutate:rust`, and `mutate:typescript` run one language. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
@@ -78,8 +82,10 @@ Each language task adds its directory and lists it here.
 
 ## Requirements
 
-- Pin every tool in `mise.toml`, at an exact version. Don't install tools
-  another way. There are four exceptions. Add a Python package, such as
+- Pin every tool at an exact version: in its language's
+  `.config/mise/conf.d/<language>.toml`, or in `mise.toml` if more than one
+  language, or the docs build, runs it. Don't install tools another way.
+  There are four exceptions. Add a Python package, such as
   ruff or pyright, with `mise exec -- uv add --dev <package>`, which pins it
   in `uv.lock`, and a docs build tool with
   `mise exec -- uv add --project docs --dev <package>`, which pins it in

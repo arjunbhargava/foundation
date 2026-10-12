@@ -2,8 +2,22 @@
 # code owner review. Add each public interface file here when it is created.
 /.cursor/                @arjunbhargava
 /.github/                @arjunbhargava
+/mise.toml               @arjunbhargava
+/.config/mise/           @arjunbhargava
+/AGENTS.md               @arjunbhargava
 /deny.toml               @arjunbhargava
 /docs/architecture.md    @arjunbhargava
 /.dependency-cruiser.cjs @arjunbhargava
 /pyproject.toml          @arjunbhargava
 /CMakeLists.txt          @arjunbhargava
+/biome.json              @arjunbhargava
+/tsconfig.json           @arjunbhargava
+/.clang-tidy             @arjunbhargava
+/.clang-format           @arjunbhargava
+/Doxyfile                @arjunbhargava
+/CMakePresets.json       @arjunbhargava
+/stryker.config.json     @arjunbhargava
+/docs/build.sh           @arjunbhargava
+/docs/conf.py            @arjunbhargava
+/Cargo.toml              @arjunbhargava
+/package.json            @arjunbhargava
