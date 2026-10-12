@@ -81,6 +81,10 @@ run = ".github/scripts/auto_merge_test.sh"
 description = "Check which PRs .github/scripts/approve_agent_prs.sh approves, in auto mode and review mode, with a fake gh"
 run = ".github/scripts/approve_agent_prs_test.sh"
 
+[tasks."test:owned-paths-script"]
+description = "Check which changed paths .github/scripts/owned_paths.sh finds in .github/CODEOWNERS, and when it can't tell, with a fake gh"
+run = ".github/scripts/owned_paths_test.sh"
+
 [tasks."test:block-unlisted-tools-script"]
 description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
 run = ".github/scripts/block_unlisted_tools_test.sh"

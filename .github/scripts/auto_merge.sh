@@ -7,18 +7,20 @@
 # A PR this script doesn't manage is left alone: one that isn't open, was
 # opened by Dependabot, comes from a fork, merges into a branch other than the
 # default branch, or has no agent label. For the others, auto-merge is turned
-# off while the PR is a draft or Bugbot hasn't finished reviewing its head
-# commit. Otherwise it is turned on, with a merge commit (D6 in
-# docs/template-plan.md), unless the repository's "Allow auto-merge" setting
-# is off. When the PR already meets every requirement, gh merges it at once
-# instead of turning on auto-merge.
+# off while the PR is a draft, Bugbot hasn't finished reviewing its head
+# commit, or the PR changes a path in .github/CODEOWNERS, which only the
+# owner merges (owned_paths.sh). Otherwise it is turned on, with a merge
+# commit (D6 in docs/template-plan.md), unless the repository's "Allow
+# auto-merge" setting is off. When the PR already meets every requirement,
+# gh merges it at once instead of turning on auto-merge.
 #
 # Usage: .github/scripts/auto_merge.sh <PR number>...
 #
 # Needs GITHUB_REPOSITORY, which GitHub Actions sets, and gh authenticated
 # with a token that can read check runs and merge PRs: in Actions, GH_TOKEN
 # with checks: read, contents: write, and pull-requests: write. It fails if a
-# request fails; if GitHub refuses to list Bugbot's check runs, it first turns
+# request fails; if GitHub refuses to list Bugbot's check runs, or
+# owned_paths.sh can't tell which paths the PR changes, it first turns
 # auto-merge off, as it does when Bugbot hasn't reviewed.
 set -euo pipefail
 
@@ -28,6 +30,7 @@ set -euo pipefail
 # or a workflow can name a check "Cursor Bugbot", but can't report it as this
 # app.
 bugbot_app_id=1210556
+owned_paths_script=$(cd "$(dirname "$0")" && pwd)/owned_paths.sh
 
 main() {
   local repository
@@ -65,6 +68,19 @@ update_auto_merge() {
     check_runs_refused=true
     reason="GitHub refused to list Bugbot's check runs on $head_sha; the job's token needs checks: read"
   fi
+  # The required owned-paths check alone isn't enough (docs/auto-mode.md).
+  local owned_paths_status=0 owned_paths_unknown=false
+  if [[ -z $reason ]]; then
+    "$owned_paths_script" "$number" || owned_paths_status=$?
+    case $owned_paths_status in
+      0) ;;
+      1) reason="it changes a path in .github/CODEOWNERS, listed above, so only the owner merges it" ;;
+      *)
+        owned_paths_unknown=true
+        reason="owned_paths.sh couldn't tell which paths it changes, as it says above"
+        ;;
+    esac
+  fi
   if [[ -n $reason ]]; then
     if [[ $auto_merge_on == true ]]; then
       gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --disable-auto
@@ -72,7 +88,7 @@ update_auto_merge() {
     else
       echo "PR #$number: auto-merge stays off, because $reason."
     fi
-    if [[ $check_runs_refused == true ]]; then
+    if [[ $check_runs_refused == true || $owned_paths_unknown == true ]]; then
       return 1
     fi
     return

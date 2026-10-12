@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Tests .github/scripts/auto_merge.sh without calling GitHub. Each case runs
-# the script on PR 7 against a fake gh that serves a canned repository, PR, and
-# Bugbot check runs, and compares the `gh pr merge` calls the script makes with
-# the expected ones.
+# the script on PR 7 against a fake gh that serves a canned repository, PR,
+# Bugbot check runs, and PR files, and compares the `gh pr merge` calls the
+# script makes with the expected ones. owned_paths.sh, which the script runs,
+# reads this repository's .github/CODEOWNERS, which owns AGENTS.md and not
+# docs/linear.md.
 #
 # Usage: mise run test:auto-merge-script
 set -euo pipefail
@@ -25,6 +27,7 @@ in_progress='{"id": 3, "status": "in_progress", "conclusion": null,
   "output": {"summary": "Bugbot Analysis Progress (1m 2s elapsed)"}}'
 turn_on='gh pr merge 7 --repo o/r --auto --merge --match-head-commit new'
 turn_off='gh pr merge 7 --repo o/r --disable-auto'
+owned_files='[[{"filename": "docs/linear.md"}, {"filename": "AGENTS.md"}]]'
 
 main() {
   make_fake_gh
@@ -58,18 +61,25 @@ main() {
     . unreadable true "" fails
   expect_merge_calls turns_auto_merge_off_then_fails_when_github_refuses_to_list_bugbot_check_runs \
     '.auto_merge = {"merge_method": "merge"}' unreadable true "$turn_off" fails
+  expect_merge_calls keeps_auto_merge_off_when_the_pr_changes_an_owned_path \
+    . "[$reviewed]" true "" succeeds "$owned_files"
+  expect_merge_calls turns_auto_merge_off_when_a_push_adds_an_owned_path \
+    '.auto_merge = {"merge_method": "merge"}' "[$reviewed]" true "$turn_off" succeeds "$owned_files"
+  expect_merge_calls turns_auto_merge_off_then_fails_when_the_changed_paths_are_unknown \
+    '.auto_merge = {"merge_method": "merge"}' "[$reviewed]" true "$turn_off" fails unreadable
 
   if ((failures > 0)); then
     exit 1
   fi
-  echo "auto_merge.sh made the expected gh pr merge calls in all 15 cases."
+  echo "auto_merge.sh made the expected gh pr merge calls in all 18 cases."
 }
 
 # Puts first on PATH a gh that answers auto_merge.sh's requests from the files
 # in $FAKE_GH_CASE, and appends each `gh pr merge` call to its merge-calls
 # file. Only the head commit, "new", has Bugbot check runs. Without a
 # check-runs file, it refuses that request as GitHub does a token without
-# checks: read in a private repository.
+# checks: read in a private repository, and without a files file, it refuses
+# to list the PR's files.
 make_fake_gh() {
   mkdir "$work/bin"
   cat > "$work/bin/gh" << 'EOF'
@@ -79,6 +89,9 @@ case "$*" in
   "api repos/o/r/pulls/7") cat "$FAKE_GH_CASE/pr.json" ;;
   "api --method GET repos/o/r/commits/new/check-runs -f app_id=1210556 -f check_name=Cursor Bugbot")
     cat "$FAKE_GH_CASE/check-runs.json" 2> /dev/null ||
+      { echo "gh: Resource not accessible by integration (HTTP 403)" >&2; exit 1; } ;;
+  "api --paginate --slurp repos/o/r/pulls/7/files?per_page=100")
+    cat "$FAKE_GH_CASE/files.json" 2> /dev/null ||
       { echo "gh: Resource not accessible by integration (HTTP 403)" >&2; exit 1; } ;;
   "pr merge "*) echo "gh $*" >> "$FAKE_GH_CASE/merge-calls" ;;
   *) echo "fake gh: unexpected call: gh $*" >&2; exit 1 ;;
@@ -91,16 +104,21 @@ EOF
 # Arguments: the case's name; a jq filter that turns the agent PR into the
 # case's PR; Bugbot's check runs on the head commit, as a JSON array, or
 # "unreadable"; the repository's allow_auto_merge setting; the `gh pr merge`
-# calls expected, one per line; and whether the script "succeeds", the
-# default, or "fails".
+# calls expected, one per line; whether the script "succeeds", the default,
+# or "fails"; and the PR's files, as gh api --paginate --slurp prints them,
+# or "unreadable", by default docs/linear.md alone.
 expect_merge_calls() {
   local name=$1 pr_filter=$2 check_runs=$3 allow_auto_merge=$4 expected=$5 expected_outcome=${6:-succeeds}
+  local files=${7:-'[[{"filename": "docs/linear.md"}]]'}
   local case_dir=$work/$name
   mkdir "$case_dir"
   echo "{\"default_branch\": \"main\", \"allow_auto_merge\": $allow_auto_merge}" > "$case_dir/repository.json"
   jq "$pr_filter" <<< "$agent_pr" > "$case_dir/pr.json"
   if [[ $check_runs != unreadable ]]; then
     echo "{\"check_runs\": $check_runs}" > "$case_dir/check-runs.json"
+  fi
+  if [[ $files != unreadable ]]; then
+    echo "$files" > "$case_dir/files.json"
   fi
   touch "$case_dir/merge-calls"
 
