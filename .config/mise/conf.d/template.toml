@@ -122,7 +122,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, renders each .jinja twin in place of its root copy, and gives a project with one language only that language's files, names, and Dependabot entries"
+description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; and that a project with one language has only that language's files, names, and Dependabot entries"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -157,6 +157,10 @@ done | tar -cf - -T - | tar -xf - -C "$work/template"
 twins=$(git ls-files --cached --others --exclude-standard '*.jinja' | while read -r twin; do
   if [[ -e ${twin%.jinja} ]]; then printf '%s\n' "$twin"; fi
 done)
+if [[ -z $twins ]]; then
+  echo "FAIL: $name: found no .jinja twin with a root copy, but AGENTS.md, README.md, and .github/dependabot.yml each have one." >&2
+  exit 1
+fi
 marker="This line is only in the twin."
 for twin in $twins; do
   printf '%s\n' "$marker" >> "$work/template/$twin"
@@ -165,6 +169,23 @@ copier copy --quiet --defaults --data python=true "$work/template" "$work/twins"
 for twin in $twins; do
   if [[ $(tail -n 1 "$work/twins/${twin%.jinja}") != "$marker" ]]; then
     echo "FAIL: $name: the project's ${twin%.jinja} is its root copy, not the render of $twin." >&2
+    exit 1
+  fi
+done
+echo "$name: passed."
+
+# template:sync reads the template from git, so this test runs it in a git
+# repository made from the copy of the template whose twins end with the
+# marker. MISE_TRUSTED_CONFIG_PATHS lets mise read that repository's tasks.
+name=template_sync_writes_each_twin_render_over_its_root_copy
+git -C "$work/template" init --quiet
+git -C "$work/template" add --all
+git -C "$work/template" -c user.name=template-test -c user.email=template-test@localhost \
+  commit --quiet --message "The template, with a line added to each twin"
+MISE_TRUSTED_CONFIG_PATHS=$work/template mise --cd "$work/template" run template:sync > /dev/null
+for twin in $twins; do
+  if [[ $(tail -n 1 "$work/template/${twin%.jinja}") != "$marker" ]]; then
+    echo "FAIL: $name: after template:sync, ${twin%.jinja} lacks the line that $twin ends with." >&2
     exit 1
   fi
 done
