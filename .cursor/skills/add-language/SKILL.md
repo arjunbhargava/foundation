@@ -43,30 +43,32 @@ Each version has exactly one source. Development tools, such as the
 formatter, linter, type checker, test runner, and docs generator, go in the
 language's lockfile, where Dependabot updates them. A runtime goes in the
 version file the language's own tools read, if it has one: `.python-version`
-for uv, and `rust-toolchain.toml` for rustup. `mise.toml` pins the rest:
-other runtimes, package managers, and tools that no package manager in the
-repository installs. This is where each version lives:
+for uv, and `rust-toolchain.toml` for rustup. The language's
+`.config/mise/conf.d/<language>.toml` pins the rest: other runtimes, package
+managers, and tools that no package manager in the repository installs. A
+tool that more than one language, or the docs build, runs goes in `mise.toml`
+instead. This is where each version lives:
 
 | Language | Runtime | Package manager | Development tools |
 |---|---|---|---|
 | Python | `.python-version`, which uv installs | uv, in `mise.toml` | `uv.lock`, from the `dev` group in `pyproject.toml` |
-| TypeScript | Node, in `mise.toml` | pnpm, in `mise.toml` | `pnpm-lock.yaml`, from exact `devDependencies` in `package.json` |
-| Rust | `rust-toolchain.toml`, with clippy and rustfmt, which mise installs | cargo, from the toolchain | cargo-deny, in `mise.toml` |
-| C and C++ | The compiler, `g++`, from the OS | None | CMake, Ninja, clang-format, clang-tidy, and Doxygen in `mise.toml`; Breathe in `docs/uv.lock` |
+| TypeScript | Node, in `typescript.toml` | pnpm, in `typescript.toml` | `pnpm-lock.yaml`, from exact `devDependencies` in `package.json` |
+| Rust | `rust-toolchain.toml`, with clippy and rustfmt, which mise installs | cargo, from the toolchain | cargo-deny, in `rust.toml` |
+| C and C++ | The compiler, `g++`, from the OS | None | CMake, Ninja, clang-format, clang-tidy, and Doxygen in `cpp.toml`; Breathe in `docs/uv.lock` |
 
 - [ ] Each of the new language's versions in one file, chosen as above.
       Delete any second pin a tool writes, such as the `packageManager` and
       `devEngines` fields that `pnpm init` adds to `package.json`.
 - [ ] Each version the PR pins was released at least 7 days ago, matching
-      the Dependabot cooldown below. Dependabot can't read `mise.toml`, so
-      its pins are bumped by hand.
+      the Dependabot cooldown below. Dependabot can't read mise's files, so
+      their pins are bumped by hand.
 - [ ] Each tool installs and works on every platform the `install-script` CI
       job runs `mise run check` on: Linux x86-64, Linux arm64, and macOS. The
-      PR edits `mise.toml`, so CI runs that job, which is the only test of
-      the platforms you don't have. When mise's default source for a tool
-      lacks a platform, use a backend that has it, such as `conda:` for
-      conda-forge, as `mise.toml` does for Doxygen, or `pipx:` for PyPI
-      wheels.
+      PR adds a file to `.config/mise/conf.d/`, so CI runs that job, which is
+      the only test of the platforms you don't have. When mise's default
+      source for a tool lacks a platform, use a backend that has it, such as
+      `conda:` for conda-forge, as `cpp.toml` does for Doxygen, or `pipx:`
+      for PyPI wheels.
 - [ ] A tool that no mise backend provides, such as a compiler, comes from the
       OS. `.cursor/install.sh` doesn't install OS packages, because that
       needs sudo, so say why under "Requirements" in `AGENTS.md`, and give
@@ -77,9 +79,10 @@ repository installs. This is where each version lives:
 
 ## Commands
 
-- [ ] `lint:<language>`, `test:<language>`, and `setup:<language>` tasks in
-      `mise.toml`, which `lint`, `test`, and `setup` pick up. Of the shared
-      tasks, edit only `fmt`. `setup:<language>` installs from the lockfile in
+- [ ] `fmt:<language>`, `lint:<language>`, `test:<language>`, and
+      `setup:<language>` tasks in `.config/mise/conf.d/<language>.toml`,
+      which `fmt`, `lint`, `test`, and `setup` in `mise.toml` pick up. Don't
+      edit the shared tasks. `setup:<language>` installs from the lockfile in
       a mode that fails when it doesn't match the manifest, such as
       `uv sync --locked`, so the language's CI job fails on a manifest edited
       without relocking. A language with no package manager has no
@@ -94,13 +97,15 @@ repository installs. This is where each version lives:
 - [ ] Its CI job, added as the "To add a language" comment in
       `.github/workflows/ci.yml` says. The language's output in the `changes`
       job lists every file whose change can alter a check's result: its
-      directory, manifest, and lockfile, each root config file its tools read
-      (such as `tsconfig.json` or `.clang-tidy`), and each file that only
-      another job reads. The `docs` job runs only when some output is true,
-      so `Doxyfile`, which only the docs build reads, is in the `cpp` output.
-- [ ] The job's `MISE_ENABLE_TOOLS` lists each tool in `mise.toml` that its
-      commands run, and `.cursor/install.sh` installs only those. The job
-      runs `mise run setup:<language>`, if the language has one, before lint
+      directory, manifest, lockfile, and `.config/mise/conf.d/` file, each
+      root config file its tools read (such as `tsconfig.json` or
+      `.clang-tidy`), and each file that only another job reads. The `docs`
+      job runs only when some output is true, so `Doxyfile`, which only the
+      docs build reads, is in the `cpp` output.
+- [ ] The job's `MISE_ENABLE_TOOLS` lists each tool that `mise.toml` or
+      `.config/mise/conf.d/` pins and its commands run, and
+      `.cursor/install.sh` installs only those. The job runs
+      `mise run setup:<language>`, if the language has one, before lint
       and test. Add the tools the language's docs block runs to the `docs`
       job's list too. mise ignores a tool missing from a list, so the command
       silently runs the runner's own version, or fails if the runner has
@@ -141,7 +146,7 @@ reverting:
    from the check that runs last to the one that runs first, so that each new
    break is the first failure in its run.
 3. Wait for each run to finish before pushing the next commit, because a new
-   push cancels the PR's older run. The PR edits `mise.toml`, so every job
+   push cancels the PR's older run. The PR edits `ci.yml`, so every job
    runs, and a break can fail several, such as `docs` and `install-script`;
    read the language's own job.
 4. CI doesn't run while the PR conflicts with `main`, so merge `main` first.

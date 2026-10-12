@@ -3,6 +3,7 @@
 /.cursor/                @arjunbhargava
 /.github/                @arjunbhargava
 /mise.toml               @arjunbhargava
+/.config/mise/           @arjunbhargava
 /AGENTS.md               @arjunbhargava
 /deny.toml               @arjunbhargava
 /docs/architecture.md    @arjunbhargava
