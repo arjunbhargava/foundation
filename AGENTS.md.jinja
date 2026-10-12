@@ -94,7 +94,7 @@ language the project has: {{ language_names }}.
   as the `dependencies` rule says. With vcpkg, also add a `vcpkg` entry to
   `.github/dependabot.yml`; Dependabot can't update `FetchContent` pins.
 {% endif %}
-- Module boundaries, which `mise run lint` checks. Add a project's own:
+- Module boundaries, which `mise run lint` checks. Add a project's own boundaries:
 {% if python %}
   - Python: a contract under `[tool.importlinter]` in `pyproject.toml`.
 {% endif %}
