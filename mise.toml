@@ -77,6 +77,10 @@ run = ".github/rulesets/rulesets_test.sh"
 description = "Check when .github/scripts/auto_merge.sh turns auto-merge on and off, and which PRs it leaves alone, with a fake gh"
 run = ".github/scripts/auto_merge_test.sh"
 
+[tasks."test:approve-agent-prs-script"]
+description = "Check which PRs .github/scripts/approve_agent_prs.sh approves, in auto mode and review mode, with a fake gh"
+run = ".github/scripts/approve_agent_prs_test.sh"
+
 [tasks."test:block-unlisted-tools-script"]
 description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
 run = ".github/scripts/block_unlisted_tools_test.sh"

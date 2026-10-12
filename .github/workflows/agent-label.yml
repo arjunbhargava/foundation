@@ -2,6 +2,8 @@
 # so agent PRs can be counted against the open-PR limit (D9 in
 # docs/template-plan.md). Agent PRs are opened from the owner's account, so
 # the PR's author doesn't show which PRs came from an agent.
+# approve-agent-prs.yml runs when the workflow with this name finishes, so a
+# rename must be made there too.
 name: Agent label
 
 on:
