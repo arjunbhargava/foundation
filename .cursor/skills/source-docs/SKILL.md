@@ -101,10 +101,11 @@ The build also needs the following, which the template already has:
 
 - `docs/index.md` has two toctrees. The "Explanation" toctree lists
   `architecture` and other hand-written pages. The "API reference" toctree
-  lists `Python <api/python/<pkg>/index>`, `api/rust`,
-  `TypeScript <_generated/ts/index>`, and `api/cpp`, for whichever languages
-  the repo has. The labels name the language, because those two pages are
-  titled with the package's name.
+  globs `api/*`, so it lists each page in `docs/api/`: one per language,
+  titled with the language's name.
+- For Python and TypeScript, add a stub page whose toctree lists the
+  generated pages, `python/<pkg>/index` in `docs/api/python.md` and
+  `/_generated/ts/index` in `docs/api/typescript.md`.
 - For each embedded-HTML language, add a stub page such as `docs/api/rust.md`
   that links to each crate with an HTML link,
   `<a href="rust/<crate>/index.html">`. A Markdown link fails the build

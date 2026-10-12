@@ -18,9 +18,7 @@ template-plan
 ```{toctree}
 :caption: API reference
 :maxdepth: 1
+:glob:
 
-Python <api/python/foundation/index>
-api/rust
-TypeScript <_generated/ts/index>
-api/cpp
+api/*
 ```
