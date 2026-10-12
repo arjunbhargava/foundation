@@ -490,22 +490,24 @@ projects that use the template.
 **T23. Auto mode for exploratory tasks.** Needs: T13.
 
 **In progress** (owner, 2026-10-10). PR 1 (#38) added the review ruleset, the
-CODEOWNERS entries, and `docs/auto-mode.md`, and PR 2 (#43) the auto-merge
-workflow. PR 3, the branch-update workflow, is left.
+CODEOWNERS entries, and `docs/auto-mode.md`, PR 2 (#43) the auto-merge
+workflow, and PR 3 (#50) the approval workflow. PR 4, the branch-update
+workflow, is left.
 
 Some tasks need several rounds of exploration, and waiting for a person's
 review on each round stalls them. In auto mode, a repository's agent PRs merge
 without a person's approval, with CI and Bugbot as the gate. The design so
 far:
 
-- `.github/rulesets/apply.sh --auto` applies a second review ruleset with no
-  required approval, code-owner review kept (so owned paths still need the
-  owner), and `required_review_thread_resolution` on, so Bugbot's findings
+- `.github/rulesets/apply.sh --auto` applies a second review ruleset with one
+  required approval, which a workflow gives agent PRs, code-owner review kept
+  (so owned paths still need the owner), and
+  `required_review_thread_resolution` on, so Bugbot's findings
   block merging until their threads are resolved. `main: checks` is
   unchanged. `mise.toml`, `AGENTS.md`, and the files that configure checks
   become owned paths, so an agent PR can't change what CI runs, the agent
-  instructions, or a check without the owner. First confirm on a scratch PR
-  that GitHub still requires code-owner review when the approval count is 0.
+  instructions, or a check without the owner. With no required approval,
+  GitHub didn't enforce code-owner review on a scratch PR (#47, 2026-10-12).
 - GitHub's native auto-merge, not a custom merge workflow: it already waits
   for every ruleset, and Actions has no trigger for a resolved review thread.
   A workflow turns on auto-merge for an `agent` PR once the `Cursor Bugbot`

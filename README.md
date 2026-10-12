@@ -4,12 +4,12 @@ A starter repository for the team's projects. Agents write most of the code
 and people review every change, so the template exists to make each change
 cheap and reliable to review. When complete, it will provide instructions
 that Cursor agents follow, pinned tools and shared commands, example code and
-checks for Python, TypeScript, Rust, and C/C++, CI, and support for
+checks for Python, Rust, TypeScript, and C and C++, CI, and support for
 agent-launched compute jobs.
 
 Status: under construction. So far it has the agent rules, skills, and Bugbot
-review instructions described below, the shared `mise run` commands, Python,
-Rust, TypeScript, and C++, each with its checks and an example module, the
+review instructions described below, the shared `mise run` commands, an
+example module with its checks in each language, the
 documentation build ([`docs/build.sh`](docs/build.sh)), cloud agent setup in
 [`.cursor/environment.json`](.cursor/environment.json), and the
 [PR template](.github/pull_request_template.md).
@@ -18,10 +18,52 @@ the order it lands in.
 
 ## Start a project
 
-Projects will be created with [Copier](https://copier.readthedocs.io/), which
-can later pull template updates into them (decision D1 in the plan). Until
-that lands, copy this repository and delete what the project doesn't use.
-Then add the repository to Linear as [`docs/linear.md`](docs/linear.md) says.
+A project is created from this template with
+[Copier](https://copier.readthedocs.io/), which can later pull template
+updates into it (decision D1 in the plan). With
+[mise](https://mise.jdx.dev/) on your PATH, run this, with the uv and copier
+versions that `mise.toml` pins:
+
+```sh
+mise exec uv@0.12.21 pipx:copier@9.18.2 -- copier copy gh:arjunbhargava/foundation my-project
+```
+
+Copier asks one yes/no question per language: `python`, `rust`, `typescript`,
+and `cpp`. The project gets the files of each language you answer yes to,
+and Copier refuses to create one with none. To answer without prompts, pass
+`--defaults` and a `--data` option per language, such as
+`--data python=true`. Then set up the project and commit it, because
+`copier update` needs a git repository:
+
+```sh
+cd my-project
+git init
+bash .cursor/install.sh
+mise run check
+git add -A
+git commit -m "Create the project from the foundation template"
+```
+
+Then create its GitHub repository, push, run
+[`.github/rulesets/apply.sh`](.github/rulesets/apply.sh) to apply the
+repository settings, and add the repository to Linear as
+[`docs/linear.md`](docs/linear.md) says.
+
+## Pull template updates
+
+Projects follow the template's `main` branch, which has no release tags. In
+a project with no uncommitted changes, run:
+
+```sh
+mise exec -- copier update --defaults
+```
+
+`--defaults` keeps the answers recorded in `.copier-answers.yml`. To add a
+language, also pass its answer, such as `--data rust=true`. Copier applies
+the template's changes since the project was created or last updated, and
+marks each conflict with the project's own changes between `<<<<<<<` and
+`>>>>>>>` lines in the file. Resolve them, rerun `bash .cursor/install.sh`
+for any new tools, run `mise run check`, and commit.
 
 ## Set up a local machine
 
@@ -37,9 +79,9 @@ installs it to `~/.local/bin` without sudo, unless that version is already on
 your PATH. It then runs `mise install` for the tools pinned in `mise.toml`
 and `.config/mise/conf.d/`, and `mise run setup` for the project's
 dependencies. It supports macOS and
-Linux on x86-64 or arm64, and a second run changes nothing. C and C++ also
-need `g++` from the OS: on Ubuntu, `sudo apt-get install g++`; on macOS, the
-Xcode Command Line Tools, which git already needs.
+Linux on x86-64 or arm64, and a second run changes nothing.
+C and C++ also need `g++` from the OS: on Ubuntu, `sudo apt-get install g++`;
+on macOS, the Xcode Command Line Tools, which git already needs.
 
 If `~/.local/bin` isn't on your PATH, the script ends by saying so. Add this
 line to `~/.zshrc` for zsh, `~/.bashrc` for bash on Linux, or

@@ -1,0 +1,97 @@
+# Checks the Copier template that copier.yml defines. template-tasks checks
+# that the project with every language equals the repository root, that
+# Copier refuses a project with no language, that a project with one language
+# has only that language, and that `copier update` gives a project what a
+# new copy gives. Each variant job creates a project, as README.md says, and
+# runs `mise run check` in it. Only the
+# template repository has this workflow: copier.yml leaves it out of
+# projects. The template-checks ruleset requires only template-ok.
+name: Template
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  # As in ci.yml: a new commit on a PR cancels the PR's older run.
+  group: template-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Naming bash explicitly adds -o pipefail, which the default shell lacks.
+    shell: bash
+
+jobs:
+  template-tasks:
+    # The tasks in .config/mise/conf.d/template.toml.
+    runs-on: ubuntu-latest
+    env:
+      # mise installs copier with uv.
+      MISE_ENABLE_TOOLS: uv,pipx:copier
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # template:check-update creates projects from origin/main.
+          fetch-depth: 0
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: mise run template:check
+      - run: mise run test:template
+      - run: mise run template:check-update
+
+  variant:
+    # The project is created outside the checkout, so that mise doesn't also
+    # load the template's mise files. The project's steps set no
+    # MISE_ENABLE_TOOLS, so install.sh installs every tool the project pins,
+    # as people do.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { languages: every language, data: --data python=true --data rust=true --data typescript=true --data cpp=true }
+          - { languages: Python, data: --data python=true }
+          - { languages: Rust, data: --data rust=true }
+          - { languages: TypeScript, data: --data typescript=true }
+          - { languages: C and C++, data: --data cpp=true }
+    name: variant (${{ matrix.languages }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # install.sh puts mise on PATH for the later steps only.
+      - env:
+          MISE_ENABLE_TOOLS: uv,pipx:copier
+        run: bash .cursor/install.sh
+      - env:
+          MISE_ENABLE_TOOLS: uv,pipx:copier
+        run: mise exec -- copier copy --quiet --defaults --vcs-ref=HEAD ${{ matrix.data }} . "$RUNNER_TEMP/project"
+      - working-directory: ${{ runner.temp }}/project
+        run: |
+          git init --quiet
+          bash .cursor/install.sh
+      - working-directory: ${{ runner.temp }}/project
+        run: mise run check
+
+  template-ok:
+    # The only check that the template-checks ruleset requires. always(), not
+    # !cancelled(), as in ci.yml's ci-ok: GitHub treats a skipped required
+    # check as passing, so this job must still run, and fail, when the run is
+    # cancelled.
+    needs:
+      - template-tasks
+      - variant
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "::error::A job that template-ok needs failed or was cancelled. Results by job:"
+          echo "$NEEDS"
+          exit 1
