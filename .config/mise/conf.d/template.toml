@@ -61,7 +61,7 @@ description = "Run template:check, so that lint and check include it"
 depends = ["template:check"]
 
 [tasks."test:template"]
-description = "Check that Copier refuses to create a project with no language, and writes nothing"
+description = "Check that Copier refuses to create a project with no language, and writes nothing, and that it renders each .jinja twin in place of its root copy"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -82,5 +82,30 @@ if [[ -e $work/project ]]; then
   echo "FAIL: $name: copier refused, but wrote $work/project." >&2
   exit 1
 fi
+echo "$name: passed."
+
+# template:check can't see which file Copier used while a twin's render
+# equals its root copy, so this test copies the template and adds a line to
+# each twin that its root copy lacks.
+name=copier_renders_each_twin_in_place_of_its_root_copy
+mkdir "$work/template"
+git ls-files --cached --others --exclude-standard | while read -r file; do
+  if [[ -e $file ]]; then printf '%s\n' "$file"; fi
+done | tar -cf - -T - | tar -xf - -C "$work/template"
+# A twin is a .jinja file whose root copy exists, as in template:sync.
+twins=$(git ls-files --cached --others --exclude-standard '*.jinja' | while read -r twin; do
+  if [[ -e ${twin%.jinja} ]]; then printf '%s\n' "$twin"; fi
+done)
+marker="This line is only in the twin."
+for twin in $twins; do
+  printf '%s\n' "$marker" >> "$work/template/$twin"
+done
+copier copy --quiet --defaults --data python=true "$work/template" "$work/twins"
+for twin in $twins; do
+  if [[ $(tail -n 1 "$work/twins/${twin%.jinja}") != "$marker" ]]; then
+    echo "FAIL: $name: the project's ${twin%.jinja} is its root copy, not the render of $twin." >&2
+    exit 1
+  fi
+done
 echo "$name: passed."
 '''
