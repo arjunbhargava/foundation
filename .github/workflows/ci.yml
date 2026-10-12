@@ -52,6 +52,7 @@ jobs:
       typescript: ${{ steps.diff.outputs.typescript }}
       cpp: ${{ steps.diff.outputs.cpp }}
       rulesets: ${{ steps.diff.outputs.rulesets }}
+      auto-merge-script: ${{ steps.diff.outputs.auto-merge-script }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -77,6 +78,7 @@ jobs:
             echo "typescript=$(changed packages/ package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
             echo "cpp=$(changed cpp/ CMakeLists.txt CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
             echo "rulesets=$(changed .github/rulesets/)"
+            echo "auto-merge-script=$(changed .github/scripts/auto_merge.sh .github/scripts/auto_merge_test.sh)"
           } >> "$GITHUB_OUTPUT"
 
   install-script:
@@ -210,6 +212,20 @@ jobs:
       - run: mise run lint:rulesets
       - run: mise run test:rulesets
 
+  auto-merge-script:
+    needs: changes
+    if: needs.changes.outputs.auto-merge-script == 'true'
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: jq
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run test:auto-merge-script
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change, and counts as passing. always(), not !cancelled(): GitHub treats
@@ -224,6 +240,7 @@ jobs:
       - typescript
       - cpp
       - rulesets
+      - auto-merge-script
     if: always()
     runs-on: ubuntu-latest
     steps:

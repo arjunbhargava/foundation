@@ -488,8 +488,9 @@ projects that use the template.
 
 **T23. Auto mode for exploratory tasks.** Needs: T13.
 
-**In progress** (owner, 2026-10-10). The first PR adds the review ruleset,
-the CODEOWNERS entries, and `docs/auto-mode.md`; the two workflows follow.
+**In progress** (owner, 2026-10-10). PR 1 (#38) added the review ruleset, the
+CODEOWNERS entries, and `docs/auto-mode.md`, and PR 2 (#43) the auto-merge
+workflow. PR 3, the branch-update workflow, is left.
 
 Some tasks need several rounds of exploration, and waiting for a person's
 review on each round stalls them. In auto mode, a repository's agent PRs merge
@@ -507,11 +508,16 @@ far:
 - GitHub's native auto-merge, not a custom merge workflow: it already waits
   for every ruleset, and Actions has no trigger for a resolved review thread.
   A workflow turns on auto-merge for an `agent` PR once the `Cursor Bugbot`
-  check completes, because before then there are no threads to block it.
+  check completes, because before then there are no threads to block it, and
+  turns it off on each push until Bugbot has reviewed the new commit.
 - After each merge, a workflow updates the open agent PRs that are behind
   `main`. It needs a GitHub App token: updates made with `GITHUB_TOKEN` start
   no workflows, so `ci-ok` would never report, and the owner's token would
-  bypass code-owner review, because the owner is a bypass actor.
+  bypass code-owner review, because the owner is a bypass actor. The
+  auto-merge workflow merges with `GITHUB_TOKEN`, so its merges start no
+  `push` or `pull_request` `closed` runs either. Switching it to the App
+  token lets the update workflow start on those merges, and CodeQL analyse
+  `main` again.
 - `docs/auto-mode.md` says what auto mode allows, what still needs the owner,
   and how to audit and revert. Merge commits (D6) make each revert one commit.
 - Limits (owner, 2026-10-10): $500 per day of cloud agent spend to start,
