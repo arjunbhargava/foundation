@@ -30,7 +30,7 @@ the same thing:
 | `mise run spend` | Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs `CURSOR_ADMIN_API_KEY`. Arguments after `--` go to the script: `mise run spend -- --since 2026-09-26`. |
 | `mise run check` | Run everything CI runs. |
 
-Run `mise run check` before opening a PR; it must pass. It checks every
+Run `mise run check` before you open a PR; it must pass. It checks every
 language the project has: Python, Rust, TypeScript, and C and C++.
 
 ## Where code lives
