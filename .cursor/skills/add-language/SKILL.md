@@ -132,8 +132,8 @@ instead. This is where each version lives:
 - [ ] Its directory and config files under "Where code lives" in
       `AGENTS.md`.
 - [ ] The language, and its example, in the lines that list them: the status
-      line in `README.md`, the sentence below the Commands table in
-      `AGENTS.md`, and the status line in `docs/architecture.md`.
+      line in `README.md` and the sentence below the Commands table in
+      `AGENTS.md`.
 
 ## Show each check failing
 
