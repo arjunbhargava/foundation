@@ -1,24 +1,19 @@
 #!/usr/bin/env bash
-# Approves each agent PR given, as github-actions[bot], while auto mode is on,
-# so that it has the one approval the auto-mode ruleset requires
-# (docs/auto-mode.md). github-actions[bot] isn't a code owner, so a PR that
-# changes a path in .github/CODEOWNERS still needs a code owner's approval.
-# .github/workflows/approve-agent-prs.yml runs it.
-#
-# Auto mode is on when the ruleset in main-review-auto.json is active and the
-# one in main-review.json isn't. Otherwise nothing is approved, because
-# main: review would count the bot's approval as the person's it requires.
+# Approves each agent PR given, as github-actions[bot], while auto mode is on:
+# the ruleset in main-review-auto.json is active and the one in
+# main-review.json isn't. In review mode, main: review would count the bot's
+# approval as the person's it requires. .github/workflows/approve-agent-prs.yml
+# runs it, and docs/auto-mode.md says why.
 #
 # A PR is left alone if it isn't open, comes from a fork, has no agent label,
-# or github-actions[bot] has reviewed it before. The bot approves a PR at most
-# once, so an approval that a person, or apply.sh, dismissed stays dismissed.
+# or github-actions[bot] has reviewed it before, so that an approval a person
+# or apply.sh dismissed stays dismissed.
 #
 # Usage: .github/scripts/approve_agent_prs.sh <PR number>...
 #
 # Needs GITHUB_REPOSITORY, which GitHub Actions sets, and gh authenticated
-# with a token that can approve PRs: in Actions, GH_TOKEN with
-# pull-requests: write, with "Allow GitHub Actions to create and approve pull
-# requests" on in Settings > Actions > General. It fails if a request fails.
+# with a token that may approve PRs: in Actions, GH_TOKEN with
+# pull-requests: write. It fails if a request fails.
 set -euo pipefail
 
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set; set it to the repository as owner/name}"

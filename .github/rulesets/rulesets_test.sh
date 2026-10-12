@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Tests the scripts in .github/rulesets/ without calling GitHub. apply.sh runs
-# with --dry-run against a fake gh that lists canned existing rulesets and an
-# open PR's reviews, and each case compares the changes apply.sh would make
-# with the expected ones.
+# with --dry-run against a fake gh that lists canned existing rulesets, and
+# each case compares the changes apply.sh would make with the expected ones.
 # Each case runs apply.sh in a copy of this directory, as a project has it
 # (without template-checks.json) or as the template repository has it (with
 # one), so the test gives the same result in both. check.sh runs on copies of

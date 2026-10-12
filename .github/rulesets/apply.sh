@@ -13,13 +13,13 @@
 #      (docs/auto-mode.md). In the JSON, integration_id 15368 is the GitHub
 #      Actions app, so only Actions can report the required checks, and
 #      actor_id 5 with actor_type RepositoryRole is the admin role.
-#   3. Without --auto, if the auto-mode ruleset exists, each approval that
-#      .github/workflows/approve-agent-prs.yml gave an open PR is dismissed.
-#      main: review would count it as the one approval it requires, so a PR
-#      that auto mode held back on an unresolved review thread would merge.
-#      After step 2, main: review is active, so the workflow approves no more.
+#   3. Without --auto, if the auto-mode ruleset exists, each approval by
+#      github-actions[bot] on an open PR is dismissed: main: review would count
+#      it as a person's, so a PR that auto mode held back on an unresolved
+#      review thread would merge. After step 2, approve-agent-prs.yml gives no
+#      new ones.
 #   4. The other review ruleset, if it exists, is disabled. It is disabled
-#      after steps 2 and 3, so a failure before it leaves both in force rather
+#      after step 2, so a failure between the two leaves both in force rather
 #      than neither.
 #   5. Secret scanning and push protection are turned on. This step is last
 #      because it fails on a private repository without GitHub Secret
@@ -29,9 +29,8 @@
 #
 # Needs gh logged in as a repository admin. The repository defaults to the
 # one for the current directory. --dry-run prints each change instead of
-# making it; it still reads the existing rulesets, and for step 3 the open
-# PRs' reviews, to decide what to change. --auto turns auto mode on; running
-# without it turns it off.
+# making it; it still reads the existing rulesets to decide between create
+# and update. --auto turns auto mode on; running without it turns it off.
 #
 # Switching to a merge queue, which GitHub offers only to repositories owned
 # by an organization:

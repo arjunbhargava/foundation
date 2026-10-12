@@ -1,9 +1,7 @@
 # Approves each agent PR while auto mode is on, by running
-# .github/scripts/approve_agent_prs.sh, so that the PR has the one approval
-# the auto-mode ruleset requires. The approval comes from github-actions[bot],
-# which isn't a code owner, so a PR that changes a path in .github/CODEOWNERS
-# still needs the owner. docs/auto-mode.md describes how this fits with the
-# auto-merge workflow.
+# .github/scripts/approve_agent_prs.sh, so that it has the one approval the
+# auto-mode ruleset requires. docs/auto-mode.md says how this fits with
+# code-owner review and the auto-merge workflow.
 #
 # Both triggers run main's copy of this file, with GITHUB_SHA set to main's
 # latest commit, and the job checks out that commit, so no code from a PR runs
@@ -11,11 +9,10 @@
 name: Approve agent PRs
 
 on:
-  # agent-label.yml adds the agent label with GITHUB_TOKEN, which starts no
-  # workflow, and on a new PR it lands after the opened event. So this runs
-  # when that workflow finishes, which it does after each PR is opened,
-  # reopened, or pushed to. zizmor flags every workflow_run and
-  # pull_request_target, because checking out a PR with either runs the PR's
+  # agent-label.yml adds the label with GITHUB_TOKEN, which starts no
+  # workflow, after the opened event, so this runs when that workflow
+  # finishes: after each push, and when a PR is opened or reopened. zizmor
+  # flags both triggers, because checking out a PR with either runs the PR's
   # code with a write token.
   workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: [Agent label]
@@ -52,8 +49,7 @@ jobs:
           persist-credentials: false
       - env:
           GH_TOKEN: ${{ github.token }}
-          # A workflow run lists the open PRs whose head is its branch,
-          # leaving out PRs from forks.
+          # A workflow run lists the open PRs whose head is its branch.
           PR_NUMBERS: ${{ github.event.pull_request.number || join(github.event.workflow_run.pull_requests.*.number, ' ') }}
         run: |
           read -ra pr_numbers <<< "$PR_NUMBERS"
