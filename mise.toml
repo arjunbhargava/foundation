@@ -54,7 +54,7 @@ description = "Check formatting, lint, and types without changing files"
 depends = ["lint:*"]
 
 [tasks."lint:rulesets"]
-description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, approval count, and thread resolution"
+description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name and thread resolution"
 run = ".github/rulesets/check.sh"
 
 [tasks.test]

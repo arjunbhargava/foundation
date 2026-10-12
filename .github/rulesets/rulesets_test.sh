@@ -64,12 +64,15 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   expect_check_error check_fails_when_auto_mode_drops_thread_resolution main-review-auto.json \
     "$(with_review_setting main-review-auto.json required_review_thread_resolution false)" \
     "must set require_code_owner_review and required_review_thread_resolution to true"
-  expect_check_error check_fails_when_auto_mode_requires_an_approval main-review-auto.json \
-    "$(with_review_setting main-review-auto.json required_approving_review_count 1)" \
-    "main-review-auto.json must set required_approving_review_count to 0"
+  expect_check_error check_fails_when_auto_mode_requires_no_approval main-review-auto.json \
+    "$(with_review_setting main-review-auto.json required_approving_review_count 0)" \
+    "main-review-auto.json must set required_approving_review_count to 1"
   expect_check_error check_fails_when_review_mode_requires_no_approval main-review.json \
     "$(with_review_setting main-review.json required_approving_review_count 0)" \
     "main-review.json must set required_approving_review_count to at least 1"
+  expect_check_error check_fails_when_the_review_rulesets_differ_in_approval_count main-review.json \
+    "$(with_review_setting main-review.json required_approving_review_count 2)" \
+    "differ in the lines above"
   expect_check_error check_fails_when_review_mode_requires_thread_resolution main-review.json \
     "$(with_review_setting main-review.json required_review_thread_resolution true)" \
     "main-review.json must set required_review_thread_resolution to false"
@@ -77,7 +80,7 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   if ((failures > 0)); then
     exit 1
   fi
-  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 6 broken ones."
+  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 7 broken ones."
 }
 
 # Puts first on PATH a gh that answers only apply.sh's request for the existing
