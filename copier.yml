@@ -2,9 +2,11 @@
 # in docs/template-plan.md); README.md says how. The repository root is the
 # project with every language. Each question below adds one language, and
 # _exclude leaves out the files of each language a project doesn't use.
-# `mise run template:check` checks that a project with every language equals
-# the root, and .github/workflows/template.yml runs `mise run check` in a
-# project with every language and in one with each language alone.
+# AGENTS.md, README.md, and .github/dependabot.yml are rendered from their
+# .jinja twins; edit the twin, then run `mise run template:sync` to render the
+# root copy. The tasks in .config/mise/conf.d/template.toml check all of
+# this, and .github/workflows/template.yml runs them and `mise run check` in
+# a project with every language and in one with each language alone.
 
 python:
   type: bool
