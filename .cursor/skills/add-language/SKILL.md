@@ -131,9 +131,26 @@ instead. This is where each version lives:
 
 - [ ] Its directory and config files under "Where code lives" in
       `AGENTS.md`.
-- [ ] The language, and its example, in the lines that list them: the status
-      line in `README.md` and the sentence below the Commands table in
+- [ ] The language, and its example, in the lines that list them: the first
+      paragraph of `README.md` and the sentence below the Commands table in
       `AGENTS.md`.
+
+## In the template repository
+
+The template repository, which has `copier.yml`, also needs these:
+
+- [ ] In `copier.yml`: a yes/no question for the language, before `cpp`,
+      whose validator stays last and names every language; the language in
+      `language_names`; and an `_exclude` block listing its files.
+- [ ] Its lines in `AGENTS.md`, `README.md`, and `.github/dependabot.yml`
+      written in their `.jinja` twins, inside `{% if <language> %}` blocks.
+      `mise run template:sync` then renders the root copies.
+- [ ] In `.config/mise/conf.d/template.toml`: `--data <language>=true` in
+      `template:check` and `template:sync`; the language in the variant lists
+      of `test:template` and `template:check-update`; and its files, name,
+      and Dependabot entries in `test:template`.
+- [ ] In `.github/workflows/template.yml`: `--data <language>=true` in the
+      variant with every language, and a variant for the language alone.
 
 ## Show each check failing
 
