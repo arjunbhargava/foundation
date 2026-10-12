@@ -7,7 +7,7 @@ these conventions rely on (task T17 in [the template plan](template-plan.md)).
 
 ## Filing an issue
 
-- Start every issue from the issue template below. Write each acceptance
+- Start each issue from the issue template below. Write each acceptance
   criterion as behaviour someone can check, because each one becomes a named
   test in the PR.
 - Split work that needs several PRs into a parent issue with one sub-issue
