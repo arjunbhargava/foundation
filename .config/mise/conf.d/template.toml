@@ -161,7 +161,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; and that template:check-update retries copier update once, and only on copier's temporary-directory error"
+description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -383,5 +383,33 @@ expect_update another_cleanup_error 1 1 "$(cleanup_traceback "OSError: [Errno 13
 expect_update the_directory_not_empty_error_outside_a_cleanup 1 1 "$not_a_cleanup_traceback"
 expect_update the_cleanup_error_twice 1 2 "$git_error" "$objects_error"
 unset -f copier
+echo "$name: passed."
+
+# template:check-update's git settings, taken from the task and applied in a
+# subshell: a commit in a new repository must not start git maintenance.
+name=template_check_update_turns_off_automatic_git_maintenance
+sed -n '/^export GIT_CONFIG_COUNT=/,/^export GIT_CONFIG_KEY_1=/p' .config/mise/conf.d/template.toml > "$work/git_settings.sh"
+if [[ $(wc -l < "$work/git_settings.sh") -ne 3 ]]; then
+  echo "FAIL: $name: found $(wc -l < "$work/git_settings.sh") GIT_CONFIG lines in the template:check-update task, expected 3 that start with \"export GIT_CONFIG_COUNT=\" and end with \"export GIT_CONFIG_KEY_1=\"." >&2
+  exit 1
+fi
+maintenance_repo=$work/maintenance_repo
+git init --quiet "$maintenance_repo"
+echo "from the template" > "$maintenance_repo/tracked_file"
+git -C "$maintenance_repo" add tracked_file
+(
+  source "$work/git_settings.sh"
+  GIT_TRACE2_EVENT=$work/maintenance_trace git -C "$maintenance_repo" \
+    -c user.name=template-test -c user.email=template-test@localhost \
+    commit --quiet --message "Create the project"
+)
+if [[ ! -s $work/maintenance_trace ]]; then
+  echo "FAIL: $name: git wrote no trace of the commit to $work/maintenance_trace, so the check could not run." >&2
+  exit 1
+fi
+if grep -q '"maintenance"' "$work/maintenance_trace"; then
+  echo "FAIL: $name: a commit with the task's git settings still ran git maintenance; the trace is $work/maintenance_trace." >&2
+  exit 1
+fi
 echo "$name: passed."
 '''
