@@ -85,7 +85,7 @@ description = "Check that .github/scripts/lint_workflows.sh fails on a finding f
 run = ".github/scripts/lint_workflows_test.sh"
 
 [tasks."test:language-listings-script"]
-description = "Check that .github/scripts/language_listings.sh passes for the repository and names each place that lacks a language, on copies of the repository"
+description = "Check that .github/scripts/language_listings.sh passes for the repository and names each place that lacks a language, on copies of the files it reads"
 run = ".github/scripts/language_listings_test.sh"
 
 [tasks."test:rulesets"]

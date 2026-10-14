@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Tests .github/scripts/language_listings.sh on copies of the repository: as
-# it is, with a language that no place lists, and with the places that test
-# for each language's manifest emptied. Each case runs the copy's script and
-# checks the exit status and the places its errors name.
+# Tests .github/scripts/language_listings.sh on copies of the files it reads:
+# as they are, with a language that no place lists, and with the places that
+# test for each language's manifest emptied. Each case runs the copy's script
+# and checks the exit status and the places its errors name.
 #
 # Usage: mise run test:language-listings-script
 set -euo pipefail
@@ -40,13 +40,18 @@ main() {
   echo "language_listings.sh gave the expected exit status and errors in all 3 cases."
 }
 
-# Copies the files that git would commit, including uncommitted changes, to
-# $work/<name>, as template:check does.
+# Copies the script and the files it reads to $work/<name>. Copying the whole
+# tree instead fails at times under `mise run check`, whose docs build
+# creates and deletes files in docs/api/python/ while the tests run.
 copy_repository() {
-  mkdir "$work/$1"
-  git ls-files --cached --others --exclude-standard | while read -r file; do
-    if [[ -e $file ]]; then printf '%s\n' "$file"; fi
-  done | tar -cf - -T - | tar -xf - -C "$work/$1"
+  local file
+  for file in .github/scripts/language_listings.sh .config/mise/conf.d/*.toml .github/workflows/*.yml \
+    docs/build.sh docs/api/*.md AGENTS.md copier.yml; do
+    if [[ -f $file ]]; then
+      mkdir -p "$work/$1/$(dirname "$file")"
+      cp "$file" "$work/$1/$file"
+    fi
+  done
 }
 
 # Runs the script in the copy of the repository named <name>.
