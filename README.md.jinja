@@ -11,69 +11,67 @@ follow, pinned tools and shared commands, example code and checks for
 under construction; [`docs/template-plan.md`](docs/template-plan.md) lists
 the remaining work.
 
-## Get started
+## Get started with an agent
 
-1. **Start a project from the template.** With [mise](https://mise.jdx.dev/)
-   on your PATH, run this, with the uv and copier versions that `mise.toml`
-   pins:
+Give a Cursor agent this prompt, replacing `my-project` and `<languages>`:
 
-   ```sh
-   mise exec uv@0.12.21 pipx:copier@9.18.2 -- copier copy gh:arjunbhargava/foundation my-project
-   ```
+> Create a new project named `my-project` from the Copier template
+> `gh:arjunbhargava/foundation`, with these languages: `<languages>`. Follow
+> "Get started" in the template's README: copy the template, run `git init`,
+> then `bash .cursor/install.sh` and `mise run check`. Report anything that
+> fails.
 
-   [Copier](https://copier.readthedocs.io/) asks one yes/no question per
-   language: `python`, `rust`, `typescript`, and `cpp`. The project gets the
-   files of each language you answer yes to, and Copier refuses to create one
-   with none. To answer without prompts, pass `--defaults` and a `--data`
-   option per language, such as `--data python=true`.
+The agent copies the template with this command, which answers every
+question, so Copier never prompts. Each language is `true` or `false`, and at
+least one must be `true`:
 
-2. **Set up a local machine.** Make the project a git repository, because
-   `copier update` needs one. The setup script installs the pinned mise to
-   `~/.local/bin` without sudo and the tools it pins, then runs
-   `mise run setup`. It supports macOS and Linux on x86-64 or arm64.
+```sh
+mise exec uv@0.12.21 pipx:copier@9.18.2 -- copier copy --defaults \
+  --data python=true --data rust=true --data typescript=false --data cpp=false \
+  gh:arjunbhargava/foundation my-project
+```
+
+Creating and checking a project needs no secret: `.cursor/environment.json`
+only runs `.cursor/install.sh`. For the agent's pull requests to merge without
+a person ([auto mode](docs/auto-mode.md)), Bugbot must review the repository,
+and "Allow GitHub Actions to create and approve pull requests" (Settings >
+Actions > General) and "Allow auto-merge" (Settings > General) must be on.
+
+## Get started by hand
+
+1. **Start a project.** Run the command above, or leave out `--defaults` and
+   the `--data` flags to answer one yes/no question per language: `python`,
+   `rust`, `typescript`, and `cpp`. It needs [mise](https://mise.jdx.dev/) on
+   your PATH.
+
+2. **Set up and check.** The project must be a git repository, because
+   `copier update` needs one. `.cursor/install.sh` installs the pinned mise
+   and tools, then runs `mise run setup`, on macOS and Linux (x86-64 or
+   arm64). `mise run check` runs everything CI runs, and must pass before a
+   pull request.
 
    ```sh
    cd my-project
    git init
    bash .cursor/install.sh
+   mise run check
    ```
 
 {% if cpp %}
    C and C++ also need `g++` from the OS: on Ubuntu,
-   `sudo apt-get install g++`; on macOS, the Xcode Command Line Tools, which
-   git already needs.
+   `sudo apt-get install g++`; on macOS, the Xcode Command Line Tools.
 
 {% endif %}
    If the script ends by saying `~/.local/bin` isn't on your PATH, add
-   `export PATH="$HOME/.local/bin:$PATH"` to `~/.zshrc` for zsh,
-   `~/.bashrc` for bash on Linux, or `~/.bash_profile` for bash on macOS,
-   then open a new terminal.
+   `export PATH="$HOME/.local/bin:$PATH"` to your shell's startup file, such
+   as `~/.zshrc`, and open a new terminal.
 
-3. **Run the checks.** This runs everything CI runs, and must pass before you
-   open a pull request:
-
-   ```sh
-   mise run check
-   ```
-
-4. **Commit and publish.** Commit the project:
-
-   ```sh
-   git add -A
-   git commit -m "Create the project from the foundation template"
-   ```
-
-   Then create its GitHub repository and push. Run
+3. **Commit and publish.** Run `git add -A` and `git commit`, create the
+   GitHub repository, and push. Then run
    [`.github/rulesets/apply.sh`](.github/rulesets/apply.sh) to apply the
    repository settings; it needs the [GitHub CLI](https://cli.github.com/),
-   `gh`, which the setup script doesn't install. Add the repository to Linear
-   as [`docs/linear.md`](docs/linear.md) says.
-
-## Commands
-
-Every command is `mise run <command>`, so people, agents, and CI run the same
-tools at the same versions. [`AGENTS.md`](AGENTS.md) has the table of
-commands.
+   `gh`. Add the repository to Linear as [`docs/linear.md`](docs/linear.md)
+   says.
 
 ## Learn more
 
@@ -82,3 +80,4 @@ commands.
 - [Orchestrating agents](docs/orchestration.md)
 - [Auto mode](docs/auto-mode.md)
 - [Pulling template updates](docs/template-updates.md)
+- [Commands](AGENTS.md): every `mise run <command>`, the same for people, agents, and CI
