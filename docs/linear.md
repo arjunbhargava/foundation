@@ -46,7 +46,7 @@ these conventions rely on (task T17 in [the template plan](template-plan.md)).
 
 ## Issue template
 
-Paste this into Linear under Settings > Templates. The line under each
+Paste this template into Linear under Settings > Templates. The line under each
 heading is a hint for the person filing the issue; mark it as placeholder
 text in Linear's template editor.
 
