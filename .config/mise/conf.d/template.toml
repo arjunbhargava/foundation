@@ -291,8 +291,8 @@ echo "$name: passed."
 
 # template:check-update's update function, sourced here with a shell function
 # in place of copier. The fake fails the calls that copier_errors names, with
-# the error each holds ("" succeeds), and leaves an untracked file as a
-# failed real update leaves the project changed.
+# the error each holds ("" succeeds), and changes a tracked file and adds an
+# untracked one, as a real update does before it fails.
 name=update_retries_once_and_only_on_copiers_temporary_directory_error
 sed -n '/^update() {$/,/^}$/p' .config/mise/conf.d/template.toml > "$work/update_function.sh"
 if [[ ! -s $work/update_function.sh ]]; then
@@ -303,6 +303,8 @@ source "$work/update_function.sh"
 
 update_project=$work/update_project
 git init --quiet "$update_project"
+echo "from the template" > "$update_project/tracked_file"
+git -C "$update_project" add tracked_file
 git -C "$update_project" -c user.name=template-test -c user.email=template-test@localhost \
   commit --quiet --allow-empty --message "Create the project"
 
@@ -315,7 +317,8 @@ copier() {
   if ((copier_calls > 1)) && [[ -n $(git -C "$update_project" status --porcelain) ]]; then
     retried_a_changed_project=true
   fi
-  touch "$update_project/changed_by_copier"
+  echo "changed by copier" >> "$update_project/tracked_file"
+  touch "$update_project/untracked_file"
   if [[ -n $error ]]; then
     echo "$error" >&2
     return 1
@@ -329,6 +332,7 @@ expect_update() {
   copier_errors=("$@")
   copier_calls=0
   retried_a_changed_project=false
+  git -C "$update_project" reset --quiet --hard
   git -C "$update_project" clean --quiet --force -d -x
   update "$update_project" --vcs-ref=unused 2> /dev/null || status=$?
   if ((status != expected_status || copier_calls != expected_calls)); then
