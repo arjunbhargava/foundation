@@ -13,6 +13,10 @@
 # A change to this script, its workflow, or stryker.config.json mutates
 # every package.
 #
+# For python, the Python scripts in .github/scripts/ count as one more package,
+# reported separately. The shell scripts there aren't mutated, because mutmut
+# reads only Python and no shell mutation tool is pinned.
+#
 # The report goes to stdout and, in GitHub Actions, to the job summary.
 # Surviving mutants don't fail the script: for now, mutation testing reports
 # and doesn't block merging (T14 in docs/template-plan.md). It fails only when
@@ -42,6 +46,11 @@ main() {
 }
 
 mutate_python() {
+  mutate_python_source
+  mutate_python_scripts
+}
+
+mutate_python_source() {
   local files
   files=$(files_to_mutate tests/ 'src/*.py')
   if [[ -z $files ]]; then
@@ -61,13 +70,63 @@ mutate_python() {
     module_globs+=("${module//\//.}.x*")
   done
 
+  run_mutmut Python "$files" "${module_globs[@]}"
+}
+
+# The scripts in .github/scripts/ are imported by bare name, as in `import
+# agent_spend`, but mutmut counts a test as covering a mutant only if the test
+# imports the module under the name mutmut derives from the file's path
+# relative to the project, with a leading src/ removed. So mutmut runs in a
+# scratch project with the scripts in src/ and their tests in tests/, so a
+# survivor's diff names a script as src/<script>.py. Its
+# pytest settings are the root pyproject.toml's, except for pytest-xdist,
+# which mutmut can't see through, and testpaths.
+mutate_python_scripts() {
+  local scripts='.github/scripts/*.py' script_tests='.github/scripts/*_test.py'
+  local files
+  files=$(files_to_mutate "$script_tests" "$scripts" ":(exclude)$script_tests")
+  if [[ -z $files ]]; then
+    report "Python scripts" "" 0 0 ""
+    return
+  fi
+
+  local project_root=$PWD scratch=.mutants-scripts
+  rm -rf "$scratch"
+  mkdir -p "$scratch/src" "$scratch/tests"
+  git ls-files -z -- "$scripts" ":(exclude)$script_tests" | xargs -0 -I{} cp {} "$scratch/src/"
+  git ls-files -z -- "$script_tests" | xargs -0 -I{} cp {} "$scratch/tests/"
+  cat > "$scratch/pyproject.toml" << 'SETTINGS'
+[tool.pytest]
+addopts = ["--doctest-modules"]
+strict = true
+filterwarnings = ["error"]
+SETTINGS
+
+  local module_globs=() path module
+  for path in $files; do
+    module=${path##*/}
+    module_globs+=("${module%.py}.x*")
+  done
+
+  # uv runs in the scratch directory, where mutmut reads its settings, but
+  # with the root project's environment.
+  (cd "$scratch" && UV_PROJECT=$project_root run_mutmut "Python scripts" "$files" "${module_globs[@]}")
+}
+
+# Runs mutmut in the current directory on the modules that match the globs,
+# and reports the surviving mutants. files is the list of mutated source
+# files, for the report.
+run_mutmut() {
+  local label=$1 files=$2
+  shift 2
+
   # mutmut reuses results from earlier runs, which a changed test can make
   # wrong.
   rm -rf mutants
   mkdir mutants
-  if ! uv run mutmut run "${module_globs[@]}" 2>&1 | tee mutants/run.log; then
+  if ! uv run mutmut run "$@" 2>&1 | tee mutants/run.log; then
     if grep -qF "Filtered for specific mutants, but nothing matches" mutants/run.log; then
-      report Python "$files" 0 0 "mutmut found no code to mutate in these files."
+      report "$label" "$files" 0 0 "mutmut found no code to mutate in these files."
       return
     fi
     echo "error: mutmut failed; its output is above." >&2
@@ -89,7 +148,7 @@ mutate_python() {
   # report prints it.
   local mutant survivor_diffs
   survivor_diffs=$(for mutant in $survivors; do uv run mutmut show "$mutant" || exit 1; done)
-  report Python "$files" "$survived_count" "$tested_count" "mutmut: $status_counts." \
+  report "$label" "$files" "$survived_count" "$tested_count" "mutmut: $status_counts." \
     "$(printf '```diff\n%s\n```' "$survivor_diffs")"
 }
 

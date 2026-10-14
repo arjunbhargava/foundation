@@ -28,7 +28,7 @@ the same thing:
 | `mise run test:approve-agent-prs-script` | Check which PRs `.github/scripts/approve_agent_prs.sh` approves, in auto mode and review mode, with a fake `gh`. |
 | `mise run test:owned-paths-script` | Check which changed paths `.github/scripts/owned_paths.sh` finds in `.github/CODEOWNERS`, and when it can't tell, with a fake `gh`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
-| `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:<language>` runs one language, except C and C++, which have no mutation tool yet. `check` doesn't run it, because it's slow. |
+| `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:<language>` runs one language, except C and C++, which have no mutation tool yet. Python includes the changed `.github/scripts/*.py`; the shell scripts there have no mutation tool. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
 | `mise run spend` | Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs `CURSOR_ADMIN_API_KEY`. Arguments after `--` go to the script: `mise run spend -- --since 2026-09-26`. |
 | `mise run check` | Run everything CI runs. |
