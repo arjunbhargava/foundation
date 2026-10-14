@@ -107,10 +107,15 @@ instead. This is where each version lives:
       `.cursor/install.sh` installs only those. The job runs
       `mise run setup:<language>`, if the language has one, before lint
       and test. Add the tools the language's docs block runs to the `docs`
-      job's list too. mise ignores a tool missing from a list, so the command
-      silently runs the runner's own version, or fails if the runner has
-      none. The C and C++ job lists `uv` for this reason: mise installs the
-      `pipx:` tools with it, and without it falls back to the runner's pipx.
+      job's list too. mise ignores a tool missing from a list, so the job
+      runs `.github/scripts/block_unlisted_tools.sh` after `.cursor/install.sh`.
+      The script puts a stub command on the PATH for each pinned tool the
+      list leaves out, and a command that runs the stub fails with status 127
+      and an error naming the tool and the list to edit. `install.sh` runs
+      before the script, so the script can't catch a tool that the install
+      itself needs: the C and C++ job lists `uv` because mise installs the
+      `pipx:` tools with it, and without it falls back to the runner's pipx
+      without any error.
       To check a list, set `MISE_ENABLE_TOOLS` to it locally and run
       `mise exec -- which <tool>` for each tool the job's commands call: each
       must resolve inside mise's directory. Rust's tools resolve to rustup's
