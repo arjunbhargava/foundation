@@ -20,6 +20,24 @@ list, and [auto mode](auto-mode.md) decides how PRs merge.
 - **bcId**: a cloud agent's id, such as `bc-489632bd-...`. Its page is
   `https://cursor.com/agents/<bcId>`.
 
+## Why this design
+
+- Each worker has its own context and PR. In [Cursor's design][cursor],
+  workers "don't coordinate with other workers or worry about the big picture".
+- The orchestrator writes no feature code, so its context stays small (see
+  [Cost](#cost)). That is this page's choice, not a finding of the sources.
+- The orchestrator checks each PR against its "Done when" before the owner
+  sees it. [arXiv 2512.08296][paper] reports error amplification of 4.4 under
+  centralized coordination and 17.2 for independent agents.
+- The orchestrator launches independent tasks in parallel and sequences
+  dependent ones. The paper measured +80.8% on decomposable financial
+  reasoning and -39% to -70% on sequential planning. [Anthropic][anthropic]
+  wrote that "most coding tasks involve fewer truly parallelizable tasks".
+
+[cursor]: https://cursor.com/blog/scaling-agents
+[paper]: https://arxiv.org/abs/2512.08296
+[anthropic]: https://www.anthropic.com/engineering/multi-agent-research-system
+
 ## Launch workers through the API
 
 Launch each worker as a top-level cloud agent, with the Cursor API. Do not use
@@ -98,6 +116,24 @@ A worker prompt is short, because the worker reads the repository itself.
 
 The orchestrator finds its own bcId with the `cursor-cloud` `run-info` tool.
 
+### Launch tiers
+
+The owner decided on 2026-10-14 when an orchestrator launches a worker without
+asking. The queue is wherever the project keeps its task list: today the
+handoff prompt, later Linear.
+
+| Work | The orchestrator |
+|---|---|
+| A task already in the queue | Launches it without asking. |
+| Essential or useful work whose need is obvious | Adds it to the queue, and may launch it. |
+| Cleanup | Launches it. |
+| An entirely new feature, or an unrelated initiative | Asks the owner. |
+
+If the next task is obvious and needs no human input, the orchestrator does it.
+Every tier keeps the limits in [Cost](#cost): at most 5 open agent PRs, at most
+10 running workers, nothing new within $50 of the daily limit, and the
+[model routing](#which-model).
+
 ## Cost
 
 A cloud agent's cost is dominated by cache-read tokens: on each step, the
@@ -118,6 +154,11 @@ events read about 13.3 million cache-read tokens, about 350,000 per event. The r
 - **Keep prompts short** and point to files instead of pasting them.
 - **Limit concurrency.** Keep the open agent PRs within the project's
   limit (5 by default), because the owner's review time is the bottleneck.
+  Also keep at most 10 workers running at once, of any model. The owner
+  decided this on 2026-10-14 and expects to reach it rarely. The owner raises
+  it for very ambitious or complex work, because splitting such work across
+  more workers keeps each context short and lowers cost. Raising it does not
+  raise the open-PR limit (D9 in `template-plan.md`).
 - **Check spend at each pause**, and tell the owner the totals:
   `mise run spend -- --since "$(date -u +%F)"`. The total counts every
   repository's agents. `/teams/spend` must be compared as `spendCents` plus
@@ -193,5 +234,3 @@ for the owner to review. This page holds what doesn't change.
 | # | Question | Proposed default |
 |---|---|---|
 | O1 | Where the owner sees a list of workers that survives deselecting them | Links in each orchestrator message now; a Slack message or a pinned issue per launch once the owner picks one |
-| O2 | A cap on concurrent Opus workers | 2, because each costs $9 to $16 per task and design tasks need the owner's attention |
-| O3 | Whether an orchestrator may launch a worker without asking, once auto mode is on | Yes for tasks already in the queue; ask for a new task |
