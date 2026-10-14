@@ -6,6 +6,14 @@ API reference is generated from doc comments in the source by
 reference.
 
 ```{toctree}
+:caption: Start here
+:maxdepth: 1
+
+README <project-readme>
+agent-instructions
+```
+
+```{toctree}
 :caption: Explanation
 :maxdepth: 1
 
