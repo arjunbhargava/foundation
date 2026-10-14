@@ -93,7 +93,7 @@ jobs:
             echo "typescript=$(language_changed package.json packages/ pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
             echo "cpp=$(language_changed CMakeLists.txt cpp/ CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
             echo "rulesets=$(changed .github/rulesets/)"
-            echo "workflows=$(changed .github/workflows/)"
+            echo "workflows=$(changed .github/workflows/ .github/scripts/lint_workflows.sh .github/scripts/lint_workflows_test.sh)"
             # The script runs owned_paths.sh, which reads .github/CODEOWNERS.
             echo "auto-merge-script=$(changed .github/scripts/auto_merge.sh .github/scripts/auto_merge_test.sh .github/scripts/owned_paths.sh .github/CODEOWNERS)"
             # The script reads the review rulesets' names from their files.
@@ -245,6 +245,7 @@ jobs:
       - run: bash .cursor/install.sh
       - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run lint:workflows
+      - run: mise run test:lint-workflows-script
 
   auto-merge-script:
     needs: changes

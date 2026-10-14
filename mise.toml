@@ -60,17 +60,9 @@ depends = ["lint:*"]
 description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths check"
 run = ".github/rulesets/check.sh"
 
-# --offline skips the audits that query GitHub, so the result doesn't depend
-# on a token or the network. Both tools run, so one failure doesn't hide the
-# other's findings.
 [tasks."lint:workflows"]
 description = "Check the GitHub Actions workflows in .github/workflows/ with actionlint, and with zizmor for security problems"
-run = '''
-status=0
-actionlint || status=1
-zizmor --offline --no-progress .github/workflows || status=1
-exit $status
-'''
+run = ".github/scripts/lint_workflows.sh"
 
 [tasks.test]
 description = "Run all tests"
@@ -83,6 +75,10 @@ depends = ["mutate:*"]
 [tasks."test:mutate-script"]
 description = "Check which files .github/scripts/mutate.sh mutates and what it reports, with fake mutation tools"
 run = ".github/scripts/mutate_test.sh"
+
+[tasks."test:lint-workflows-script"]
+description = "Check that .github/scripts/lint_workflows.sh fails on a finding from either actionlint or zizmor, and runs both"
+run = ".github/scripts/lint_workflows_test.sh"
 
 [tasks."test:rulesets"]
 description = "Check the changes .github/rulesets/apply.sh makes with and without --auto, and that check.sh catches broken ruleset files, with a fake gh"
