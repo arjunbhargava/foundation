@@ -116,6 +116,23 @@ A worker prompt is short, because the worker reads the repository itself.
 
 The orchestrator finds its own bcId with the `cursor-cloud` `run-info` tool.
 
+### Launch tiers
+
+The owner decided on 2026-10-14 when an orchestrator launches a worker without
+asking. The queue is wherever the project keeps its task list: today the
+handoff prompt, later Linear.
+
+| Work | The orchestrator |
+|---|---|
+| A task already in the queue | Launches it without asking. |
+| Essential or useful work whose need is obvious | Adds it to the queue, and may launch it. |
+| Cleanup | Launches it. |
+| An entirely new feature, or an unrelated initiative | Asks the owner. |
+
+If the next task is obvious and needs no human input, the orchestrator does it.
+Every tier keeps the limits in [Cost](#cost): at most 5 open agent PRs, nothing
+new within $50 of the daily limit, and the [model routing](#which-model).
+
 ## Cost
 
 A cloud agent's cost is dominated by cache-read tokens: on each step, the
@@ -212,4 +229,3 @@ for the owner to review. This page holds what doesn't change.
 |---|---|---|
 | O1 | Where the owner sees a list of workers that survives deselecting them | Links in each orchestrator message now; a Slack message or a pinned issue per launch once the owner picks one |
 | O2 | A cap on concurrent Opus workers | 2, because each costs $9 to $16 per task and design tasks need the owner's attention |
-| O3 | Whether an orchestrator may launch a worker without asking, once auto mode is on | Yes for tasks already in the queue; ask for a new task |
