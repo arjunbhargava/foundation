@@ -95,8 +95,8 @@ create() {
 # update <project> <copier update options>: run copier update on a committed
 # project. Once in about 160 updates in CI (1 of 33 Template runs, run
 # 38577039801), copier finishes its work and then exits with
-# "OSError: [Errno 39] Directory not empty: '.git'", because Python can't
-# delete the temporary repository it made. The process that writes into that
+# "OSError: [Errno 39] Directory not empty: '.git'" (macOS numbers it 66),
+# because Python can't delete the temporary repository it made. The process that writes into that
 # directory during the deletion is inside copier or git, not in this
 # repository, so this retries once, and only on that error: any other
 # failure, and a second occurrence of this one, fails the task. The first
@@ -110,7 +110,7 @@ update() {
     return 0
   fi
   cat "$stderr_file" >&2
-  if ! grep -qF "OSError: [Errno 39] Directory not empty: '.git'" "$stderr_file"; then
+  if ! grep -qE "OSError: .*Directory not empty: '\.git'" "$stderr_file"; then
     return 1
   fi
   echo "copier update failed to delete its temporary directory (see the error above); retrying once." >&2
@@ -347,7 +347,9 @@ expect_update() {
 
 temporary_directory_error="OSError: [Errno 39] Directory not empty: '.git'"
 expect_update the_error_once_then_success 0 2 "$temporary_directory_error" ""
+expect_update the_macos_error_once_then_success 0 2 "OSError: [Errno 66] Directory not empty: '.git'" ""
 expect_update another_error 1 1 "OSError: [Errno 13] Permission denied: '.git'"
+expect_update the_error_for_another_directory 1 1 "OSError: [Errno 39] Directory not empty: 'src'"
 expect_update the_error_twice 1 2 "$temporary_directory_error" "$temporary_directory_error"
 unset -f copier
 echo "$name: passed."
