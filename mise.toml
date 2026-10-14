@@ -64,6 +64,10 @@ run = ".github/rulesets/check.sh"
 description = "Check the GitHub Actions workflows in .github/workflows/ with actionlint, and with zizmor for security problems"
 run = ".github/scripts/lint_workflows.sh"
 
+[tasks."lint:language-listings"]
+description = "Check that each place that must list every language, such as the CI jobs and the Copier questions, lists each language in .config/mise/conf.d/, and name each place that lacks one"
+run = ".github/scripts/language_listings.sh"
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -79,6 +83,10 @@ run = ".github/scripts/mutate_test.sh"
 [tasks."test:lint-workflows-script"]
 description = "Check that .github/scripts/lint_workflows.sh fails on a finding from either actionlint or zizmor, and runs both"
 run = ".github/scripts/lint_workflows_test.sh"
+
+[tasks."test:language-listings-script"]
+description = "Check that .github/scripts/language_listings.sh passes for the repository and names each place that lacks a language, on copies of the files it reads"
+run = ".github/scripts/language_listings_test.sh"
 
 [tasks."test:rulesets"]
 description = "Check the changes .github/rulesets/apply.sh makes with and without --auto, and that check.sh catches broken ruleset files, with a fake gh"
@@ -103,6 +111,10 @@ run = ".github/scripts/block_unlisted_tools_test.sh"
 [tasks.docs]
 description = "Build the documentation site"
 run = "docs/build.sh"
+
+[tasks."test:docs"]
+description = "Check that docs/conf.py points the links in README.md and AGENTS.md at the site's pages, turns those to other repository paths into text, and still fails on a path that is missing or outside the repository, by building a small site"
+run = "uv run --project docs python docs/conf_test.py"
 
 [tasks.spend]
 description = "Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API, labelled with each run's task, repository, and branch; needs CURSOR_ADMIN_API_KEY, and CURSOR_API_KEY for the labels; arguments after -- go to the script, such as --since 2026-09-26"

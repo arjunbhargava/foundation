@@ -139,6 +139,16 @@ instead. This is where each version lives:
 - [ ] The language, and its example, in the lines that list them: the first
       paragraph of `README.md` and the sentence below the Commands table in
       `AGENTS.md`.
+- [ ] `mise run lint:language-listings` passes. It takes the languages from
+      the files in `.config/mise/conf.d/`, and fails naming each place in
+      this checklist that must list every language but lacks one: the
+      language's tasks; its output, job, and `ci-ok` entry in `ci.yml`; its
+      line in `codeql.yml`; its block in `docs/build.sh`; its page in
+      `docs/api/`; its rows in the Commands table in `AGENTS.md`; and, in
+      the template repository, its places in `copier.yml`, `template.toml`,
+      `template.yml`, and `README.md`'s lines about Copier's questions. It
+      can't check a place that names the language by its display name, such
+      as the two above, so check those by hand.
 
 ## In the template repository
 
