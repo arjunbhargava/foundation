@@ -88,8 +88,8 @@ def _unlink_repository_paths(app: Any, doctree: Any) -> None:
     for node in list(doctree.findall()):
         is_unresolved_link = (
             node.tagname == "pending_xref"
-            and node["reftype"] == "myst"
-            and node["refdomain"] is None
+            and node.get("reftype") == "myst"
+            and node.get("refdomain") is None
         )
         if not is_unresolved_link:
             continue
