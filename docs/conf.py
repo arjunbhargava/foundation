@@ -88,10 +88,12 @@ def _resolve_root_file_links(app: Any, doctree: Any) -> None:
     repository file or directory opens it. Their links into docs/ already work,
     through the include's relative-docs option: a link to a page leads to it,
     and a link to another file downloads it. A link to one of
-    pages_of_root_files leads to that file's page. Any other path in the
-    repository has no page, so the strict build would fail on the link, and it
-    becomes text. A link to a path that doesn't exist is left alone, so it
-    still fails the build.
+    pages_of_root_files leads to that file's page, and to the heading its
+    #fragment names, if any. Any other path in the repository has no page, so
+    the strict build would fail on the link, and it becomes text. A link to a
+    path that doesn't exist, or that is outside the repository, such as an
+    absolute path or one through .., is left alone, so it still fails the
+    build.
     """
     for node in list(doctree.findall()):
         is_unresolved_link = (
@@ -105,11 +107,15 @@ def _resolve_root_file_links(app: Any, doctree: Any) -> None:
         if not is_in_root_file:
             continue
 
-        linked_path = Path(node["reftarget"])
-        page = pages_of_root_files.get(linked_path)
+        linked_path_text, _, fragment = node["reftarget"].partition("#")
+        linked_path = (repository_root / linked_path_text).resolve()
+        if not linked_path.is_relative_to(repository_root):
+            continue
+
+        page = pages_of_root_files.get(linked_path.relative_to(repository_root))
         if page is not None:
             node["refdomain"] = "doc"
             node["reftarget"] = page
-            node["reftargetid"] = None
-        elif (repository_root / linked_path).exists():
+            node["reftargetid"] = fragment or None
+        elif linked_path.exists():
             node.replace_self(node.children)

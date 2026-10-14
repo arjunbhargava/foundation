@@ -113,7 +113,7 @@ description = "Build the documentation site"
 run = "docs/build.sh"
 
 [tasks."test:docs"]
-description = "Check that docs/conf.py points the links in README.md and AGENTS.md at the site's pages, turns those to other repository paths into text, and still fails on a missing path, by building a small site"
+description = "Check that docs/conf.py points the links in README.md and AGENTS.md at the site's pages, turns those to other repository paths into text, and still fails on a path that is missing or outside the repository, by building a small site"
 run = "uv run --project docs python docs/conf_test.py"
 
 [tasks.spend]
