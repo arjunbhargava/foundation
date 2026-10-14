@@ -130,8 +130,9 @@ handoff prompt, later Linear.
 | An entirely new feature, or an unrelated initiative | Asks the owner. |
 
 If the next task is obvious and needs no human input, the orchestrator does it.
-Every tier keeps the limits in [Cost](#cost): at most 5 open agent PRs, nothing
-new within $50 of the daily limit, and the [model routing](#which-model).
+Every tier keeps the limits in [Cost](#cost): at most 5 open agent PRs, at most
+10 running workers, nothing new within $50 of the daily limit, and the
+[model routing](#which-model).
 
 ## Cost
 
@@ -153,6 +154,11 @@ events read about 13.3 million cache-read tokens, about 350,000 per event. The r
 - **Keep prompts short** and point to files instead of pasting them.
 - **Limit concurrency.** Keep the open agent PRs within the project's
   limit (5 by default), because the owner's review time is the bottleneck.
+  Also keep at most 10 workers running at once, of any model. The owner
+  decided this on 2026-10-14 and expects to reach it rarely. The owner raises
+  it for very ambitious or complex work, because splitting such work across
+  more workers keeps each context short and lowers cost. Raising it does not
+  raise the open-PR limit (D9 in `template-plan.md`).
 - **Check spend at each pause**, and tell the owner the totals:
   `mise run spend -- --since "$(date -u +%F)"`. The total counts every
   repository's agents. `/teams/spend` must be compared as `spendCents` plus
@@ -228,4 +234,3 @@ for the owner to review. This page holds what doesn't change.
 | # | Question | Proposed default |
 |---|---|---|
 | O1 | Where the owner sees a list of workers that survives deselecting them | Links in each orchestrator message now; a Slack message or a pinned issue per launch once the owner picks one |
-| O2 | A cap on concurrent Opus workers | 2, because each costs $9 to $16 per task and design tasks need the owner's attention |
