@@ -246,10 +246,10 @@ of the merge, which undoes everything the PR changed.
   `mise run spend` data. The repository can't stop a run partway through, so
   the real cap is the spend limit the owner sets in the Cursor dashboard. The
   orchestrator checks the day's spend at each pause with
-  `mise run spend -- --since "$(date -u +%F)"`, whose "All N cloud agent
-  runs" row is the total since 00:00 UTC. That total includes every cloud
-  agent run on the team's account, so while other repositories run agents
-  too, it overstates this repository's spend.
+  `mise run spend -- --since "$(date -u +%F)"`, whose "Repository
+  github.com/<owner>/<repo>" row is this repository's total since 00:00 UTC. The
+  "All N cloud agent runs" row includes every repository on the team's
+  account, and the repository rows need `CURSOR_API_KEY`.
 - **Size: 500 changed lines per PR**, the ceiling `pr-size` enforces in both
   modes. A PR whose description starts with `Oversize:` passes `pr-size`, and
   Bugbot then checks that the `large-changes` skill allows it.
