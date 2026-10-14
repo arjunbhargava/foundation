@@ -19,6 +19,8 @@ __pycache__/
 .import_linter_cache/
 # mutmut's copy of the source with mutants in it, and its results.
 /mutants/
+# The scratch project that mutate.sh runs mutmut in for .github/scripts/*.py.
+/.mutants-scripts/
 
 # TypeScript
 node_modules/

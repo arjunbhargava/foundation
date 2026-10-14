@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Checks which files .github/scripts/mutate.sh mutates and what its report
 # says, without running a mutation tool. It runs the script in a temporary
-# git repository with one package in each language, where fake uv, cargo,
-# and pnpm record the files or module globs they are given and print canned
-# results: one surviving and one caught mutant, or two caught mutants if
-# FAKE_ALL_KILLED is set.
+# git repository with one package in each language and two Python scripts in
+# .github/scripts/, where fake uv, cargo, and pnpm record the files or module
+# globs they are given and print canned results: one surviving and one caught
+# mutant, or two caught mutants if FAKE_ALL_KILLED is set. For the scripts,
+# fake uv reports one mutant, which survives unless FAKE_ALL_KILLED is set.
 #
 # Usage: .github/scripts/mutate_test.sh
 set -euo pipefail
@@ -33,10 +34,16 @@ main() {
   check typescript packages/p/src/a.test.ts $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
   check typescript stryker.config.json $'packages/p/src/a.ts\npackages/p/src/b.ts' "1 of 2 mutants survived"
 
+  check python .github/scripts/script_a.py 'script_a.x*' "Python scripts mutation testing: 1 of 1 mutants survived"
+  check python .github/scripts/script_a_test.py $'script_a.x*\nscript_b.x*' "Python scripts mutation testing: 1 of 1 mutants survived"
+  check python .github/scripts/mutate.sh $'pkg.x*\npkg.a.x*\npkg.b.x*\nscript_a.x*\nscript_b.x*' "Python scripts mutation testing: 1 of 1 mutants survived"
+  check python .github/scripts/shell_script.sh "" "Python scripts mutation testing: no source or test file changed"
+
   FAKE_ALL_KILLED=1 check python src/pkg/a.py 'pkg.a.x*' "0 of 2 mutants survived"
+  FAKE_ALL_KILLED=1 check python .github/scripts/script_a.py 'script_a.x*' "Python scripts mutation testing: 0 of 1 mutants survived"
   FAKE_ALL_KILLED=1 check rust crates/c/src/x.rs crates/c/src/x.rs "0 of 2 mutants survived"
   FAKE_ALL_KILLED=1 check typescript packages/p/src/a.ts packages/p/src/a.ts "0 of 2 mutants survived"
-  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 13 cases."
+  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 18 cases."
 }
 
 # Writes fake uv, cargo, and pnpm, which append the module globs or files
@@ -46,8 +53,19 @@ make_fake_tools() {
   cat > "$work/bin/uv" << 'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "run mutmut run "*) printf '%s\n' "${@:4}" >> "$FAKE_TOOL_ARGUMENTS" ;;
+  "run mutmut run "*)
+    if [[ $PWD == */.mutants-scripts ]]; then
+      # The scratch project has the scripts, without their tests, in src/, the
+      # tests, without the scripts, in tests/, and the root's environment.
+      [[ -f src/script_a.py && -f src/script_b.py && ! -e src/script_a_test.py && -f tests/script_a_test.py && ! -e tests/script_a.py && -f pyproject.toml && -n ${UV_PROJECT:-} ]] || { echo "fake uv: the scratch project is wrong: $(find . -type f | sort | tr '\n' ' ')" >&2; exit 1; }
+    fi
+    printf '%s\n' "${@:4}" >> "$FAKE_TOOL_ARGUMENTS"
+    ;;
   "run mutmut results --all true")
+    if [[ $PWD == */.mutants-scripts ]]; then
+      printf '    script_a.x_f__mutmut_1: %s\n' "$([[ -n ${FAKE_ALL_KILLED:-} ]] && echo killed || echo survived)"
+      exit 0
+    fi
     printf '    pkg.a.x_f__mutmut_1: %s\n    pkg.a.x_f__mutmut_2: killed\n    pkg.b.x_g__mutmut_1: not checked\n' "$([[ -n ${FAKE_ALL_KILLED:-} ]] && echo killed || echo survived)"
     ;;
   "run mutmut show "*) echo "# $4: survived" ;;
@@ -104,7 +122,9 @@ make_repository() {
   cp "$script_dir/mutate.sh" .github/scripts/
   touch src/pkg/__init__.py src/pkg/a.py src/pkg/b.py tests/test_a.py \
     crates/c/src/lib.rs crates/c/src/x.rs crates/c/tests/t.rs \
-    packages/p/src/a.ts packages/p/src/b.ts packages/p/src/a.test.ts stryker.config.json
+    packages/p/src/a.ts packages/p/src/b.ts packages/p/src/a.test.ts stryker.config.json \
+    .github/scripts/script_a.py .github/scripts/script_b.py .github/scripts/script_a_test.py \
+    .github/scripts/shell_script.sh
   git init --quiet
   git add .
   git -c user.name=test -c user.email=test@example.com commit --quiet --message base
