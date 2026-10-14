@@ -247,3 +247,21 @@ def test_report_fails_with_the_api_error_text_when_the_agent_listing_rejects_the
         "error: https://api.cursor.com/v0/agents returned HTTP 401: "
         '{"code":"error","message":"Invalid API key"}\n'
     )
+
+
+def test_listing_reads_at_most_the_page_limit_when_a_run_is_not_in_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    urls: list[str] = []
+
+    def endless_listing(request: urllib.request.Request, timeout: float) -> io.BytesIO:
+        urls.append(request.full_url)
+        return io.BytesIO(b'{"agents": [{"id": "bc-other"}], "nextCursor": "more"}')
+
+    monkeypatch.setattr(agent_spend, "MAX_LISTING_PAGES", 3)
+    monkeypatch.setattr(urllib.request, "urlopen", endless_listing)
+
+    labels = agent_spend.fetch_run_labels("agents-key", {"bc-run-missing"})
+
+    assert labels == {"bc-run-missing": agent_spend.UNKNOWN_RUN_LABEL}
+    assert len(urls) == 3

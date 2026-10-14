@@ -40,6 +40,9 @@ USAGE_EVENTS_URL = "https://api.cursor.com/teams/filtered-usage-events"
 AGENTS_URL = "https://api.cursor.com/v0/agents"
 EVENTS_PER_PAGE = 1000  # The endpoint's maximum.
 AGENTS_PER_PAGE = 100  # The endpoint's maximum.
+# The Cloud Agents API allows 20 requests a minute. Ten pages, the 1,000 newest
+# agents, stay under that; a run older than that is labelled unknown.
+MAX_LISTING_PAGES = 10
 UNKNOWN_LABEL = "unknown"
 REQUEST_TIMEOUT_S = 60
 DEFAULT_WINDOW = timedelta(days=7)
@@ -209,8 +212,8 @@ def fetch_run_labels(api_key: str, run_ids: set[str]) -> dict[str, RunLabel]:
     """Label cloud agent runs with their task, repository, and branch.
 
     Reads the Cloud Agents API's agent listing, newest first, and stops at the
-    page where the last of ``run_ids`` is found, so a window of recent runs
-    does not read every agent the team ever started.
+    page where the last of ``run_ids`` is found, or after ``MAX_LISTING_PAGES``
+    pages, so a missing run does not read every agent the team ever started.
 
     Args:
         api_key: a Cursor user or service account API key; a team Admin API key
@@ -219,7 +222,7 @@ def fetch_run_labels(api_key: str, run_ids: set[str]) -> dict[str, RunLabel]:
 
     Returns:
         A label for each ID in ``run_ids``; ``UNKNOWN_RUN_LABEL`` for an ID
-        the listing lacks.
+        not in the newest ``MAX_LISTING_PAGES`` pages of the listing.
 
     Raises:
         urllib.error.HTTPError: the Cloud Agents API rejected a request.
@@ -228,7 +231,9 @@ def fetch_run_labels(api_key: str, run_ids: set[str]) -> dict[str, RunLabel]:
     credentials = base64.b64encode(f"{api_key}:".encode()).decode()
     labels: dict[str, RunLabel] = {}
     cursor: str | None = None
-    while len(labels) < len(run_ids):
+    for _ in range(MAX_LISTING_PAGES):
+        if len(labels) == len(run_ids):
+            break
         query = {"limit": AGENTS_PER_PAGE, **({"cursor": cursor} if cursor else {})}
         request = urllib.request.Request(
             f"{AGENTS_URL}?{urllib.parse.urlencode(query)}",
