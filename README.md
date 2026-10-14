@@ -14,9 +14,10 @@ Give a Cursor agent this prompt, replacing `my-project` and `<languages>`:
 
 > Create a new project named `my-project` from the Copier template
 > `gh:arjunbhargava/foundation`, with these languages: `<languages>`. Follow
-> "Get started" in the template's README: copy the template, run `git init`,
-> then `bash .cursor/install.sh` and `mise run check`. Report anything that
-> fails.
+> "Get started with an agent" in
+> https://github.com/arjunbhargava/foundation/blob/main/README.md: copy the
+> template, run `git init`, then `bash .cursor/install.sh` and
+> `mise run check`. Report anything that fails.
 
 The agent copies the template with this command, which answers every
 question, so Copier never prompts. Each language is `true` or `false`, and at
