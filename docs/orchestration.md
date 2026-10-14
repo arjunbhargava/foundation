@@ -20,6 +20,24 @@ list, and [auto mode](auto-mode.md) decides how PRs merge.
 - **bcId**: a cloud agent's id, such as `bc-489632bd-...`. Its page is
   `https://cursor.com/agents/<bcId>`.
 
+## Why this design
+
+- Each worker has its own context and PR. In [Cursor's design][cursor],
+  workers "don't coordinate with other workers or worry about the big picture".
+- The orchestrator writes no feature code, so its context stays small (see
+  [Cost](#cost)). That is this page's choice, not a finding of the sources.
+- The orchestrator checks each PR against its "Done when" before the owner
+  sees it. [arXiv 2512.08296][paper] reports error amplification of 4.4 under
+  centralized coordination and 17.2 for independent agents.
+- The orchestrator launches independent tasks in parallel and sequences
+  dependent ones. The paper measured +80.8% on decomposable financial
+  reasoning and -39% to -70% on sequential planning. [Anthropic][anthropic]
+  wrote that "most coding tasks involve fewer truly parallelizable tasks".
+
+[cursor]: https://cursor.com/blog/scaling-agents
+[paper]: https://arxiv.org/abs/2512.08296
+[anthropic]: https://www.anthropic.com/engineering/multi-agent-research-system
+
 ## Launch workers through the API
 
 Launch each worker as a top-level cloud agent, with the Cursor API. Do not use
