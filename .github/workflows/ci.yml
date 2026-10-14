@@ -150,6 +150,7 @@ jobs:
       - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run setup
       - run: mise run docs
+      - run: mise run test:docs
 
   python:
     needs: changes

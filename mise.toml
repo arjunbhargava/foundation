@@ -104,6 +104,10 @@ run = ".github/scripts/block_unlisted_tools_test.sh"
 description = "Build the documentation site"
 run = "docs/build.sh"
 
+[tasks."test:docs"]
+description = "Check that docs/conf.py points the links in README.md and AGENTS.md at the site's pages, turns those to other repository paths into text, and still fails on a missing path, by building a small site"
+run = "uv run --project docs python docs/conf_test.py"
+
 [tasks.spend]
 description = "Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs CURSOR_ADMIN_API_KEY; arguments after -- go to the script, such as --since 2026-09-26"
 run = "uv run python .github/scripts/agent_spend.py"
