@@ -13,7 +13,8 @@ failures=0
 
 # A workflow neither tool reports.
 clean_steps='      - run: echo "hello"'
-# shellcheck reports SC2086 for the unquoted variable, which zizmor doesn't.
+# The unquoted variable draws SC2086 from shellcheck, which zizmor does not report.
+# shellcheck disable=SC2016 # The variable must reach the workflow unexpanded.
 actionlint_only_steps='      - run: echo $HOME'
 # zizmor reports artipacked for the credentials the checkout persists, which
 # actionlint doesn't.
@@ -23,6 +24,8 @@ main() {
   expect_result passes_a_clean_workflow "$clean_steps" 0 ""
   expect_result fails_on_a_finding_only_actionlint_reports "$actionlint_only_steps" 1 "SC2086"
   expect_result fails_on_a_finding_only_zizmor_reports "$zizmor_only_steps" 1 "artipacked"
+  expect_result checks_a_yaml_extension_file "$actionlint_only_steps" 1 "SC2086" yaml
+  expect_result fails_when_the_directory_has_no_workflow "$clean_steps" 1 "no .yml or .yaml workflow" none
   expect_result still_runs_zizmor_after_actionlint_fails "$actionlint_only_steps" 1 "No findings to report"
 
   if ((failures > 0)); then
@@ -32,13 +35,16 @@ main() {
 }
 
 # expect_result <name> <steps of the workflow's job> <expected exit status>
-# <text the output must contain, or "" for none>
+# <text the output must contain, or "" for none> [yaml|none: name the file
+# test.yaml, or write no file]
 expect_result() {
-  local name=$1 steps=$2 expected_status=$3 expected_text=$4
+  local name=$1 steps=$2 expected_status=$3 expected_text=$4 variant=${5:-yml}
   local dir=$work/$name
   mkdir "$dir"
-  printf 'name: Test\non: pull_request\npermissions: {}\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n%s\n' \
-    "$steps" > "$dir/test.yml"
+  if [[ $variant != none ]]; then
+    printf 'name: Test\non: pull_request\npermissions: {}\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n%s\n' \
+      "$steps" > "$dir/test.$variant"
+  fi
 
   local status=0
   "$script" "$dir" > "$dir.out" 2>&1 || status=$?

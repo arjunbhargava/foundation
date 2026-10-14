@@ -12,11 +12,19 @@
 # The optional argument is the directory to check, default .github/workflows,
 # which the test of this script changes.
 set -uo pipefail
+shopt -s nullglob
 
 workflows_dir=${1:-.github/workflows}
 status=0
 
-actionlint "$workflows_dir"/*.yml || status=1
-zizmor --offline --no-progress "$workflows_dir"/*.yml || status=1
+# GitHub runs both .yml and .yaml files.
+workflow_files=("$workflows_dir"/*.yml "$workflows_dir"/*.yaml)
+if ((${#workflow_files[@]} == 0)); then
+  echo "error: no .yml or .yaml workflow in $workflows_dir; pass the directory that holds the workflows" >&2
+  exit 1
+fi
+
+actionlint "${workflow_files[@]}" || status=1
+zizmor --offline --no-progress "${workflow_files[@]}" || status=1
 
 exit "$status"
