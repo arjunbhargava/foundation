@@ -149,7 +149,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; and that a project with one language has only that language's files, names, and Dependabot entries"
+description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; and that template:check-update retries copier update once, and only on copier's temporary-directory error"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -287,5 +287,64 @@ for language in $languages; do
     exit 1
   fi
 done
+echo "$name: passed."
+
+# template:check-update's update function, sourced here with a shell function
+# in place of copier. The fake fails the calls that copier_errors names, with
+# the error each holds ("" succeeds), and leaves an untracked file as a
+# failed real update leaves the project changed.
+name=update_retries_once_and_only_on_copiers_temporary_directory_error
+sed -n '/^update() {$/,/^}$/p' .config/mise/conf.d/template.toml > "$work/update_function.sh"
+if [[ ! -s $work/update_function.sh ]]; then
+  echo "FAIL: $name: found no update function in .config/mise/conf.d/template.toml; it must start with \"update() {\" and end with \"}\" at the start of a line." >&2
+  exit 1
+fi
+source "$work/update_function.sh"
+
+update_project=$work/update_project
+git init --quiet "$update_project"
+git -C "$update_project" -c user.name=template-test -c user.email=template-test@localhost \
+  commit --quiet --allow-empty --message "Create the project"
+
+copier_errors=()
+copier_calls=0
+retried_a_changed_project=false
+copier() {
+  local error=${copier_errors[copier_calls]:-}
+  copier_calls=$((copier_calls + 1))
+  if ((copier_calls > 1)) && [[ -n $(git -C "$update_project" status --porcelain) ]]; then
+    retried_a_changed_project=true
+  fi
+  touch "$update_project/changed_by_copier"
+  if [[ -n $error ]]; then
+    echo "$error" >&2
+    return 1
+  fi
+}
+
+# expect_update <case> <expected status> <expected copier calls> <error of each call>...
+expect_update() {
+  local case=$1 expected_status=$2 expected_calls=$3 status=0
+  shift 3
+  copier_errors=("$@")
+  copier_calls=0
+  retried_a_changed_project=false
+  git -C "$update_project" clean --quiet --force -d -x
+  update "$update_project" --vcs-ref=unused 2> /dev/null || status=$?
+  if ((status != expected_status || copier_calls != expected_calls)); then
+    echo "FAIL: $name ($case): update returned $status after $copier_calls copier calls; expected $expected_status after $expected_calls." >&2
+    exit 1
+  fi
+  if [[ $retried_a_changed_project == true ]]; then
+    echo "FAIL: $name ($case): update retried without restoring the project, which the failed attempt had changed." >&2
+    exit 1
+  fi
+}
+
+temporary_directory_error="OSError: [Errno 39] Directory not empty: '.git'"
+expect_update the_error_once_then_success 0 2 "$temporary_directory_error" ""
+expect_update another_error 1 1 "OSError: [Errno 13] Permission denied: '.git'"
+expect_update the_error_twice 1 2 "$temporary_directory_error" "$temporary_directory_error"
+unset -f copier
 echo "$name: passed."
 '''
