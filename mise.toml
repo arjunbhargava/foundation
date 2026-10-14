@@ -64,6 +64,10 @@ run = ".github/rulesets/check.sh"
 description = "Check the GitHub Actions workflows in .github/workflows/ with actionlint, and with zizmor for security problems"
 run = ".github/scripts/lint_workflows.sh"
 
+[tasks."lint:language-listings"]
+description = "Check that each place that must list every language, such as the CI jobs and the Copier questions, lists each language in .config/mise/conf.d/, and name each place that lacks one"
+run = ".github/scripts/language_listings.sh"
+
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -79,6 +83,10 @@ run = ".github/scripts/mutate_test.sh"
 [tasks."test:lint-workflows-script"]
 description = "Check that .github/scripts/lint_workflows.sh fails on a finding from either actionlint or zizmor, and runs both"
 run = ".github/scripts/lint_workflows_test.sh"
+
+[tasks."test:language-listings-script"]
+description = "Check that .github/scripts/language_listings.sh passes for the repository and names each place that lacks a language, on copies of the files it reads"
+run = ".github/scripts/language_listings_test.sh"
 
 [tasks."test:rulesets"]
 description = "Check the changes .github/rulesets/apply.sh makes with and without --auto, and that check.sh catches broken ruleset files, with a fake gh"
