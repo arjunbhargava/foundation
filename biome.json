@@ -1,6 +1,11 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"files": {
-		"includes": ["packages/**", "*.json", ".dependency-cruiser.cjs"]
+		"includes": [
+			"packages/**",
+			"*.json",
+			".dependency-cruiser.cjs",
+			"!!**/pytest-cache-files-*"
+		]
 	}
 }
