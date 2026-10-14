@@ -97,7 +97,7 @@ jobs:
             echo "rulesets=$(changed .github/rulesets/)"
             echo "workflows=$(changed .github/workflows/ .github/scripts/lint_workflows.sh .github/scripts/lint_workflows_test.sh)"
             # The files the check reads, which are those that list the languages.
-            echo "language-listings=$(changed .github/scripts/language_listings.sh .github/scripts/language_listings_test.sh .config/mise/conf.d/ .github/workflows/ docs/build.sh docs/api/ AGENTS.md copier.yml)"
+            echo "language-listings=$(changed .github/scripts/language_listings.sh .github/scripts/language_listings_test.sh .config/mise/conf.d/ .github/workflows/ docs/build.sh docs/api/ AGENTS.md README.md copier.yml)"
             # The script runs owned_paths.sh, which reads .github/CODEOWNERS.
             echo "auto-merge-script=$(changed .github/scripts/auto_merge.sh .github/scripts/auto_merge_test.sh .github/scripts/owned_paths.sh .github/CODEOWNERS)"
             # The script reads the review rulesets' names from their files.

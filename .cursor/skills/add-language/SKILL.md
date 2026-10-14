@@ -146,8 +146,9 @@ instead. This is where each version lives:
       line in `codeql.yml`; its block in `docs/build.sh`; its page in
       `docs/api/`; its rows in the Commands table in `AGENTS.md`; and, in
       the template repository, its places in `copier.yml`, `template.toml`,
-      and `template.yml`. It can't check a place that names the language by
-      its display name, such as the two above, so check those by hand.
+      `template.yml`, and `README.md`'s lines about Copier's questions. It
+      can't check a place that names the language by its display name, such
+      as the two above, so check those by hand.
 
 ## In the template repository
 
