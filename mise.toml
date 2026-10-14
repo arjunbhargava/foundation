@@ -105,7 +105,7 @@ description = "Build the documentation site"
 run = "docs/build.sh"
 
 [tasks.spend]
-description = "Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs CURSOR_ADMIN_API_KEY; arguments after -- go to the script, such as --since 2026-09-26"
+description = "Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API, labelled with each run's task, repository, and branch; needs CURSOR_ADMIN_API_KEY, and CURSOR_API_KEY for the labels; arguments after -- go to the script, such as --since 2026-09-26"
 run = "uv run python .github/scripts/agent_spend.py"
 
 [tasks.check]
