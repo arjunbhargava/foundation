@@ -4,8 +4,11 @@ A starter repository for engineers who work with Cursor agents. Agents write
 most of the code and people review every change, so the template makes each
 change cheap and reliable to review. It provides instructions that agents
 follow, pinned tools and shared commands, example code and checks for
-Python, Rust, TypeScript, and C and C++, CI, and support for agent-launched compute jobs. It is
-under construction; [the plan](docs/template-plan.md) lists what remains.
+Python, Rust, TypeScript, and C and C++, CI, and support for agent-launched compute jobs.
+Most of it is built; [the plan](docs/template-plan.md) lists what remains:
+T16 (compute job support), T17 (Linear setup), T19 (measuring the
+instructions), T22 (collecting follow-ups, which waits for T17), and T23's
+PR 4 (the branch-update workflow).
 
 ## Get started with an agent
 
