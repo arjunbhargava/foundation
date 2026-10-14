@@ -67,7 +67,7 @@ a person has recorded a different choice here.
 | # | Decision | Recommended default | Why |
 |---|---|---|---|
 | D1 | How projects are created from the template and receive later updates | Copier | A GitHub template copies files once; later changes to rules and skills never reach existing projects. Copier can pull them in later, and can include only the languages a project needs. Cost: one more tool, and some combinations of languages go untested. |
-| D2 | Tool version manager and command runner | `mise` | One file (`mise.toml`) pins the versions of Python, Node, `uv`, `d2`, and so on, and defines the shared commands. Works the same locally, in agents, and in CI. |
+| D2 | Tool version manager and command runner | `mise` | `mise.toml` pins the tools that more than one language, or the docs build, runs (such as `uv`) and defines the shared commands; each language's own tools and commands are in `.config/mise/conf.d/<language>.toml`. Works the same locally, in agents, and in CI. |
 | D3 | Python dependency manager | `uv`; switch to `pixi` for projects that need compiled scientific libraries | `uv` is fast and handles normal Python packages. `pixi` uses conda-forge, which also packages MPI, HDF5, CUDA libraries, and compilers. |
 | D4 | Where compute jobs run | SkyPilot | One job description runs on the major clouds, GPU providers, Kubernetes, or a Slurm cluster. Switch to Slurm with Apptainer if the team has a university or lab cluster, since those clusters usually don't allow Docker. |
 | D5 | Licence | **Decided:** Apache-2.0, copyright the repository owner | Permissive, requires attribution through `NOTICE`, and grants an explicit patent licence. Projects may pick their own. |
@@ -491,8 +491,9 @@ projects that use the template.
 
 **In progress** (owner, 2026-10-10). PR 1 (#38) added the review ruleset, the
 CODEOWNERS entries, and `docs/auto-mode.md`, PR 2 (#43) the auto-merge
-workflow, and PR 3 (#50) the approval workflow. After PR #54, a fix added
-the owned-paths check. PR 4, the branch-update workflow, is left.
+workflow, and PR 3 (#50) the approval workflow. After PR #54, a fix (#55)
+added the owned-paths check, which replaces code-owner review as the owner's
+gate in auto mode. PR 4, the branch-update workflow, is left.
 
 Some tasks need several rounds of exploration, and waiting for a person's
 review on each round stalls them. In auto mode, a repository's agent PRs merge
@@ -504,10 +505,12 @@ far:
   check (so owned paths still need the owner), and
   `required_review_thread_resolution` on, so Bugbot's findings
   block merging until their threads are resolved. `main: checks` is
-  unchanged. `mise.toml`, `AGENTS.md`, and the files that configure checks
-  become owned paths, so an agent PR can't change what CI runs, the agent
-  instructions, or a check without the owner. Code-owner review alone let
-  agent PR #54, which changed only `AGENTS.md`, merge (2026-10-12).
+  unchanged. `mise.toml`, `.config/mise/`, `AGENTS.md`, and the files that
+  configure checks become owned paths, so an agent PR can't change what CI
+  runs, the agent instructions, or a check without the owner. The ruleset
+  still sets code-owner review, but that alone let agent PR #54, which
+  changed only `AGENTS.md`, merge (2026-10-12); the `owned-paths` check is
+  what stops owned paths in auto mode.
 - GitHub's native auto-merge, not a custom merge workflow: it already waits
   for every ruleset, and Actions has no trigger for a resolved review thread.
   A workflow turns on auto-merge for an `agent` PR once the `Cursor Bugbot`
