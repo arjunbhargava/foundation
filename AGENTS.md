@@ -32,6 +32,7 @@ the same thing:
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 | `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:<language>` runs one language, except C and C++, which have no mutation tool yet. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |
+| `mise run test:docs` | Check that `docs/conf.py` points the links in `README.md` and `AGENTS.md` at the site's pages, turns those to other repository paths into text, and still fails on a path that is missing or outside the repository, by building a small site. |
 | `mise run spend` | Report tokens and cost per Cursor cloud agent run over the last 7 days, from the Cursor Admin API; needs `CURSOR_ADMIN_API_KEY`. Arguments after `--` go to the script: `mise run spend -- --since 2026-09-26`. |
 | `mise run check` | Run everything CI runs. |
 
