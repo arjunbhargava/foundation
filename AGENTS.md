@@ -83,7 +83,7 @@ language the project has: Python, Rust, TypeScript, and C and C++.
   cost, and hands off to a fresh orchestrator. Before you launch or message
   any other agent, read it and the `orchestrate` skill.
 
-Each language task adds its directory and lists it here.
+Each language task adds its directory to this list.
 
 ## Requirements
 
