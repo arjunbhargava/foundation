@@ -1,9 +1,11 @@
 # Plan: a team template repository
 
-Status: plan, not started. This document describes a starter repository for the
-team's projects and the order to build it in. It is written for the people and
-agents building the template. Copy it into the new repository as its first
-commit.
+Status: most of this plan is built; what remains is T16 (compute job
+support), T17 (Linear setup), T19 (measuring the instructions), T22 (collecting
+follow-ups, which waits for T17), and T23's PR 4 (the branch-update workflow).
+This document describes a starter repository for the team's projects and the
+order to build it in. It is written for the people and agents building the
+template. Copy it into the new repository as its first commit.
 
 ## Goal
 
