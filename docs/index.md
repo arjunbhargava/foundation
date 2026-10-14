@@ -12,6 +12,7 @@ reference.
 agent-rules-and-skills
 architecture
 auto-mode
+install-script
 linear
 orchestration
 template-plan
