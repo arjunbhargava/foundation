@@ -92,6 +92,33 @@ create() {
   git -C "$project" commit --quiet --message "Create the project"
 }
 
+# update <project> <copier update options>: run copier update on a committed
+# project. Once in about 160 updates in CI (1 of 33 Template runs, run
+# 38577039801), copier finishes its work and then exits with
+# "OSError: [Errno 39] Directory not empty: '.git'", because Python can't
+# delete the temporary repository it made. The process that writes into that
+# directory during the deletion is inside copier or git, not in this
+# repository, so this retries once, and only on that error: any other
+# failure, and a second occurrence of this one, fails the task. The first
+# attempt has already changed the project, so the retry first restores the
+# committed state.
+update() {
+  local project=$1 stderr_file=$work/update_stderr
+  shift
+  if copier update --quiet --defaults "$@" "$project" 2> "$stderr_file"; then
+    cat "$stderr_file" >&2
+    return 0
+  fi
+  cat "$stderr_file" >&2
+  if ! grep -qF "OSError: [Errno 39] Directory not empty: '.git'" "$stderr_file"; then
+    return 1
+  fi
+  echo "copier update failed to delete its temporary directory (see the error above); retrying once." >&2
+  git -C "$project" reset --quiet --hard
+  git -C "$project" clean --quiet --force -d -x
+  copier update --quiet --defaults "$@" "$project"
+}
+
 failures=0
 # expect_equal <test name> <updated project> <new project>
 expect_equal() {
@@ -108,14 +135,14 @@ name=a_project_created_from_main_and_updated_equals_one_created_from_the_working
 for languages in "python rust typescript cpp" python rust typescript cpp; do
   data=$(printf -- '--data %s=true ' $languages)
   create "$work/updated" "$main" $data
-  copier update --quiet --defaults --vcs-ref="$working_tree" "$work/updated"
+  update "$work/updated" --vcs-ref="$working_tree"
   create "$work/new" "$working_tree" $data
   expect_equal "$name ($languages)" "$work/updated" "$work/new"
 done
 
 name=adding_rust_to_a_python_project_with_copier_update_equals_a_new_python_and_rust_project
 create "$work/updated" "$working_tree" --data python=true
-copier update --quiet --defaults --vcs-ref="$working_tree" --data rust=true "$work/updated"
+update "$work/updated" --vcs-ref="$working_tree" --data rust=true
 create "$work/new" "$working_tree" --data python=true --data rust=true
 expect_equal "$name" "$work/updated" "$work/new"
 exit $((failures > 0))
