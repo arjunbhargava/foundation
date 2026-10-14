@@ -92,6 +92,33 @@ create() {
   git -C "$project" commit --quiet --message "Create the project"
 }
 
+# update <project> <copier update options>: run copier update on a committed
+# project. Once in about 160 updates in CI (1 of 33 Template runs, run
+# 38577039801), copier finishes its work and then exits with
+# "OSError: [Errno 39] Directory not empty: '.git'" (macOS numbers it 66),
+# because Python can't delete the temporary repository it made. The process that writes into that
+# directory during the deletion is inside copier or git, not in this
+# repository, so this retries once, and only on that error: any other
+# failure, and a second occurrence of this one, fails the task. The first
+# attempt has already changed the project, so the retry first restores the
+# committed state.
+update() {
+  local project=$1 stderr_file=$work/update_stderr
+  shift
+  if copier update --quiet --defaults "$@" "$project" 2> "$stderr_file"; then
+    cat "$stderr_file" >&2
+    return 0
+  fi
+  cat "$stderr_file" >&2
+  if ! grep -qE "OSError: .*Directory not empty: '\.git'" "$stderr_file"; then
+    return 1
+  fi
+  echo "copier update failed to delete its temporary directory (see the error above); retrying once." >&2
+  git -C "$project" reset --quiet --hard
+  git -C "$project" clean --quiet --force -d -x
+  copier update --quiet --defaults "$@" "$project"
+}
+
 failures=0
 # expect_equal <test name> <updated project> <new project>
 expect_equal() {
@@ -108,21 +135,21 @@ name=a_project_created_from_main_and_updated_equals_one_created_from_the_working
 for languages in "python rust typescript cpp" python rust typescript cpp; do
   data=$(printf -- '--data %s=true ' $languages)
   create "$work/updated" "$main" $data
-  copier update --quiet --defaults --vcs-ref="$working_tree" "$work/updated"
+  update "$work/updated" --vcs-ref="$working_tree"
   create "$work/new" "$working_tree" $data
   expect_equal "$name ($languages)" "$work/updated" "$work/new"
 done
 
 name=adding_rust_to_a_python_project_with_copier_update_equals_a_new_python_and_rust_project
 create "$work/updated" "$working_tree" --data python=true
-copier update --quiet --defaults --vcs-ref="$working_tree" --data rust=true "$work/updated"
+update "$work/updated" --vcs-ref="$working_tree" --data rust=true
 create "$work/new" "$working_tree" --data python=true --data rust=true
 expect_equal "$name" "$work/updated" "$work/new"
 exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; and that a project with one language has only that language's files, names, and Dependabot entries"
+description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; and that template:check-update retries copier update once, and only on copier's temporary-directory error"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -260,5 +287,70 @@ for language in $languages; do
     exit 1
   fi
 done
+echo "$name: passed."
+
+# template:check-update's update function, sourced here with a shell function
+# in place of copier. The fake fails the calls that copier_errors names, with
+# the error each holds ("" succeeds), and changes a tracked file and adds an
+# untracked one, as a real update does before it fails.
+name=update_retries_once_and_only_on_copiers_temporary_directory_error
+sed -n '/^update() {$/,/^}$/p' .config/mise/conf.d/template.toml > "$work/update_function.sh"
+if [[ ! -s $work/update_function.sh ]]; then
+  echo "FAIL: $name: found no update function in .config/mise/conf.d/template.toml; it must start with \"update() {\" and end with \"}\" at the start of a line." >&2
+  exit 1
+fi
+source "$work/update_function.sh"
+
+update_project=$work/update_project
+git init --quiet "$update_project"
+echo "from the template" > "$update_project/tracked_file"
+git -C "$update_project" add tracked_file
+git -C "$update_project" -c user.name=template-test -c user.email=template-test@localhost \
+  commit --quiet --allow-empty --message "Create the project"
+
+copier_errors=()
+copier_calls=0
+retried_a_changed_project=false
+copier() {
+  local error=${copier_errors[copier_calls]:-}
+  copier_calls=$((copier_calls + 1))
+  if ((copier_calls > 1)) && [[ -n $(git -C "$update_project" status --porcelain) ]]; then
+    retried_a_changed_project=true
+  fi
+  echo "changed by copier" >> "$update_project/tracked_file"
+  touch "$update_project/untracked_file"
+  if [[ -n $error ]]; then
+    echo "$error" >&2
+    return 1
+  fi
+}
+
+# expect_update <case> <expected status> <expected copier calls> <error of each call>...
+expect_update() {
+  local case=$1 expected_status=$2 expected_calls=$3 status=0
+  shift 3
+  copier_errors=("$@")
+  copier_calls=0
+  retried_a_changed_project=false
+  git -C "$update_project" reset --quiet --hard
+  git -C "$update_project" clean --quiet --force -d -x
+  update "$update_project" --vcs-ref=unused 2> /dev/null || status=$?
+  if ((status != expected_status || copier_calls != expected_calls)); then
+    echo "FAIL: $name ($case): update returned $status after $copier_calls copier calls; expected $expected_status after $expected_calls." >&2
+    exit 1
+  fi
+  if [[ $retried_a_changed_project == true ]]; then
+    echo "FAIL: $name ($case): update retried without restoring the project, which the failed attempt had changed." >&2
+    exit 1
+  fi
+}
+
+temporary_directory_error="OSError: [Errno 39] Directory not empty: '.git'"
+expect_update the_error_once_then_success 0 2 "$temporary_directory_error" ""
+expect_update the_macos_error_once_then_success 0 2 "OSError: [Errno 66] Directory not empty: '.git'" ""
+expect_update another_error 1 1 "OSError: [Errno 13] Permission denied: '.git'"
+expect_update the_error_for_another_directory 1 1 "OSError: [Errno 39] Directory not empty: 'src'"
+expect_update the_error_twice 1 2 "$temporary_directory_error" "$temporary_directory_error"
+unset -f copier
 echo "$name: passed."
 '''

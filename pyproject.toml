@@ -32,6 +32,7 @@ ignore = ["D107"]
 # Tests aren't API reference; their names state the behaviour they check.
 "tests/**" = ["D"]
 ".github/scripts/*_test.py" = ["D"]
+"docs/*_test.py" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
