@@ -168,8 +168,11 @@ events read about 13.3 million cache-read tokens, about 350,000 per event. The r
   more workers keeps each context short and lowers cost. Raising it does not
   raise the open-PR limit (D9 in `template-plan.md`).
 - **Check spend at each pause**, and tell the owner the totals:
-  `mise run spend -- --since "$(date -u +%F)"`. The total counts every
-  repository's agents. `/teams/spend` must be compared as `spendCents` plus
+  `mise run spend -- --since "$(date -u +%F)"`. The "All N cloud agent
+  runs" total counts every repository's agents; this
+  repository's spend is at most its "Repository" row plus the "Repository
+  unknown" row, which holds runs the agent listing lacks (both need
+  `CURSOR_API_KEY`). `/teams/spend` must be compared as `spendCents` plus
   `includedSpendCents`.
 - **The real cap is in the Cursor dashboard.** The repository can't stop a run
   partway through. The starting limit is $500 per day across cloud agent
