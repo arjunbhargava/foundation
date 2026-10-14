@@ -9,11 +9,13 @@ reference.
 :caption: Explanation
 :maxdepth: 1
 
+agent-rules-and-skills
 architecture
 auto-mode
 linear
 orchestration
 template-plan
+template-updates
 ```
 
 ```{toctree}
