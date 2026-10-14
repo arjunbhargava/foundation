@@ -1,5 +1,5 @@
-# Paths that need a person's review. Enforced when the branch ruleset requires
-# code owner review. Add each public interface file here when it is created.
+# Paths that need the owner's review, which the owned-paths check enforces in
+# auto mode. Add each public interface file here when it is created.
 /.cursor/                @arjunbhargava
 /.github/                @arjunbhargava
 /mise.toml               @arjunbhargava

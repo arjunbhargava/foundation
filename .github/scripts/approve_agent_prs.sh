@@ -68,7 +68,7 @@ approve_agent_pr() {
   fi
 
   if ! gh api --method POST "repos/$GITHUB_REPOSITORY/pulls/$number/reviews" --silent -f event=APPROVE \
-    -f body="Auto mode is on and this is an agent PR, so $approver gives the approval the auto-mode ruleset requires (docs/auto-mode.md). It isn't a code owner: a change to a path in .github/CODEOWNERS still needs the code owner's approval."; then
+    -f body="Auto mode is on and this is an agent PR, so $approver gives the approval the auto-mode ruleset requires (docs/auto-mode.md). It doesn't let a change to a path in .github/CODEOWNERS merge: the owned-paths check fails for one, so only the owner merges it."; then
     echo "error: GitHub refused $approver's approval of PR #$number. If the error above says GitHub Actions is not permitted to approve pull requests, turn on \"Allow GitHub Actions to create and approve pull requests\" in Settings > Actions > General." >&2
     return 1
   fi

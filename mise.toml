@@ -54,7 +54,7 @@ description = "Check formatting, lint, and types without changing files"
 depends = ["lint:*"]
 
 [tasks."lint:rulesets"]
-description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name and thread resolution"
+description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths check"
 run = ".github/rulesets/check.sh"
 
 [tasks.test]
@@ -80,6 +80,10 @@ run = ".github/scripts/auto_merge_test.sh"
 [tasks."test:approve-agent-prs-script"]
 description = "Check which PRs .github/scripts/approve_agent_prs.sh approves, in auto mode and review mode, with a fake gh"
 run = ".github/scripts/approve_agent_prs_test.sh"
+
+[tasks."test:owned-paths-script"]
+description = "Check which changed paths .github/scripts/owned_paths.sh finds in .github/CODEOWNERS, and when it can't tell, with a fake gh"
+run = ".github/scripts/owned_paths_test.sh"
 
 [tasks."test:block-unlisted-tools-script"]
 description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
