@@ -6,6 +6,10 @@
 # Docs build output
 docs/_build/
 docs/_generated/
+# sphinx-autoapi's pages, which it writes during the build and deletes after.
+# Without this, template:check, running alongside docs in `mise run check`,
+# can copy them into one side of its comparison but not the other.
+docs/api/python/
 
 # Python
 __pycache__/
