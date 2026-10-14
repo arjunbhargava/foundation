@@ -90,14 +90,22 @@ work; record each addition in this table.
 
 | Task | Model id | Parameters |
 |---|---|---|
-| Design work: plans, rulesets, CI security, changes spanning several areas | `claude-opus-5-5` | `effort=xhigh`, `fast=false` |
+| Design work: plans, rulesets, CI security, changes spanning several areas | `claude-opus-5-5` | `effort=medium`, `fast=false` |
+| Extremely challenging or confusing feature | `claude-opus-5-5` | `effort=xhigh`, `fast=false` |
 | Routine work with checkable acceptance criteria | `claude-sonnet-5-5` | `reasoning_effort=high` |
 | Orchestrator | `claude-sonnet-5-5` | `reasoning_effort=high` |
 
+The Opus API parameters are
+`"model":{"id":"claude-opus-5-5","params":[{"id":"effort","value":"medium"},{"id":"fast","value":"false"}]}`.
+`effort=xhigh` is reserved for an extremely challenging or confusing feature.
+The orchestrator says why in its launch message to the owner.
+
 A Sonnet worker that fails twice on the same CI failure or Bugbot finding is
-relaunched on Opus from its branch. Do not start on Opus "to be safe". In one
-project's `mise run spend` report for the 7 days to 2026-10-12, each Opus
-worker cost $9 to $16, and a Sonnet orchestrator cost $11.54 over 38 events.
+relaunched on Opus at `effort=medium` from its branch, unless the failure
+itself looks confusing, in which case it is relaunched at `effort=xhigh`. Do
+not start on Opus "to be safe". In one project's `mise run spend` report for
+the 7 days to 2026-10-12, each Opus worker, run at `effort=xhigh`, cost $9 to
+$16, and a Sonnet orchestrator cost $11.54 over 38 events.
 
 ### What a worker prompt contains
 
@@ -225,7 +233,7 @@ for the owner to review. This page holds what doesn't change.
 - **A merge by auto-merge starts no workflows on `main`**, so CodeQL on `main`
   goes stale until a GitHub App token exists for the repository.
 - **A Sonnet worker stuck on one finding** costs more each retry; relaunch on
-  Opus after the second failure.
+  Opus at `effort=medium` after the second failure.
 - **A stale branch.** GitHub has shown a PR as "clean" while behind `main`.
   The owner's checklist includes confirming the Merge button on such a
   branch.
