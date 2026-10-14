@@ -15,6 +15,7 @@ on:
       - tests/**
       - crates/**
       - packages/**
+      - .github/scripts/*.py
       - .github/scripts/mutate.sh
       - .github/scripts/mutate_test.sh
       - .github/workflows/mutation.yml
