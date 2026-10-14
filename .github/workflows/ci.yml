@@ -237,7 +237,7 @@ jobs:
     if: needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
     env:
-      MISE_ENABLE_TOOLS: actionlint,zizmor
+      MISE_ENABLE_TOOLS: actionlint,shellcheck,zizmor
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
