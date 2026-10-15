@@ -132,15 +132,23 @@ run_mutmut() {
   # mutmut reuses results from earlier runs, which a changed test can make
   # wrong.
   rm -rf mutants
-  if ! uv run mutmut run "$@"; then
-    # With no mutant in the files, mutmut either says nothing matches or, if
-    # the project has no tests either, fails to collect any: pytest exits
-    # with status 5. Neither is a failure of the tool.
-    local generated_mutants
-    generated_mutants=$(uv run mutmut results --all true)
-    if ! any_mutant_matches "$generated_mutants" "$@"; then
+  mkdir mutants
+  if ! uv run mutmut run "$@" 2>&1 | tee mutants/run.log; then
+    if grep -qF "Filtered for specific mutants, but nothing matches" mutants/run.log; then
       report "$label" "$files" 0 0 ""
       return
+    fi
+
+    # pytest's status 5 means it collected no test, which only matters if some
+    # test is needed: a mutant in the files. Any other status is a broken test
+    # suite, which must fail.
+    if grep -qF "failed to collect stats. runner returned 5" mutants/run.log; then
+      local generated_mutants
+      generated_mutants=$(uv run mutmut results --all true)
+      if ! any_mutant_matches "$generated_mutants" "$@"; then
+        report "$label" "$files" 0 0 ""
+        return
+      fi
     fi
     echo "error: mutmut failed; its output is above." >&2
     return 1

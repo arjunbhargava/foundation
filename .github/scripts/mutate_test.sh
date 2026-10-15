@@ -8,9 +8,12 @@
 # caught mutants if FAKE_ALL_KILLED is set. For the scripts, fake uv reports
 # one mutant, which survives unless FAKE_ALL_KILLED is set. If
 # FAKE_NO_MUTABLE_CODE is set, the tools find no mutant in the changed files;
-# for mutmut it is "empty" if the project has no mutant at all, and "elsewhere"
-# if its mutants are in other files. If FAKE_MUTMUT_FAILS is set, mutmut fails
-# although it has generated mutants in the changed files.
+# mutmut does so as pytest exits with status 5 for no test and the project has
+# no mutant at all ("empty") or only in other files ("elsewhere"), or as
+# mutmut says nothing matches ("nothing_matches"). mutmut fails, although it
+# has no mutant in the changed files, if FAKE_MUTMUT_FAILS is "failing_test"
+# (pytest exits with status 1), and, although pytest collected no test, if it
+# is "untested_mutant" (a mutant is in the changed files).
 #
 # Usage: .github/scripts/mutate_test.sh
 set -euo pipefail
@@ -51,15 +54,17 @@ main() {
 
   FAKE_NO_MUTABLE_CODE=empty check python src/pkg/a.py 'pkg.a.x*' "Python mutation testing: passed, because the changed files hold no mutable code: src/pkg/a.py"
   FAKE_NO_MUTABLE_CODE=elsewhere check python src/pkg/a.py 'pkg.a.x*' "Python mutation testing: passed, because the changed files hold no mutable code: src/pkg/a.py"
+  FAKE_NO_MUTABLE_CODE=nothing_matches check python src/pkg/a.py 'pkg.a.x*' "Python mutation testing: passed, because the changed files hold no mutable code: src/pkg/a.py"
   FAKE_NO_MUTABLE_CODE=empty check rust crates/c/src/x.rs crates/c/src/x.rs "Rust mutation testing: passed, because the changed files hold no mutable code: crates/c/src/x.rs"
   FAKE_NO_MUTABLE_CODE=empty check typescript packages/p/src/a.ts packages/p/src/a.ts "TypeScript mutation testing: passed, because the changed files hold no mutable code: packages/p/src/a.ts"
-  FAKE_MUTMUT_FAILS=1 check_fails python src/pkg/a.py "mutmut failed"
+  FAKE_MUTMUT_FAILS=failing_test check_fails python src/pkg/a.py "mutmut failed"
+  FAKE_MUTMUT_FAILS=untested_mutant check_fails python src/pkg/a.py "mutmut failed"
 
   FAKE_ALL_KILLED=1 check python src/pkg/a.py 'pkg.a.x*' "0 of 2 mutants survived"
   FAKE_ALL_KILLED=1 check python .github/scripts/script_a.py 'script_a.x*' "Python scripts mutation testing: 0 of 1 mutants survived"
   FAKE_ALL_KILLED=1 check rust crates/c/src/x.rs crates/c/src/x.rs "0 of 2 mutants survived"
   FAKE_ALL_KILLED=1 check typescript packages/p/src/a.ts packages/p/src/a.ts "0 of 2 mutants survived"
-  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 25 cases."
+  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 27 cases."
 }
 
 # Writes fake uv, cargo, and pnpm, which append the module globs or files
@@ -76,8 +81,14 @@ case "$*" in
       [[ -f src/script_a.py && -f src/script_b.py && ! -e src/script_a_test.py && -f tests/script_a_test.py && ! -e tests/script_a.py && -f pyproject.toml && -n ${UV_PROJECT:-} ]] || { echo "fake uv: the scratch project is wrong: $(find . -type f | sort | tr '\n' ' ')" >&2; exit 1; }
     fi
     printf '%s\n' "${@:4}" >> "$FAKE_TOOL_ARGUMENTS"
-    # mutmut's own failures: pytest exiting with status 5, "no tests ran",
-    # when the project has no tests, or no match for the globs.
+    if [[ ${FAKE_NO_MUTABLE_CODE:-} == nothing_matches ]]; then
+      echo "Filtered for specific mutants, but nothing matches" >&2
+      exit 1
+    fi
+    if [[ ${FAKE_MUTMUT_FAILS:-} == failing_test ]]; then
+      echo "failed to collect stats. runner returned 1" >&2
+      exit 1
+    fi
     if [[ -n ${FAKE_NO_MUTABLE_CODE:-} || -n ${FAKE_MUTMUT_FAILS:-} ]]; then
       echo "failed to collect stats. runner returned 5" >&2
       exit 1
@@ -91,8 +102,11 @@ case "$*" in
       printf '    other.x_f__mutmut_1: not checked\n'
       exit 0
     fi
-    if [[ -n ${FAKE_MUTMUT_FAILS:-} ]]; then
+    if [[ ${FAKE_MUTMUT_FAILS:-} == untested_mutant ]]; then
       printf '    pkg.a.x_f__mutmut_1: not checked\n'
+      exit 0
+    fi
+    if [[ ${FAKE_MUTMUT_FAILS:-} == failing_test ]]; then
       exit 0
     fi
     if [[ $PWD == */.mutants-scripts ]]; then
