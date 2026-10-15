@@ -4,3 +4,8 @@ version = "0.1.0"
 description = "The template's example Rust crate."
 edition = "2024"
 license = "Apache-2.0"
+
+# The name `use` takes. Without this, cargo derives it from the package's
+# name, and the template's package_name question may differ.
+[lib]
+name = "foundation"

@@ -2,11 +2,11 @@
 render with every language: edit this file, then run `mise run template:sync`.
 The template's own README, which GitHub shows instead of this one, is
 .github/README.md. -#}
-# Project name
+# {{ project_name }}
 
 A project in {{ language_names }}, created from the
 [foundation](https://github.com/arjunbhargava/foundation) template. Replace
-this title with the project's name, and this sentence with what it does.
+this sentence with what the project does.
 
 ## Set up a local machine
 
@@ -39,8 +39,8 @@ people, agents, and CI. The ones used most:
 ## Pull template updates
 
 In a project with no uncommitted changes, run
-`mise exec -- copier update --defaults`, resolve any conflicts it marks, and
-run `mise run check`. [Pulling template updates](docs/template-updates.md)
+`mise exec -- copier update --defaults --trust`, resolve any conflicts it
+marks, and run `mise run check`. [Pulling template updates](docs/template-updates.md)
 has the details.
 
 ## Learn more
