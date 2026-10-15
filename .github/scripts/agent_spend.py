@@ -21,6 +21,10 @@ Rate, whether paid on demand or from the plan's included usage. The Admin API
 documents it as the field that matches the dashboard's totals.
 """
 
+# Annotations name Usage before its definition. Python 3.14 defers evaluating
+# them, but 3.13 raises NameError unless this import defers them too.
+from __future__ import annotations
+
 import argparse
 import base64
 import json

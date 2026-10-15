@@ -266,6 +266,7 @@ _exclude:
     /pyproject.toml
     /uv.lock
     /.python-version
+    /conftest.py
     /src
     /tests
     /.config/mise/conf.d/python.toml
