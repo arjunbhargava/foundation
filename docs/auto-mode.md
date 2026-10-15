@@ -7,7 +7,7 @@ a person, and CI and Bugbot are the gate, so exploratory work that needs
 several rounds doesn't wait for review on each. It is a switch for the whole
 repository; a PR without the `agent` label still needs a person's approval.
 
-Status: in progress (T23 in [the template plan](template-plan.md)). The
+Status: in progress (T23 in [the template plan](https://github.com/arjunbhargava/foundation/blob/main/docs/template-plan.md)). The
 review ruleset, the approval workflow, the auto-merge workflow, and the
 owned-paths and needs-human-review checks are in place. Until the branch-update workflow lands, a PR
 that falls behind `main` waits for someone to update it.

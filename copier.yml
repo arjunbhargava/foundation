@@ -1,7 +1,7 @@
 # Copier's settings for creating a project from this repository (decision D1
-# in docs/template-plan.md); README.md says how. The repository root is the
-# project with every language. Each question below adds one language, and
-# _exclude leaves out the files of each language a project doesn't use.
+# in docs/template-plan.md); .github/README.md says how. The repository root
+# is the project with every language. Each question below adds one language,
+# and _exclude leaves out the files of each language a project doesn't use.
 # AGENTS.md, README.md, and .github/dependabot.yml are rendered from their
 # .jinja twins; edit the twin, then run `mise run template:sync` to render the
 # root copy. The tasks in .config/mise/conf.d/template.toml check all of
@@ -69,11 +69,16 @@ _exclude:
   - .git
   - .DS_Store
   - .svn
-  # The template's own checks. Keep this list equal to the one in
-  # template:check in .config/mise/conf.d/template.toml.
+  # The template's own files: its checks, its README (which GitHub shows in
+  # place of README.md; README.md.jinja renders each project's), and its plan
+  # (docs/index.md lists it in no toctree, so a project's docs build passes
+  # without it). Keep this list equal to the one in template:check in
+  # .config/mise/conf.d/template.toml.
   - /.config/mise/conf.d/template.toml
   - /.github/workflows/template.yml
   - /.github/rulesets/template-checks.json
+  - /.github/README.md
+  - /docs/template-plan.md
   # Each language's files: its manifest and the files listed with it in the
   # changes job of .github/workflows/ci.yml, its API page, and its workflows.
   # Keep each block equal to the language's list in test:template.
