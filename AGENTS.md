@@ -15,7 +15,7 @@ the same thing:
 | `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory, ban, licence, and source checks. |
 | `mise run lint:typescript` | Run only the TypeScript checks. |
 | `mise run lint:cpp` | Run only the C and C++ checks: clang-format, a check that no `#include` uses `../`, and a build with clang-tidy and compiler warnings as errors. |
-| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths check. |
+| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks. |
 | `mise run lint:workflows` | Run only the GitHub Actions workflow checks: actionlint, and zizmor's offline security audits. A finding in a workflow is suppressed with a `# zizmor: ignore[<audit>]` comment. |
 | `mise run lint:language-listings` | Check that each place that must list every language, such as the CI jobs and this table, lists each language in `.config/mise/conf.d/`, and name each place that lacks one. |
 | `mise run test` | Run all tests. |

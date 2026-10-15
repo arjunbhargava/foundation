@@ -2,21 +2,21 @@
 # Checks the ruleset files in this directory: each is valid JSON, and the
 # auto-mode review ruleset (docs/auto-mode.md) differs from main-review.json
 # only in its name, whether review threads must be resolved, and its rule
-# requiring the owned-paths check, so an edit to one review ruleset is made to
-# both. It also checks those values against docs/auto-mode.md: auto mode
-# needs exactly 1 approval, which the approval workflow gives an agent PR,
-# review mode at least 1, and only auto mode needs resolved threads and the
-# owned-paths check. Auto mode must keep code-owner review, thread
-# resolution, and the owned-paths check on, because without them, a PR could
-# merge with no Bugbot or owner gate.
+# requiring the owned-paths and needs-human-review checks, so an edit to one
+# review ruleset is made to both. It also checks those values against
+# docs/auto-mode.md: auto mode needs exactly 1 approval, which the approval
+# workflow gives an agent PR, review mode at least 1, and only auto mode
+# needs resolved threads and the two checks. Auto mode must keep code-owner
+# review, thread resolution, and the two checks on, because without them, a
+# PR could merge with no Bugbot or owner gate.
 #
 # Usage: mise run lint:rulesets
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Requires .github/workflows/owned-paths.yml to pass, as reported by GitHub
-# Actions, integration_id 15368.
-owned_paths_rule='{"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": true, "required_status_checks": [{"context": "owned-paths", "integration_id": 15368}]}}'
+# Requires .github/workflows/owned-paths.yml and needs-human-review.yml to
+# pass, as reported by GitHub Actions, integration_id 15368.
+auto_mode_checks_rule='{"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": true, "required_status_checks": [{"context": "owned-paths", "integration_id": 15368}, {"context": "needs-human-review", "integration_id": 15368}]}}'
 
 for file in *.json; do
   if ! jq empty "$file"; then
@@ -42,16 +42,16 @@ require_review_setting main-review.json '.required_approving_review_count >= 1' 
 require_review_setting main-review.json '.required_review_thread_resolution == false' \
   "must set required_review_thread_resolution to false, as the table in docs/auto-mode.md says."
 
-if ! jq -e --argjson rule "$owned_paths_rule" 'any(.rules[]; . == $rule)' main-review-auto.json > /dev/null; then
-  echo "error: main-review-auto.json must have this rule, so that a PR that changes a path in .github/CODEOWNERS merges only with the owner's bypass: $owned_paths_rule" >&2
+if ! jq -e --argjson rule "$auto_mode_checks_rule" 'any(.rules[]; . == $rule)' main-review-auto.json > /dev/null; then
+  echo "error: main-review-auto.json must have this rule, so that a PR that changes a path in .github/CODEOWNERS, or has the needs-human-review label, merges only with the owner's bypass: $auto_mode_checks_rule" >&2
   exit 1
 fi
 
 without_auto_mode_fields='del(.name, (.rules[] | select(.type == "pull_request") | .parameters | .required_review_thread_resolution))'
 if ! diff -u <(jq -S "$without_auto_mode_fields" main-review.json) \
-  <(jq -S --argjson rule "$owned_paths_rule" "$without_auto_mode_fields | del(.rules[] | select(. == \$rule))" main-review-auto.json) >&2; then
-  echo "error: main-review.json and main-review-auto.json differ in the lines above, which auto mode doesn't change. Make the same edit to both files; only main-review-auto.json has the owned-paths rule." >&2
+  <(jq -S --argjson rule "$auto_mode_checks_rule" "$without_auto_mode_fields | del(.rules[] | select(. == \$rule))" main-review-auto.json) >&2; then
+  echo "error: main-review.json and main-review-auto.json differ in the lines above, which auto mode doesn't change. Make the same edit to both files; only main-review-auto.json has the rule requiring the owned-paths and needs-human-review checks." >&2
   exit 1
 fi
 
-echo "The ruleset files are valid JSON, and the review rulesets differ only in name, thread resolution, and the owned-paths rule, with the values docs/auto-mode.md gives."
+echo "The ruleset files are valid JSON, and the review rulesets differ only in name, thread resolution, and the rule requiring the owned-paths and needs-human-review checks, with the values docs/auto-mode.md gives."

@@ -17,9 +17,9 @@ on:
   workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: [Agent label]
     types: [completed]
-  # A person adding the label.
+  # A person adding the agent label, or removing needs-human-review.
   pull_request_target: # zizmor: ignore[dangerous-triggers]
-    types: [labeled]
+    types: [labeled, unlabeled]
 
 permissions: {}
 
@@ -31,10 +31,12 @@ defaults:
 jobs:
   approve:
     # Skips PRs from forks, so a fork's PR runs no step with the write token,
-    # and labels other than agent.
+    # and other label changes.
     if: >-
       (github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository)
-      || (github.event_name == 'pull_request_target' && github.event.label.name == 'agent' && github.event.pull_request.head.repo.full_name == github.repository)
+      || (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
+          && ((github.event.action == 'labeled' && github.event.label.name == 'agent')
+              || (github.event.action == 'unlabeled' && github.event.label.name == 'needs-human-review')))
     # One run at a time per PR branch, so each run sees the previous run's
     # approval and doesn't approve again.
     concurrency:

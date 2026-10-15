@@ -17,10 +17,11 @@ on:
   # Bugbot runs on drafts and doesn't rerun when a PR is marked ready, so
   # ready_for_review checks again. GitHub keeps auto-merge on after a push by
   # anyone with write access, so synchronize turns it off until Bugbot has
-  # reviewed the new commit. zizmor flags every pull_request_target, because
-  # checking out a PR with it runs the PR's code with a write token.
+  # reviewed the new commit. labeled and unlabeled turn it off and on again
+  # for the needs-human-review label. zizmor flags every pull_request_target,
+  # because checking out a PR with it runs the PR's code with a write token.
   pull_request_target: # zizmor: ignore[dangerous-triggers]
-    types: [ready_for_review, synchronize]
+    types: [ready_for_review, synchronize, labeled, unlabeled]
 
 permissions: {}
 
