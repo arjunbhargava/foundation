@@ -166,9 +166,10 @@ expect_equal "$name" "$work/updated" "$work/new"
 
 name=naming_a_project_from_main_with_copier_update_equals_a_new_project_with_that_name
 create "$work/updated" "$main" --data python=true --data rust=true --data typescript=true --data cpp=true
-# A project from a main with the name questions has recorded package_name,
-# which a new project_name doesn't change, so this gives both.
-update "$work/updated" --vcs-ref="$working_tree" --data project_name=my-project --data package_name=my_project
+# A project from a main with the name and owner questions has recorded
+# package_name and github_repository, which a new project_name doesn't
+# change, so this gives all three.
+update "$work/updated" --vcs-ref="$working_tree" --data project_name=my-project --data package_name=my_project --data github_repository=arjunbhargava/my-project
 # As in the first test; delete it with that line.
 rm -f "$work/updated/docs/template-plan.md"
 create "$work/new" "$working_tree" --data python=true --data rust=true --data typescript=true --data cpp=true --data project_name=my-project
