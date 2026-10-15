@@ -137,10 +137,11 @@ fails when they name different minor versions. SkyPilot 0.14.0 supports Python
 up to 3.13, so `compute/` is a uv project of its own, pinned to 3.13.
 
 **Failures.** If the server is down, running jobs continue, but nothing can
-launch, and preempted jobs wait for it. A Route 53 health check emails the
-owner. A scheduled GitHub workflow, independent of the server, terminates any
-job machine past its maximum run time. If the database is lost, restore it;
-the archive still holds every result.
+launch, and preempted jobs wait for it. A Route 53 health check that emails
+the owner, and a scheduled GitHub workflow, independent of the server, that
+terminates any job machine past its maximum run time, are both
+[deferred](#deferred). If the database is lost, restore it; the archive still
+holds every result.
 
 **What "set up once and forget" actually needs**, from AWS's and SkyPilot's
 lifecycles (the hours are my estimate):
@@ -151,7 +152,7 @@ lifecycles (the hours are my estimate):
 | Update the node's AMI, for security fixes | Monthly |
 | Upgrade SkyPilot, then the client pin | Each minor release |
 | Rotate the agents' token (90 days) and the read-only S3 key | Quarterly |
-| Answer a health-check email | When it fires |
+| Answer a health-check email, once the check exists | When it fires |
 
 About two hours a month plus half a day a year, all through the
 `compute-server-admin` skill.
@@ -229,7 +230,8 @@ families, GPUs per node, a maximum node count, a maximum run time, and
 | `gpu-train` | 8 × L40S (g6e.48xlarge), then 8 × A10G (g5.48xlarge, $16.29/h) | Training that fits in 44 GB per GPU | $30.13/h | 2 | 60.26 | 1,446 |
 | `gpu-train-large` | 8 × H100 (p5.48xlarge, $55.04/h), then 8 × A100 (p4d.24xlarge, $21.96/h) | Large training | $55.04/h | 2 | 110.08 | 2,642 |
 
-`gpu-train-large` is `enabled: false` until the admin opts in.
+`gpu-train-large` is [deferred](#deferred); when built, it is `enabled: false`
+until the admin opts in.
 
 **Which GPU fits which work.** Isaac Sim's documentation says "GPUs without RT
 Cores (A100, H100) are not supported", and names g6e (L40S) for AWS; L40S, L4,
@@ -347,8 +349,9 @@ Observe finds rank 0's machine from the first line of the job's log while the
 server is up, and from `index/<job name>/` when it isn't, so the read-only key
 alone serves progress, results, and logs. A job could write a false marker
 under another job's name, because the job role can't be scoped to one name;
-observe then shows both machines, and the phase 2 watch's index from EC2 tags,
-which the server sets and a job can't, is the authoritative mapping.
+observe then shows both machines, and the watch's index from EC2 tags,
+which the server sets and a job can't, is the authoritative mapping once it
+is built (deferred).
 
 ## How a job runs
 
@@ -375,7 +378,7 @@ which the server sets and a job can't, is the authoritative mapping.
 4. The server relaunches a preempted job, which resumes from its checkpoint,
    and deletes the machines when the job ends.
 5. Any agent runs `mise run job:observe`.
-6. Later (phase 2): `.github/workflows/compute-watch.yml` runs every 15
+6. Deferred: `.github/workflows/compute-watch.yml` runs every 15
    minutes, terminates machines past their deadline or all of them once the
    budget action fires, cancels the jobs of closed, unmerged PRs, and, when a
    job ends, comments on the PR and adds a check run, `compute-job: <job
@@ -445,7 +448,8 @@ settings:                 # free-form; recorded, and passed as JSON
 - The provisioning and operating code is in `compute/server/`: Helm values,
   the admin policy package, `limits.yaml`, IAM policy files, and scripts. It
   runs only through `MISE_ENV=admin mise run
-  compute-server:<provision|upgrade|rotate-token|status>`. Those tasks and
+  compute-server:<provision|status>`, and later `upgrade` and `rotate-token`
+  (deferred). Those tasks and
   their tools (AWS CLI, eksctl, kubectl, Helm) are in `mise.admin.toml`, which
   mise loads only when `MISE_ENV=admin`, so `mise run check`, CI, and agents
   neither list nor install them.
@@ -468,8 +472,8 @@ settings:                 # free-form; recorded, and passed as JSON
 |---|---|---|---|
 | `SKYPILOT_API_SERVER_ENDPOINT`, `SKYPILOT_SERVICE_ACCOUNT_TOKEN` | Cursor secrets | token: yes | client |
 | `COMPUTE_JOBS_AWS_ACCESS_KEY_ID`, `COMPUTE_JOBS_AWS_SECRET_ACCESS_KEY`, `COMPUTE_JOBS_BUCKET`, `COMPUTE_JOBS_AWS_REGION` | Cursor secrets | key: yes | observe |
-| The same endpoint, and a second `user` token | GitHub environment `compute`, limited to `main` | token: yes | watch (phase 2) |
-| `COMPUTE_JOBS_AWS_ROLE_ARN`, `COMPUTE_JOBS_AWS_REGION` | variables on `compute` | no | watch (phase 2) |
+| The same endpoint, and a second `user` token | GitHub environment `compute`, limited to `main` | token: yes | watch (deferred) |
+| `COMPUTE_JOBS_AWS_ROLE_ARN`, `COMPUTE_JOBS_AWS_REGION` | variables on `compute` | no | watch (deferred) |
 | `COMPUTE_SERVER_ADMIN_AWS_PROFILE` | the owner's shell only | no | admin tasks |
 
 The server's AWS identity is the role `compute-jobs-launcher`, given to its pod
@@ -482,39 +486,41 @@ terminate only its own instance. So one job can't alter another's archive,
 but could overwrite another's checkpoints, which costs at most a restart. The
 read-only key exposes job logs and outputs, nothing more.
 
-## Phasing
+## Scope: the base first
 
-**Phase 1, the first slice and the spike.** Enough to run a real search end to
-end, and to learn what the plan got wrong before building the rest:
+The owner decided on 2026-10-15 to build the base now and defer the rest,
+and accepted the recommended defaults: one server node, a read-only S3 key
+for agents, and Copier questions that default to no. The base is enough to
+run a real search end to end through the real server, and to learn what this
+plan got wrong before building more. It is the nine pull requests at the end
+of this page. Everything else is under [Deferred](#deferred), with its design
+kept on this page and the condition that frees it.
 
-- The client, `job:dry-run`, `job:launch`, `job:observe`, the wrapper, the
-  archive, `progress.json`, and `fanout`.
-- A one-node server, the admin policy with the `cpu` and `gpu-small` profiles,
-  the default image, and the budget action.
-- The spike: a toy evolutionary search over a CPU stand-in simulation (a
-  10 ms function), 10,000 evaluations per generation for 5 generations, on 2
-  `cpu` nodes, launched by an agent through the real server and observed from
-  a second agent. List price: under $5 for the jobs, plus the server's hours.
-  It needs a compute budget from the owner, since tasks without one have $0.
-- Then one `gpu-small` job, to check the driver, the image, and CUDA wheels on
-  a real GPU.
-
-**Phase 2**, each useful alone: the `gpu-sim` and `gpu-train` profiles,
-project images, the watch workflow and its check run, the Cursor Automation,
-the skills and the rule, Copier's questions, and the docs. **Later:** the P
-family, when a project needs it, and GPU tests on a self-hosted runner.
-
-**Hard to change later**, so phase 1 settles them: the job file's fields and
+**Hard to change later**, so the base settles them: the job file's fields and
 kinds, the archive layout and `progress.json`'s schema, `job:observe`'s output
 and exit codes (agents' scripts will parse them), the job name format, and the
 credentials boundary (which variables a client has, and that only the admin
 touches AWS). **Easy to change:** the profiles and limits, quotas, the server's
-size, the image's contents, the watch, notifications, and Copier's questions.
+size, the image's contents, and everything deferred.
+
+## Deferred
+
+Each item keeps its design above; the PR that builds it moves it out of this
+list.
+
+| Item | Design | Until then | Freed when |
+|---|---|---|---|
+| The 15-minute watch workflow and its backstops: terminating machines past their deadline, terminating every job machine once the budget action fires, cancelling the jobs of closed, unmerged PRs, and the authoritative `index/` from EC2 tags | [How a job runs](#how-a-job-runs), step 6 | The in-job `timeout`, SkyPilot's teardown when a job ends, the quotas, and the budget action, which blocks new launches but stops no running machine; the owner can terminate machines in the EC2 console | Agents launch jobs that no person is watching, a machine is found running after its job ended, or a job's run time exceeds a day |
+| The `compute-job:` check run and the Cursor Automation that starts a follow-up agent | [How a job runs](#how-a-job-runs), step 6 | Agents poll `job:observe` | A job outlasts the agent that launched it and someone must act on its result |
+| Copier's `compute` and `compute_server_admin` questions | [Admin, apart from the client](#admin-apart-from-the-client) | `copier.yml` leaves out `compute/`, `mise.admin.toml`, and both skills, so a new project has neither part, which matches the accepted defaults | The first project made from the template needs compute jobs |
+| Project images beyond the default: `compute/image.yaml`, vendor bases such as Isaac Sim's, and other repositories in the allowlist | [Environments](#environments) | Every job runs the default image | A project needs a system package, CUDA version, or simulator that the default image lacks |
+| The `gpu-train-large` profile (P family), and fan-out beyond the spike: more than 2 nodes, or more GPUs than the base quotas allow | [Hardware profiles](#hardware-profiles), [How a search fans out](#how-a-search-fans-out) | `gpu-train` and `gpu-sim` with at most 2 nodes | A project needs H100 or A100, or a search needs more than 16 L40S at once; both need new quotas and a rechecked ceiling |
+| A second server node, the Route 53 health check, automated token rotation, and the upgrade and restore procedures | [The API server](#the-api-server) | One node; the owner notices an outage when a command fails; tokens are rotated by hand in the dashboard before they expire; RDS keeps 7 days of backups, and the archive keeps every result | A node failure's 10 minutes of downtime matters; jobs run unattended; the first token is 2 weeks from expiry; the first SkyPilot upgrade; the job table holds history someone relies on |
 
 ## Setup for the owner
 
 Each step works in a phone browser except 5 and 9, which run admin tasks from
-a laptop. Steps 1–4 can start now; the rest wait for phase 1's admin PR.
+a laptop. Steps 1–4 can start now; the rest wait for the provisioning PR.
 
 1. Create an AWS account for agent jobs, `agent-jobs`, under the negotiated
    agreement, and sign in to it with IAM Identity Center:
@@ -535,13 +541,15 @@ a laptop. Steps 1–4 can start now; the rest wait for phase 1's admin PR.
    `COMPUTE_SERVER_ADMIN_AWS_PROFILE` and run
    `MISE_ENV=admin mise run compute-server:provision`. From the committed
    files, it creates the EKS cluster, the RDS database, the ACM certificate,
-   the S3 bucket (private, 90-day expiry), the roles `compute-jobs-launcher`,
-   `compute-jobs-job`, and `compute-jobs-watch`, the policy
-   `compute-jobs-deny-launch`, the IAM user `compute-jobs-observer` and its
-   key, the health check, and the server with its admin policy. It prints the
+   the S3 bucket (private, 90-day expiry), the roles `compute-jobs-launcher`
+   and `compute-jobs-job`, the policy `compute-jobs-deny-launch`, the IAM user
+   `compute-jobs-observer` and its key, and the server with its admin policy.
+   It prints the
    endpoint, the dashboard URL, and the observer key once.
-6. Open the dashboard, change the initial admin password, and create two
-   service accounts with role `user` and 90-day expiry, `agents` and `watch`.
+6. Open the dashboard, change the initial admin password, and create a
+   service account named `agents`, with role `user` and 90-day expiry. Note
+   the expiry date; rotating it by hand before then is your job until
+   rotation is automated.
 7. Add the Cursor secrets `SKYPILOT_API_SERVER_ENDPOINT`,
    `SKYPILOT_SERVICE_ACCOUNT_TOKEN` (the `agents` token),
    `COMPUTE_JOBS_AWS_ACCESS_KEY_ID`, `COMPUTE_JOBS_AWS_SECRET_ACCESS_KEY`,
@@ -560,9 +568,9 @@ a laptop. Steps 1–4 can start now; the rest wait for phase 1's admin PR.
 10. If Cursor's agent network allowlist is on, add the server's host name and
     `<bucket>.s3.us-east-1.amazonaws.com`.
 11. Give the spike task a compute budget, in its Linear issue: $10 covers it.
-12. Phase 2: create the GitHub environment `compute`, limited to `main`, with
-    the `watch` token, the endpoint, `COMPUTE_JOBS_AWS_ROLE_ARN` (the
-    `compute-jobs-watch` ARN that step 5 printed), and
+12. Deferred, with the watch: create the GitHub environment `compute`, limited to `main`, with
+    a `watch` token, the endpoint, `COMPUTE_JOBS_AWS_ROLE_ARN` (the
+    `compute-jobs-watch` ARN that the watch's PR adds), and
     `COMPUTE_JOBS_AWS_REGION`:
     <https://github.com/arjunbhargava/foundation/settings/environments/new>;
     then a Cursor Automation on "CI completed", filtered to checks named
@@ -576,19 +584,20 @@ a laptop. Steps 1–4 can start now; the rest wait for phase 1's admin PR.
   tests. Package `compute_jobs`: `client_config.py`, `job_file.py`,
   `dry_run.py`, `launch.py`, `observe.py`, `run.py` (the wrapper),
   `run_record.py`, `archive.py`, `progress.py`, and `fanout.py`; plus
-  `Dockerfile`, `image.yaml`, and `tests/`; and `examples/toy_search/`, the
-  spike.
+  `Dockerfile` and `tests/`; and `examples/toy_search/`, the spike.
+  `image.yaml` is deferred.
 - `compute/server/`: `values.yaml`, `admin_policy/` (with its own tests),
-  `limits.yaml`, `aws/*.json`, and the provision, upgrade, rotate, and status
-  scripts; `mise.admin.toml`.
+  `limits.yaml`, `aws/*.json`, and the provision and status scripts (upgrade
+  and rotate are deferred); `mise.admin.toml`.
 - `.github/workflows/`: `compute-image.yml` (build and attest on pushes to
-  `main`, then the smoke test), `compute-watch.yml`, and a `compute` job in
-  `ci.yml`.
+  `main`, then the smoke test), and a `compute` job in `ci.yml`;
+  `compute-watch.yml` is deferred.
 - `mise.toml`: `setup:compute`, `lint:compute`, `test:compute`, and
   `job:dry-run`, `job:launch`, `job:observe`, `job:cancel`.
 - `.github/dependabot.yml` and its `.jinja` twin, through
   `mise run template:sync` (the `docker` ecosystem for `compute/`).
-- `.env.example`, `.github/CODEOWNERS` (`compute/server/`), `copier.yml`,
+- `.env.example`, `.github/CODEOWNERS` (`compute/server/`), `copier.yml`
+  (excluding the compute parts until its questions land),
   `docs/conf.py`, `AGENTS.md` and its `.jinja` twin, `docs/architecture.md`,
   and this page, rewritten to describe what was built.
 - The `compute-jobs` and `compute-server-admin` skills, and the
@@ -607,9 +616,8 @@ spike checks.
    records no call.
 2. The default mise configuration lists no `compute-server:` task, and those
    tasks exit with a message when `COMPUTE_SERVER_ADMIN_AWS_PROFILE` is unset.
-3. A project made from the template with default answers has no `compute/`;
-   with `compute=true` it has the client and no admin part; with both true, it
-   has both.
+3. A project made from the template has no `compute/`, `mise.admin.toml`, or
+   compute skill (the Copier questions are deferred).
 4. The server pin in `values.yaml` and the client pin in `compute/uv.lock`
    name the same minor version.
 5. The job file accepts each kind with its fields and rejects a missing or
@@ -646,41 +654,47 @@ spike checks.
 15. On the real server: a request without a token gets 401, the `agents`
     token can't change the server's settings, and the spike's search finishes
     5 generations with progress visible from a second agent.
-16. Phase 2: the image workflow's smoke test passes inside the built image;
-    the policy rejects an image without a `main` attestation; the watch
-    terminates overdue machines and adds one `compute-job:` check run per
-    finished job, and the check run starts the Cursor Automation (checked by
-    hand).
+16. The image workflow's smoke test passes inside the built image, and the
+    policy rejects an image without a `main` attestation.
+17. Deferred, with the watch: it terminates overdue machines and adds one
+    `compute-job:` check run per finished job, and the check run starts the
+    Cursor Automation (checked by hand).
 
-## Recommended defaults for the owner's decisions
+## Decisions
 
-- One server node ($460 a month). Add the second ($294) if 10 minutes'
-  downtime on a node failure ever matters.
+Accepted by the owner on 2026-10-15, as recommended:
+
+- One server node ($460 a month).
 - Agents get the read-only S3 key, so progress and outputs work while the
   server is down.
-- Copier's `compute` and `compute_server_admin` questions default to no.
+- Copier's questions, when they come, default to no.
 - Every job defaults to on-demand machines; spot is opt-in.
 - The fan-out mechanism is Ray inside one managed job.
 
 ## Pull requests after approval
 
-Stacked; each is useful when it merges.
+Stacked, in this order; each is useful when it merges, and within 500 lines.
 
-1. `compute/` project, `client_config.py` with its refusal, the job file with
-   kinds and profiles, `job:dry-run`, and the CI job. Useful: agents can write
-   and check job files.
-2. Admin: `values.yaml`, `mise.admin.toml`, and the provision and status tasks
-   for a one-node server, with the IAM files. Useful: the owner can stand up
-   the server.
-3. The admin policy and `limits.yaml` with `cpu` and `gpu-small`. Useful: the
-   server enforces limits.
-4. The wrapper, run record, archive, and `progress.py`; `job:launch` and
-   `job:observe`. Useful: single jobs run and are observable.
-5. `fanout.py`, `multi-node` and `search`, and `examples/toy_search/`; then
-   the spike. Useful: the design is proved end to end.
-6. The default image, `compute-image.yml`, `image.yaml`, and the attestation
-   check; then the `gpu-small` job. Useful: GPU jobs run.
-7. The `gpu-sim` and `gpu-train` profiles.
-8. The watch workflow and check run.
-9. The skills, the rule, Copier's questions, `docs/architecture.md`, and this
-   page as a description.
+1. The `compute/` project, `client_config.py` with its refusal, `copier.yml`'s
+   exclusion of the compute parts, and the CI job. Useful: the refusal is in
+   place before anything can launch.
+2. The job file with kinds and profiles, `job:dry-run`, and `job:launch`.
+   Useful: agents can write and check job files.
+3. `job:observe` and `job:cancel`, and `progress.py` with the `progress.json`
+   schema. Useful: the observe format is fixed before anything writes it.
+4. The wrapper, run record, and archive. Useful: a job's machine records
+   everything observe reads.
+5. The default image and `compute-image.yml`, with its attestation and smoke
+   test. Useful: the job environment exists and is tested.
+6. The admin policy and `limits.yaml`, with the `cpu`, `gpu-small`,
+   `gpu-sim`, and `gpu-train` profiles and the quota ceiling check. Useful:
+   limits are enforced in code before a server exists.
+7. Server provisioning and the admin tasks: `values.yaml`, `mise.admin.toml`,
+   the IAM files, and `compute-server:provision` and `compute-server:status`
+   for a one-node server. Useful: the owner can stand up the server.
+8. The `compute-jobs` and `compute-server-admin` skills, and the
+   `compute-cost` rule's update, drafted for the owner to edit. Useful:
+   agents know the rules before the first real job.
+9. The spike: `fanout.py`, `examples/toy_search/`, and the run through the
+   real server, with `docs/architecture.md` and this page updated to describe
+   what was built. Useful: the design is proved end to end.
