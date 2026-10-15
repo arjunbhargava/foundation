@@ -40,7 +40,8 @@ uv = "0.12.21"
 
 # Each setup task fails if its lockfile is out of date with its manifest, so
 # CI catches a manifest edited without relocking.
-# [!s] leaves out setup:status; a language key starting with s needs an entry.
+# [!s] leaves out setup:status; test:setup-status-script fails until a language
+# whose key starts with s has an entry.
 [tasks.setup]
 description = "Install project dependencies"
 depends = ["setup:[!s]*"]

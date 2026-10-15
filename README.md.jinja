@@ -31,15 +31,14 @@ repository's name, or run `mise run setup:status`, which prints each step as
    `mise exec -- .github/rulesets/apply.sh` for review mode, where a person
    approves every pull request, or add `--auto` for auto mode. It also allows
    only merge commits and turns on secret scanning. Unlocks: required checks
-   and review on `main`. Who: a repository admin; private ones need a paid plan.
-5. **Turn on Bugbot** in the
-   [Cursor dashboard](https://www.cursor.com/dashboard/bugbot). Unlocks: the
-   review that auto mode waits for. Who: a Cursor team admin, or the account
-   owner.
+   and review. Who: a repository admin; private ones need a paid plan.
+5. **Turn on Bugbot** in the [Cursor dashboard](https://www.cursor.com/dashboard/bugbot).
+   Unlocks: the review that auto mode waits for. Who: a Cursor team admin, or
+   the account owner.
 6. **Give the Cursor GitHub app access** to this repository in
    [Installed GitHub apps](https://github.com/settings/installations), if it
-   has access only to selected repositories. Unlocks: cloud agents that push
-   and open pull requests. Who: the account owner, or an organization owner.
+   has access only to selected repositories. Unlocks: cloud agents that open
+   PRs. Who: the account owner, or an organization owner.
 7. **Set `CURSOR_ADMIN_API_KEY` and `CURSOR_API_KEY`** (see `.env.example`)
    as Cursor cloud agent secrets in the
    [Cursor dashboard](https://www.cursor.com/dashboard), and in `.env`
