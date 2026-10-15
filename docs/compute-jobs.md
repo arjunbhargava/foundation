@@ -15,9 +15,11 @@ on 2026-10-15.
   on what hardware, for how long, and within what budget.
 - **Job id**: `pr<PR number>-<job file name>-<first 8 hex digits of the job
   file's SHA-256>`, such as `pr81-train-small-3f9a2c1d`. It is also the
-  SkyPilot cluster name.
-- **Job record**: the files under `s3://$COMPUTE_JOBS_BUCKET/jobs/<job id>/`
-  (layout below). It is the only state that observers read.
+  SkyPilot cluster name. The prefix `pr81-train-small-` finds every job
+  launched from that file, whatever its content was.
+- **Job record**: the files under `s3://$COMPUTE_JOBS_BUCKET/jobs/<job id>/`,
+  written by the workflows, and under `machines/<machine id>/`, written by the
+  job's machine (layout below). It is the only state that observers read.
 - **Observer**: any agent or person reading a job record with
   `mise run job:observe`.
 
@@ -41,7 +43,7 @@ everyone shares a SkyPilot API server.
 | Logs after the machine is gone | Kept in S3 until the lifecycle rule deletes them (90 days) | Lost for plain clusters unless synced down first | Kept on the controller for 7 days by default |
 | Failure modes | Status is self-reported: a machine that dies without warning shows as `lost` after 3 missed heartbeats (3 min), until the watch workflow confirms it in EC2 | Server down means nothing can be observed or launched | Controller loss loses the queue; with (b), the server runs the controller |
 | Spot recovery | None; the job records `preempted`, and the agent relaunches from its checkpoint | None for plain clusters | Automatic relaunch |
-| Code we maintain | About 1,100 lines of Python (wrapper, observe, launch, watch) plus tests and three workflows | Deployment and configuration | Configuration |
+| Code we maintain | About 1,100 lines of Python (wrapper, observe, launch, watch) plus tests and four workflows | Deployment and configuration | Configuration |
 
 **Recommendation: (a).** It is the only option that meets the requirement
 without a server, gives observers read-only access, and keeps logs after the
@@ -63,7 +65,8 @@ alongside them.
    or if the list price × maximum run time exceeds the job's `budget_usd`.
    It then writes `launch.json` and runs `sky launch --down --detach-run` with
    the head commit's files as the working directory and the job image's
-   digest. It comments the job id on the PR. It never runs the PR's code on
+   digest, adds the machine id to `launch.json`, and comments the job id on
+   the PR. It never runs the PR's code on
    the runner, which is what makes `pull_request_target` safe here; zizmor's
    `dangerous-triggers` audit is suppressed with a comment naming these
    guards.
@@ -72,17 +75,37 @@ alongside them.
    stops the command at the maximum run time, on a cancel request, or on a
    spot interruption notice, then uploads `output/` and the final status.
    SkyPilot's autodown then deletes the machine after 5 idle minutes.
-4. `.github/workflows/compute-watch.yml` runs hourly. It terminates any job
-   machine past its maximum run time plus 15 minutes, or cancelled more than
-   10 minutes ago, and every job machine once the budget action has fired.
-   It marks `lost` jobs whose machine is gone, and comments on the PR once
-   when a job ends.
-5. Any agent runs `mise run job:observe -- pr81-train-small-3f9a2c1d`.
+4. `.github/workflows/compute-watch.yml` runs every 15 minutes. It
+   terminates any job machine past its maximum run time plus 15 minutes, or
+   cancelled more than 10 minutes ago, and every job machine once the budget
+   action has fired. It cancels the jobs of PRs closed without merging, and
+   marks `lost` the jobs whose machine is gone.
+5. When a job ends, the watch comments on its PR once, and starts
+   `.github/workflows/compute-job-ended.yml` for it with
+   `workflow_dispatch`, one of the two events that `GITHUB_TOKEN` may start.
+   That run's completion is the "workflow run completed" event on which a
+   Cursor Automation starts a follow-up agent to read the result, as T16
+   asks. An agent that is still running learns of the end from the PR
+   comment, through a PR subscription, or by observing.
+6. Any agent runs `mise run job:observe -- pr81-train-small-3f9a2c1d`.
 
-Editing a job file in an open PR replaces its job: the old one is cancelled
-and the new content launches. Deleting the file, or closing the PR without
-merging, cancels it. A cancel is a `cancel` object in the job record, which
-the wrapper checks with each heartbeat.
+The launch workflow runs on the `pull_request_target` types `opened`,
+`synchronize`, `reopened`, and `closed`, because the default types omit
+`closed`. On each run it lists the records under the prefix
+`pr<N>-<name>-` for every job file the PR adds, changes, or deletes, so a
+deleted file's jobs are found without its content:
+
+- A changed file launches its new content and cancels the file's older jobs
+  that are still running.
+- A deleted file, or a PR closed without merging, cancels the file's
+  running jobs. Merging cancels nothing.
+- An unchanged file launches nothing, because its job id already has a
+  record. To rerun the same job, change the file, for example by adding
+  `attempt = 2`.
+
+A cancel is a `cancel` object in the job record, which the wrapper checks
+with each heartbeat. The watch backs up both the `closed` event and the
+wrapper.
 
 ## Interface
 
@@ -106,24 +129,33 @@ learning_rate = 3e-4
 nodes per job (1), and idle minutes before autodown (5), and lists the
 allowed regions and instance families.
 
-**Job record**, under `s3://$COMPUTE_JOBS_BUCKET/jobs/<job id>/`:
+**Job record.** The workflows write under `jobs/<job id>/`. The machine
+writes only under `machines/<machine id>/`, where the machine id is
+`<role id>:<instance id>`: the value of IAM's `aws:userid` for an EC2
+instance role, so the job role's policy can limit each machine to its own
+prefix. `launch.json` names the machine id, so observers trust the
+workflows' mapping, never a machine's.
 
 | Object | Written by | Contents |
 |---|---|---|
-| `launch.json` | launch workflow | Job file, PR, commit, image digest, instance type, region, spot, list price in USD/h, launch time |
-| `status.json` | launch workflow, then the wrapper and watch | `state`, `heartbeat_at`, `started_at`, `ended_at`, `exit_code`, `message` |
-| `run-record.json` | wrapper | Commit, uncommitted changes, image digest, settings, seed, GPU model and driver, CPU, memory, start and end times |
-| `logs/000001.txt`, … | wrapper | Combined stdout and stderr, in order |
-| `result.json` | the job, optional | Small summary such as final metrics |
-| `output/` | wrapper, from `$COMPUTE_JOB_OUTPUT_DIR` | Files the job saves |
-| `cancel` | launch workflow | Present when cancelled |
+| `jobs/<job id>/launch.json` | launch workflow | Job file, PR, commit, image digest, instance type, region, spot, list price in USD/h, launch time, machine id |
+| `jobs/<job id>/status.json` | launch workflow, watch | `state` before the machine starts (`launching`, `launch_failed`), or after it is gone (`cancelled`, `lost`), and `message` |
+| `jobs/<job id>/cancel` | launch workflow, watch | Present when cancelled |
+| `machines/<machine id>/status.json` | wrapper | `state`, `heartbeat_at`, `started_at`, `ended_at`, `exit_code`, `message` |
+| `machines/<machine id>/run-record.json` | wrapper | Commit, uncommitted changes, image digest, settings, seed, GPU model and driver, CPU, memory, start and end times |
+| `machines/<machine id>/logs/000001.txt`, … | wrapper | Combined stdout and stderr, in order |
+| `machines/<machine id>/result.json` | the job, optional | Small summary such as final metrics |
+| `machines/<machine id>/output/` | wrapper, from `$COMPUTE_JOB_OUTPUT_DIR` | Files the job saves |
 
-Large data and checkpoints go under `s3://$COMPUTE_JOBS_BUCKET/data/`, never
-in git.
+Checkpoints go to `$COMPUTE_JOB_OUTPUT_DIR`, and large inputs are read from
+`s3://$COMPUTE_JOBS_BUCKET/data/`, which only the owner and the launcher can
+write; neither goes in git.
 
 `state` is one of `launching`, `launch_failed`, `running`, `succeeded`,
-`failed`, `timed_out`, `cancelled`, `preempted`, or `lost`. Observe shows
-`lost` when a `running` job's heartbeat is more than 180 s old.
+`failed`, `timed_out`, `cancelled`, `preempted`, or `lost`. Observe shows the
+workflows' state when it is `cancelled` or `lost`, and otherwise the
+machine's state once the machine has written one. It shows `lost` when a
+`running` job's heartbeat is more than 180 s old.
 
 **Observe command**, read-only:
 
@@ -133,7 +165,7 @@ Job pr81-train-small-3f9a2c1d: running, last heartbeat 42 s ago
 Pull request: https://github.com/arjunbhargava/foundation/pull/81, commit 1a2b3c4
 Machine: g6.xlarge (1 × L4), spot, us-east-1, list price $0.39/h
 Elapsed: 1 h 12 min of 2 h maximum; cost so far about $0.47 (list price × elapsed)
-Run record: s3://<bucket>/jobs/pr81-train-small-3f9a2c1d/run-record.json
+Run record: s3://<bucket>/machines/AROA...:i-0abc.../run-record.json
 Last 20 log lines:
 ...
 ```
@@ -160,8 +192,9 @@ needs no write access through `gh`.
 
 The job's own code is untrusted: it is whatever the PR's head commit
 contains. It runs only on the job machine, as the role `compute-jobs-job`,
-which can read and write the bucket and stop or terminate only its own
-instance. SkyPilot's default, `aws.remote_identity: LOCAL_CREDENTIALS`, would
+which can read the bucket, write only `machines/${aws:userid}/*`, and stop
+or terminate only its own instance, so one job can't alter another's record.
+SkyPilot's default, `aws.remote_identity: LOCAL_CREDENTIALS`, would
 copy the launcher's credentials onto the machine, so the launcher sets
 `remote_identity: compute-jobs-job`.
 
@@ -263,7 +296,10 @@ those PRs; steps 1–4 can start now.
   by digest), and `tests/`.
 - `.github/workflows/`: `compute-image.yml` (build on pushes to `main`, push
   to `ghcr.io/arjunbhargava/foundation/compute-job`), `compute-launch.yml`,
-  `compute-watch.yml`, and a `compute` job in `ci.yml`.
+  `compute-watch.yml`, `compute-job-ended.yml`, and a `compute` job in
+  `ci.yml`. Runner minutes are free for this public repository; a private
+  project's watch uses about 2,900 minutes a month, $23 at GitHub's
+  $0.008 per Linux minute.
 - `mise.toml`: `setup:compute`, `lint:compute`, `test:compute`, and
   `job:observe`.
 - `.env.example`, `.github/CODEOWNERS` (`compute/limits.toml` and
@@ -295,8 +331,20 @@ Each becomes a named test, run against moto with no AWS account or network.
    file mounts from the runner.
 8. The launcher refuses when no budget action exists or it has fired.
 9. The watch terminates machines past their deadline, cancelled, or after the
-   budget action fired, and comments once per finished job.
-10. `mise run check` passes with no AWS credentials.
+   budget action fired; cancels the jobs of PRs closed without merging; and
+   comments and starts `compute-job-ended.yml` once per finished job.
+10. A changed job file cancels the file's older running jobs, a deleted file
+    or a PR closed without merging cancels them, and an unchanged file
+    launches nothing.
+11. The job role's policy allows writes only under `machines/${aws:userid}/`,
+    and observe ignores a machine prefix that `launch.json` doesn't name.
+12. `mise run check` passes with no AWS credentials.
+
+## Not in this plan
+
+T16's GPU tests on a self-hosted GPU runner need a runner, which is a
+separate decision and cost; they are a follow-up. Until then, tests use small
+CPU-sized settings.
 
 ## Open questions
 
@@ -312,4 +360,5 @@ Each becomes a named test, run against moto with no AWS account or network.
 Stacked, each within 500 lines: (2) the `compute/` project, `job_record.py`,
 `run_record.py`, and the CI job; (3) observe; (4) the wrapper; (5) the
 Dockerfile and image workflow; (6) job files, the launcher, and the launch
-workflow; (7) the watch workflow; (8) the skill, the rule, and the docs.
+workflow; (7) the watch and job-ended workflows; (8) the skill, the rule,
+and the docs.
