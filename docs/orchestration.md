@@ -146,7 +146,10 @@ A worker prompt is short, because the worker reads the repository itself.
 2. "Done when": the checkable acceptance criteria.
 3. For auto mode, the review-thread instruction in
    [auto-mode.md](auto-mode.md).
-4. The report-back instruction: wait for CI and the Cursor Bugbot check on the
+4. If a person asked to review the task's PR, this line: "Add the
+   `needs-human-review` label to your PR; a person reviews it before it
+   merges." AGENTS.md says when a worker adds the label on its own.
+5. The report-back instruction: wait for CI and the Cursor Bugbot check on the
    final commit, fix or answer each finding, then
    `POST {"prompt":{"text":"<task> worker on branch <b>: <PR URL or blocker>"}}`
    to `https://api.cursor.com/v1/agents/<orchestrator bcId>/runs`, retrying

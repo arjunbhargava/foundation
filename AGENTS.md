@@ -15,7 +15,7 @@ the same thing:
 | `mise run lint:rust` | Run only the Rust checks, including cargo-deny's advisory, ban, licence, and source checks. |
 | `mise run lint:typescript` | Run only the TypeScript checks. |
 | `mise run lint:cpp` | Run only the C and C++ checks: clang-format, a check that no `#include` uses `../`, and a build with clang-tidy and compiler warnings as errors. |
-| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths check. |
+| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks. |
 | `mise run lint:workflows` | Run only the GitHub Actions workflow checks: actionlint, and zizmor's offline security audits. A finding in a workflow is suppressed with a `# zizmor: ignore[<audit>]` comment. |
 | `mise run lint:language-listings` | Check that each place that must list every language, such as the CI jobs and this table, lists each language in `.config/mise/conf.d/`, and name each place that lacks one. |
 | `mise run test` | Run all tests. |
@@ -28,6 +28,7 @@ the same thing:
 | `mise run test:rulesets` | Check the changes `.github/rulesets/apply.sh` makes with and without `--auto`, and that `lint:rulesets` catches broken ruleset files, with a fake `gh`. |
 | `mise run test:auto-merge-script` | Check when `.github/scripts/auto_merge.sh` turns auto-merge on and off, and which PRs it leaves alone, with a fake `gh`. |
 | `mise run test:approve-agent-prs-script` | Check which PRs `.github/scripts/approve_agent_prs.sh` approves, in auto mode and review mode, with a fake `gh`. |
+| `mise run test:needs-human-review-script` | Check that `.github/scripts/needs_human_review.sh` fails a PR with the `needs-human-review` label and passes one without. |
 | `mise run test:owned-paths-script` | Check which changed paths `.github/scripts/owned_paths.sh` finds in `.github/CODEOWNERS`, and when it can't tell, with a fake `gh`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 | `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught. `mutate:<language>` runs one language, except C and C++, which have no mutation tool yet. Python includes the changed `.github/scripts/*.py`; the shell scripts there have no mutation tool. `check` doesn't run it, because it's slow. |
@@ -117,6 +118,13 @@ Each language task adds its directory and lists it here.
 - Before asking a person to review a PR, fix each finding in Bugbot's review
   of the latest push (the `Cursor Bugbot` check), or reply saying why it is
   wrong. If Bugbot doesn't run, say so under "Verified".
+- Add the `needs-human-review` label to your PR when a person asks to
+  review it, in a Linear issue, in Cursor, or in chat, and pass the request
+  on to any agent you launch for that work. Also add it, saying why under
+  "Needs a person" in the PR body, when the PR adds an important feature or
+  makes an architectural decision. This is the one label you may add without
+  being asked, whatever a tool's description says. Don't remove it; the
+  owner does. `docs/auto-mode.md` says what it does.
 
 ## Cursor Cloud specific instructions
 

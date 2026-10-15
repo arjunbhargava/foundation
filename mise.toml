@@ -57,7 +57,7 @@ description = "Check formatting, lint, and types without changing files"
 depends = ["lint:*"]
 
 [tasks."lint:rulesets"]
-description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths check"
+description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks"
 run = ".github/rulesets/check.sh"
 
 [tasks."lint:workflows"]
@@ -99,6 +99,10 @@ run = ".github/scripts/auto_merge_test.sh"
 [tasks."test:approve-agent-prs-script"]
 description = "Check which PRs .github/scripts/approve_agent_prs.sh approves, in auto mode and review mode, with a fake gh"
 run = ".github/scripts/approve_agent_prs_test.sh"
+
+[tasks."test:needs-human-review-script"]
+description = "Check that .github/scripts/needs_human_review.sh fails a PR with the needs-human-review label and passes one without"
+run = ".github/scripts/needs_human_review_test.sh"
 
 [tasks."test:owned-paths-script"]
 description = "Check which changed paths .github/scripts/owned_paths.sh finds in .github/CODEOWNERS, and when it can't tell, with a fake gh"

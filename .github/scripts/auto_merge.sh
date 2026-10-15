@@ -7,8 +7,8 @@
 # A PR this script doesn't manage is left alone: one that isn't open, was
 # opened by Dependabot, comes from a fork, merges into a branch other than the
 # default branch, or has no agent label. For the others, auto-merge is turned
-# off while the PR is a draft, Bugbot hasn't finished reviewing its head
-# commit, or the PR changes a path in .github/CODEOWNERS, which only the
+# off while the PR is a draft, has the needs-human-review label, Bugbot
+# hasn't finished reviewing its head commit, or the PR changes a path in .github/CODEOWNERS, which only the
 # owner merges (owned_paths.sh). Otherwise it is turned on, with a merge
 # commit (D6 in docs/template-plan.md), unless the repository's "Allow
 # auto-merge" setting is off. When the PR already meets every requirement,
@@ -124,6 +124,8 @@ reason_to_leave_alone() {
 reason_to_wait() {
   if [[ $(jq .draft <<< "$1") == true ]]; then
     echo "it is a draft"
+  elif jq -e 'any(.labels[]; .name == "needs-human-review")' <<< "$1" > /dev/null; then
+    echo "it has the needs-human-review label, so the owner reviews and merges it"
   elif ! bugbot_reviewed "$2"; then
     echo "Bugbot hasn't finished reviewing its head commit, $(jq -r .head.sha <<< "$1")"
   fi

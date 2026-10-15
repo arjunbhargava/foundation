@@ -80,6 +80,9 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   expect_check_error check_fails_when_auto_mode_drops_the_owned_paths_check main-review-auto.json \
     "$(jq 'del(.rules[] | select(.type == "required_status_checks"))' "$rulesets_dir/main-review-auto.json")" \
     "main-review-auto.json must have this rule"
+  expect_check_error check_fails_when_auto_mode_drops_the_needs_human_review_check main-review-auto.json \
+    "$(jq 'del(.rules[].parameters.required_status_checks[]? | select(.context == "needs-human-review"))' "$rulesets_dir/main-review-auto.json")" \
+    "main-review-auto.json must have this rule"
   expect_check_error check_fails_when_review_mode_requires_the_owned_paths_check main-review.json \
     "$(jq --slurpfile auto "$rulesets_dir/main-review-auto.json" \
       '.rules += [$auto[0].rules[] | select(.type == "required_status_checks")]' "$rulesets_dir/main-review.json")" \
@@ -88,7 +91,7 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   if ((failures > 0)); then
     exit 1
   fi
-  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 9 broken ones."
+  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 10 broken ones."
 }
 
 # Puts first on PATH a gh that answers only apply.sh's requests: the existing

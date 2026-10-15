@@ -39,6 +39,8 @@ main() {
     "$both_review_rulesets" . "$no_reviews" allowed "" "Auto mode is off"
   expect_approval leaves_prs_without_the_agent_label_alone \
     "$auto_mode" '.labels = [{"name": "dependencies"}]' "$no_reviews" allowed "" "it has no agent label"
+  expect_approval does_not_approve_a_pr_with_the_needs_human_review_label \
+    "$auto_mode" '.labels += [{"name": "needs-human-review"}]' "$no_reviews" allowed "" "it has the needs-human-review label"
   expect_approval leaves_prs_from_forks_alone \
     "$auto_mode" '.head.repo.full_name = "fork/r"' "$no_reviews" allowed "" "it comes from a fork"
   expect_approval leaves_closed_prs_alone \
@@ -57,7 +59,7 @@ main() {
   if ((failures > 0)); then
     exit 1
   fi
-  echo "approve_agent_prs.sh approved, or left alone, PR 7 as expected in all 11 cases."
+  echo "approve_agent_prs.sh approved, or left alone, PR 7 as expected in all 12 cases."
 }
 
 # Puts first on PATH a gh that answers approve_agent_prs.sh's requests from the
