@@ -2,8 +2,6 @@
 
 Status: **proposed**, awaiting the owner's approval (task T16 in
 [the template plan](template-plan.md)). Nothing on this page is built yet.
-Revised on 2026-10-15 at the owner's request, to evaluate a shared SkyPilot
-API server in full.
 
 This page is the plan for letting agents run long jobs, such as model training
 or simulations, on AWS machines through SkyPilot (decision D4), and for letting
@@ -48,7 +46,6 @@ is each launching machine, and no other machine sees it.
 | Spot recovery | None | Automatic, for managed jobs | Automatic |
 | Logs after the machine is gone | Kept in S3 | Kept on the server for 7 days by default, configurable | Kept on the controller |
 | Standing cost | About $0.03 per job-day | About $750 per month (below) | A controller VM while jobs run |
-| Code we maintain | About 1,100 lines | An admin policy, deployment values, and thin wrappers | Little |
 
 (c) fails the requirement on its own. (b) meets it, and SkyPilot then runs
 managed jobs inside the API server ("consolidation mode", its default for a
@@ -76,9 +73,7 @@ the Helm chart on Amazon EKS.
 
 The API server pod gets SkyPilot's minimum of 4 CPU and 8 GiB, which serves 8
 long requests (such as log tails) at once, and 16 launching and 400 running
-managed jobs. Raising it to 6 CPU and 24 GiB later fits the same nodes. One
-node instead of two saves $294 per month, at the cost of about 10 minutes'
-downtime when a node fails.
+managed jobs. Raising it to 6 CPU and 24 GiB later fits the same nodes.
 
 **Authentication and TLS.** The chart exposes the server through
 ingress-nginx by default, but Kubernetes archived ingress-nginx on
@@ -303,6 +298,37 @@ new instance, and IAM can't tie a prefix to a job name. So any job could
 overwrite another's checkpoints. That costs at most a restart from a bad
 checkpoint, and the archived results stay intact.
 
+## Portability: the agent's VM and the job's machine
+
+| | Agent's VM (checked 2026-10-15) | Job's machine |
+|---|---|---|
+| CPU | x86_64 | x86_64 only: `limits.yaml` lists g4dn, g5, g6, g6e, m7i, and c7i, and no Graviton family (g5g, m7g, c7g) |
+| OS | Ubuntu 24.04, set up by `.cursor/install.sh` | SkyPilot's AWS image, running `compute/Dockerfile`'s image |
+| GPU | None, and no Docker | NVIDIA driver from SkyPilot's image; CUDA runtime from ours |
+| Tools | mise's pins, and `uv.lock` | The same pins: the image installs mise at `install.sh`'s version and runs `MISE_ENABLE_TOOLS=uv mise install`, and the job's setup runs `uv sync --locked` from the job's commit |
+
+- `compute/Dockerfile` is the one definition of the job environment: an
+  `nvidia/cuda` runtime image on Ubuntu 24.04, the agents' release, pinned
+  by digest, which Dependabot's `docker` updates move. The image holds no
+  project dependencies. They come from the job's own lockfile, at a cost of
+  1–3 minutes per attempt. Baking them in would mean rebuilding an image of
+  several GB on every lockfile change.
+- `uv.lock` is one lock for every platform, so a project that needs CUDA
+  wheels, such as PyTorch's, declares conflicting `cpu` and `cuda` extras.
+  The agent syncs `cpu`, and a job file names `uv_extras: [cuda]`.
+- Before the command, the wrapper fails the job, naming both versions, if the
+  driver supports an older CUDA than the image's. The run record adds the
+  AMI id, driver, CUDA, Python, `uv.lock`'s SHA-256, and the image digest.
+- The admin policy accepts only `ghcr.io/<owner>/<repository>/compute-job`
+  by a digest that CI built from `main`. This repository is public, so its
+  image is; a private project's server needs a registry read token, which
+  the admin sets.
+- Agents can't run the image, so CI does: the image workflow runs the
+  wrapper and `uv sync --locked` inside the new image on a CPU runner. Agents
+  run `mise run job:dry-run -- <job file>` first, which checks the file
+  against the limits and runs the command natively on CPU. The GPU path is
+  first exercised by a real job.
+
 ## Spending limits
 
 AWS budget data refreshes up to three times a day, and a daily budget acts on
@@ -374,16 +400,17 @@ tasks from a laptop. Steps 1–4 can start now; 5–12 wait for the admin PRs.
   moto (Apache-2.0) to fake S3 and EC2 in tests. Package `compute_jobs`:
   `client_config.py` (the two variables and the refusal), `job_file.py`,
   `launch.py`, `observe.py`, `run.py` (the wrapper), `run_record.py`, and
-  `archive.py` (the S3 layout); plus `Dockerfile` (CUDA base image pinned by
-  digest) and `tests/`.
+  `archive.py` (the S3 layout); plus `Dockerfile` and `tests/`.
 - `compute/server/`: `values.yaml`, `admin_policy/` (a package with its own
   tests), `limits.yaml`, `aws/*.json`, and `provision.sh`, `upgrade.sh`,
   `rotate_token.sh`, `status.sh`; `mise.admin.toml`.
 - `.github/workflows/`: `compute-image.yml` (build on pushes to `main`, push
-  to `ghcr.io/arjunbhargava/foundation/compute-job`), `compute-watch.yml`,
-  and a `compute` job in `ci.yml`.
-- `mise.toml`: `setup:compute`, `lint:compute`, `test:compute`,
-  `job:launch`, `job:observe`, `job:cancel`.
+  to `ghcr.io/arjunbhargava/foundation/compute-job`, then the smoke test),
+  `compute-watch.yml`, and a `compute` job in `ci.yml`.
+- `mise.toml`: `setup:compute`, `lint:compute`, `test:compute`, and
+  `job:launch`, `job:dry-run`, `job:observe`, `job:cancel`.
+- `.github/dependabot.yml` and its `.jinja` twin, through
+  `mise run template:sync` (the `docker` ecosystem for `compute/`).
 - `.env.example`, `.github/CODEOWNERS` (`compute/server/`), `copier.yml`,
   `docs/conf.py`, `AGENTS.md` and its `.jinja` twin, `docs/architecture.md`,
   and this page, rewritten to describe what was built.
@@ -431,6 +458,10 @@ except the last two, which `compute-server:status` checks on the real server.
     token can't change the server's settings.
 13. A `compute-job:` check run starts the Cursor Automation (checked by hand
     in the watch PR; if it doesn't, the PR comment and observing remain).
+14. The image workflow's smoke test passes inside the built image; the
+    wrapper fails before the command when a fake `nvidia-smi` reports an
+    older CUDA than the image's; and the admin policy rejects a Graviton
+    family or any other image.
 
 ## Decisions for the owner
 
