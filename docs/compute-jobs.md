@@ -70,8 +70,7 @@ Every command also exits 2 while the client isn't installed.
 | `COMPUTE_JOBS_AWS_ACCESS_KEY_ID`, `COMPUTE_JOBS_AWS_SECRET_ACCESS_KEY` | no | The read-only key of the IAM user `compute-jobs-observer`, so observe reads progress and outputs from the archive, also while the server is down |
 | `COMPUTE_JOBS_BUCKET`, `COMPUTE_JOBS_AWS_REGION` | with the key | The archive's bucket and region |
 
-The owner adds them as Cursor secrets; `.env.example` lists them for local
-use. Without the endpoint or token, or with an endpoint that isn't https:// or
+The owner adds them as Cursor secrets; `.env.example` lists them. Without the endpoint or token, or with an endpoint that isn't https:// or
 points at this machine, launch, observe, and cancel exit 2 with this message,
 because the SkyPilot client underneath starts a local server when it has no
 endpoint:
@@ -149,9 +148,8 @@ command other than dry-run lacks the variables or a remote https://
 endpoint. The client's own exit code is passed through. When foundation-compute
 releases a version, the owner replaces the placeholder with that version,
 in the form its release notes give; nothing else here changes, unless the
-release changes the contract.
-
-`mise run test:compute-job-script` checks the script against a fake client.
+release changes the contract. `mise run test:compute-job-script` checks the
+script against a fake client.
 
 ## Who owns what
 
@@ -164,6 +162,5 @@ release changes the contract.
 ## Deferred
 
 - The Copier question `compute` (default no), which adds or leaves out this
-  integration in a new project. Freed when the pin is real. Until then, a new
-  project gets the `job:*` tasks, which exit 2 with the "isn't installed"
-  message.
+  integration in a new project; freed when the pin is real. Until then a new
+  project gets the `job:*` tasks, which exit 2 saying the client isn't installed.

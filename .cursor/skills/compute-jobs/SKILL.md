@@ -8,8 +8,7 @@ description: >
   change the server.
 ---
 
-<!-- Draft by an agent for the owner to edit (finding F2 in
-docs/template-plan.md). -->
+<!-- An agent's draft, for the owner to edit (finding F2). -->
 
 # Compute jobs
 
