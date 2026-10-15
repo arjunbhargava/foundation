@@ -95,17 +95,18 @@ workers apart by time and order in Cursor's agent list. `mise run spend`
 shows each run's name in its "Task" column, so the name also labels the spend
 report.
 
-- **Orchestrator**: `Orchestrator <MM-DD HH:MMZ UTC>: <short descriptor>`, for
+- **Orchestrator**: `Orchestrator <MM-DD HH:MMZ>: <short descriptor>`, for
   example `Orchestrator 10-15 00:21Z: foundation queue`.
-- **Worker**: `Worker <MM-DD HH:MMZ UTC>: <short descriptor>`, for example
+- **Worker**: `Worker <MM-DD HH:MMZ>: <short descriptor>`, for example
   `Worker 10-15 00:18Z: document agent names`. The descriptor is a few
   plain words saying what the worker does. It is not the task ID, which stays
   in the worker's prompt and PR. The name doesn't include its orchestrator's.
   A relaunched worker, or a worker launched for
   a follow-up, gets a new launch time.
-- **Date and time** is the agent's launch time in UTC, to the minute, with no
-  year, so names sort by time within a year. A time stamp rather than a counter means nothing has to be
-  remembered through a [handoff](#handoff).
+- **Date and time** is the agent's UTC launch time to the minute, with the
+  date as `MM-DD` and no year, so names sort by time within a year. A time
+  stamp rather than a counter means nothing has to be remembered through a
+  [handoff](#handoff).
 - **Length**: at most 100 characters in total, the API's limit for `name`.
 - **First orchestrator**: an orchestrator that the owner starts renames itself
   in its first step with the `cursor-cloud` `rename-chat` tool.
