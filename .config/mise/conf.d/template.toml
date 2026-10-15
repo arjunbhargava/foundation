@@ -70,6 +70,15 @@ trap 'rm -rf "$work"' EXIT
 # copier update needs each project committed, and CI's git has no identity.
 export GIT_AUTHOR_NAME=template-check GIT_AUTHOR_EMAIL=template-check@localhost
 export GIT_COMMITTER_NAME=$GIT_AUTHOR_NAME GIT_COMMITTER_EMAIL=$GIT_AUTHOR_EMAIL
+# Since git 2.55 (CI's version), "git commit" starts "git maintenance run
+# --auto --detach", which keeps running in the background after the commit
+# and holds .git/objects/maintenance.lock until it has run. copier makes
+# temporary repositories and deletes them later, so turn automatic
+# maintenance off to leave nothing running in them. This replaces any
+# GIT_CONFIG_COUNT the caller set.
+export GIT_CONFIG_COUNT=2
+export GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0
+export GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false
 
 # copier update rereads the commit a project was created from, so the
 # working tree must be a commit: make it one in a clone that shares this
@@ -96,12 +105,14 @@ create() {
 # project. Once in about 160 updates in CI (1 of 33 Template runs, run
 # 38577039801), copier finishes its work and then exits with
 # "OSError: [Errno 39] Directory not empty: '.git'" (macOS numbers it 66),
-# because Python can't delete the temporary repository it made. The process that writes into that
-# directory during the deletion is inside copier or git, not in this
-# repository, so this retries once, and only on that error: any other
-# failure, and a second occurrence of this one, fails the task. The first
-# attempt has already changed the project, so the retry first restores the
-# committed state.
+# because Python can't delete the temporary clone it made. The next run
+# failed the same way for 'objects' (run 38617549987), so the directory is not
+# part of the match. The traceback of this failure passes through
+# tempfile.py's cleanup, which only deletes copier's own temporary
+# directories. The git settings above should prevent it, and this retries
+# once, only on that traceback, as a second defence: any other failure, and a
+# second occurrence of this one, fails the task. The first attempt has already
+# changed the project, so the retry first restores the committed state.
 update() {
   local project=$1 stderr_file=$work/update_stderr
   shift
@@ -110,7 +121,8 @@ update() {
     return 0
   fi
   cat "$stderr_file" >&2
-  if ! grep -qE "OSError: .*Directory not empty: '\.git'" "$stderr_file"; then
+  if ! grep -qE 'tempfile\.py", line [0-9]+, in cleanup' "$stderr_file" ||
+    ! grep -qE "OSError: .*Directory not empty: " "$stderr_file"; then
     return 1
   fi
   echo "copier update failed to delete its temporary directory (see the error above); retrying once." >&2
@@ -149,7 +161,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; and that template:check-update retries copier update once, and only on copier's temporary-directory error"
+description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -345,12 +357,59 @@ expect_update() {
   fi
 }
 
-temporary_directory_error="OSError: [Errno 39] Directory not empty: '.git'"
-expect_update the_error_once_then_success 0 2 "$temporary_directory_error" ""
-expect_update the_macos_error_once_then_success 0 2 "OSError: [Errno 66] Directory not empty: '.git'" ""
-expect_update another_error 1 1 "OSError: [Errno 13] Permission denied: '.git'"
-expect_update the_error_for_another_directory 1 1 "OSError: [Errno 39] Directory not empty: 'src'"
-expect_update the_error_twice 1 2 "$temporary_directory_error" "$temporary_directory_error"
+# The traceback tail copier 9.18.2 prints on Python 3.12 when a temporary
+# directory's cleanup raises the given error; line numbers vary by version.
+cleanup_traceback() {
+  printf '%s\n' \
+    'Traceback (most recent call last):' \
+    '  File "/usr/lib/python3.12/tempfile.py", line 1089, in cleanup' \
+    '    self._rmtree(self.name, ignore_errors=self._ignore_cleanup_errors)' \
+    "$1"
+}
+# What separates a retried failure from one that is not: the traceback goes
+# through tempfile.py's cleanup, so the directory is in a temporary directory
+# copier made. The same error from elsewhere, such as copier writing into the
+# project's own src, is not a cleanup race.
+not_a_cleanup_traceback=$(printf '%s\n' \
+  'Traceback (most recent call last):' \
+  '  File "copier/_main.py", line 1, in _copy_file' \
+  "OSError: [Errno 39] Directory not empty: 'src'")
+git_error=$(cleanup_traceback "OSError: [Errno 39] Directory not empty: '.git'")
+objects_error=$(cleanup_traceback "OSError: [Errno 39] Directory not empty: 'objects'")
+expect_update the_git_directory_error_once_then_success 0 2 "$git_error" ""
+expect_update the_macos_error_once_then_success 0 2 "$(cleanup_traceback "OSError: [Errno 66] Directory not empty: '.git'")" ""
+expect_update the_objects_directory_error_once_then_success 0 2 "$objects_error" ""
+expect_update another_cleanup_error 1 1 "$(cleanup_traceback "OSError: [Errno 13] Permission denied: '.git'")"
+expect_update the_directory_not_empty_error_outside_a_cleanup 1 1 "$not_a_cleanup_traceback"
+expect_update the_cleanup_error_twice 1 2 "$git_error" "$objects_error"
 unset -f copier
+echo "$name: passed."
+
+# template:check-update's git settings, taken from the task and applied in a
+# subshell: a commit in a new repository must not start git maintenance.
+name=template_check_update_turns_off_automatic_git_maintenance
+sed -n '/^export GIT_CONFIG_COUNT=/,/^export GIT_CONFIG_KEY_1=/p' .config/mise/conf.d/template.toml > "$work/git_settings.sh"
+if [[ $(wc -l < "$work/git_settings.sh") -ne 3 ]]; then
+  echo "FAIL: $name: found $(wc -l < "$work/git_settings.sh") GIT_CONFIG lines in the template:check-update task, expected 3 that start with \"export GIT_CONFIG_COUNT=\" and end with \"export GIT_CONFIG_KEY_1=\"." >&2
+  exit 1
+fi
+maintenance_repo=$work/maintenance_repo
+git init --quiet "$maintenance_repo"
+echo "from the template" > "$maintenance_repo/tracked_file"
+git -C "$maintenance_repo" add tracked_file
+(
+  source "$work/git_settings.sh"
+  GIT_TRACE2_EVENT=$work/maintenance_trace git -C "$maintenance_repo" \
+    -c user.name=template-test -c user.email=template-test@localhost \
+    commit --quiet --message "Create the project"
+)
+if [[ ! -s $work/maintenance_trace ]]; then
+  echo "FAIL: $name: git wrote no trace of the commit to $work/maintenance_trace, so the check could not run." >&2
+  exit 1
+fi
+if grep -q '"maintenance"' "$work/maintenance_trace"; then
+  echo "FAIL: $name: a commit with the task's git settings still ran git maintenance; the trace is $work/maintenance_trace." >&2
+  exit 1
+fi
 echo "$name: passed."
 '''
