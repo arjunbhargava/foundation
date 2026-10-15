@@ -178,7 +178,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, refuses a malformed project name, package name, GitHub owner or repository, copyright holder, or year, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that a project named my-project names foundation only in links to the template, and one with another owner and copyright holder names neither the root's nor a template-only file in CODEOWNERS and links its own repository's settings; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, refuses a malformed project name, package name, GitHub owner or repository, copyright holder, or year, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes and its sidebar lists the operating guide as one entry; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that a project named my-project names foundation only in links to the template, and one with another owner and copyright holder names neither the root's nor a template-only file in CODEOWNERS and links its own repository's settings; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -356,6 +356,27 @@ if ! (cd "$work/python" && bash docs/build.sh > "$work/docs_build.log" 2>&1); th
   cat "$work/docs_build.log" >&2
   exit 1
 fi
+echo "$name: passed."
+
+# The pages that docs/operating-guide.md lists belong in its toctree, so the
+# top level of the sidebar holds the project's own pages, the API reference,
+# and the one entry for the operating guide. Furo writes each top-level entry
+# as a toctree-l1 list item, and the pages under an entry as toctree-l2. The
+# page body repeats the toctrees, so only the sidebar's markup is read.
+name=a_projects_sidebar_lists_the_operating_guide_as_one_entry
+top_level_entries=$(sed -n '/class="sidebar-tree"/,/<\/aside>/p' "$work/python/docs/_build/html/index.html" \
+  | grep -o 'class="toctree-l1[^"]*"><a class="reference internal" href="[^"]*">[^<]*' | sed 's/.*">//')
+if [[ $(grep -cx 'Operating guide' <<< "$top_level_entries") -ne 1 ]]; then
+  printf 'FAIL: %s: the top level of the Python project'"'"'s sidebar should have "Operating guide" once, and has:\n%s\n' "$name" "$top_level_entries" >&2
+  exit 1
+fi
+for page_title in "Agent instructions" "Agent rules and skills" "Auto mode" "Orchestrating long-running agent work" \
+  "Linear conventions" "The setup script" "Pull template updates"; do
+  if grep -qx "$page_title" <<< "$top_level_entries"; then
+    printf 'FAIL: %s: the top level of the Python project'"'"'s sidebar lists "%s", which belongs under "Operating guide". Put its page in the toctree of docs/operating-guide.md.\n' "$name" "$page_title" >&2
+    exit 1
+  fi
+done
 echo "$name: passed."
 
 # A Python project that is a uv workspace, named foundation or otherwise, gets
