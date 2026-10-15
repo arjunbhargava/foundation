@@ -1,13 +1,15 @@
-# Fails a PR that has the needs-human-review label, so that, once the
-# auto-mode ruleset requires this check, only the owner's bypass merges it,
-# even after the approval workflow has approved it (docs/auto-mode.md).
-# pull_request_target runs the base branch's copy of this file, so a PR can't
-# change the check that judges it. No code from the PR runs.
+# Fails a PR that has the needs-human-review label, by running
+# .github/scripts/needs_human_review.sh, so that, once the auto-mode ruleset
+# requires this check, only the owner's bypass merges it, even after the
+# approval workflow has approved it (docs/auto-mode.md). pull_request_target
+# runs the base branch's copy of this file, with GITHUB_SHA set to that
+# branch's latest commit, which the job checks out, so a PR can't change the
+# check that judges it. No code from the PR runs.
 name: Needs human review
 
 on:
   # zizmor flags every pull_request_target, because checking out a PR with it
-  # runs the PR's code with the job's token; this job checks out nothing.
+  # runs the PR's code with the job's token.
   pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
@@ -26,12 +28,12 @@ jobs:
     concurrency:
       group: needs-human-review-${{ github.event.pull_request.number }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # check out the base branch
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - env:
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'needs-human-review') }}
-        run: |
-          if [[ $HAS_LABEL == true ]]; then
-            echo "error: this PR has the needs-human-review label, so only the owner merges it, with the admin bypass. Removing the label lets auto mode merge it." >&2
-            exit 1
-          fi
-          echo "This PR has no needs-human-review label."
+          LABEL_NAMES: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: .github/scripts/needs_human_review.sh "$LABEL_NAMES"

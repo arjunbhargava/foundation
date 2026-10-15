@@ -95,7 +95,7 @@ cases, as `AGENTS.md` tells it to:
 While a PR has the label, the approval workflow doesn't approve it, the
 auto-merge workflow keeps auto-merge off, and turns it off if it was on, and
 the `needs-human-review` check, which `.github/workflows/needs-human-review.yml`
-runs, fails, so only the owner's bypass merges it. When the owner removes the
+runs with `.github/scripts/needs_human_review.sh`, fails, so only the owner's bypass merges it. When the owner removes the
 label, the check runs again and passes, the approval workflow approves the PR
 if it never has, and the auto-merge workflow turns auto-merge on once Bugbot
 has reviewed the latest commit.
