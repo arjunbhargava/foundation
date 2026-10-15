@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # Checks which files .github/scripts/mutate.sh mutates and what its report
 # says, without running a mutation tool. It runs the script in a temporary
-# git repository with one package in each language and two Python scripts in
-# .github/scripts/, where fake uv, cargo, and pnpm record the files or module
-# globs they are given and print canned results: one surviving and one caught
-# mutant, or two caught mutants if FAKE_ALL_KILLED is set. For the scripts,
-# fake uv reports one mutant, which survives unless FAKE_ALL_KILLED is set.
+# git repository with one package in each language, two Python scripts in
+# .github/scripts/, and a copier.yml, which only the template repository has,
+# where fake uv, cargo, and pnpm record the files or module globs they are
+# given and print canned results: one surviving and one caught mutant, or two
+# caught mutants if FAKE_ALL_KILLED is set. For the scripts, fake uv reports
+# one mutant, which survives unless FAKE_ALL_KILLED is set. If
+# FAKE_NO_MUTABLE_CODE is set, the tools find no mutant in the changed files;
+# for mutmut it is "empty" if the project has no mutant at all, and "elsewhere"
+# if its mutants are in other files. If FAKE_MUTMUT_FAILS is set, mutmut fails
+# although it has generated mutants in the changed files.
 #
 # Usage: .github/scripts/mutate_test.sh
 set -euo pipefail
@@ -39,11 +44,22 @@ main() {
   check python .github/scripts/mutate.sh $'pkg.x*\npkg.a.x*\npkg.b.x*\nscript_a.x*\nscript_b.x*' "Python scripts mutation testing: 1 of 1 mutants survived"
   check python .github/scripts/shell_script.sh "" "Python scripts mutation testing: no source or test file changed"
 
+  # A project made from the template has no copier.yml, and doesn't mutate the
+  # scripts in .github/scripts/.
+  PROJECT=1 check python .github/scripts/script_a.py "" "Python mutation testing: no source or test file changed" "Python scripts"
+  PROJECT=1 check python .github/scripts/mutate.sh $'pkg.x*\npkg.a.x*\npkg.b.x*' "Python mutation testing: 1 of 2 mutants survived" "Python scripts"
+
+  FAKE_NO_MUTABLE_CODE=empty check python src/pkg/a.py 'pkg.a.x*' "Python mutation testing: passed, because the changed files hold no mutable code: src/pkg/a.py"
+  FAKE_NO_MUTABLE_CODE=elsewhere check python src/pkg/a.py 'pkg.a.x*' "Python mutation testing: passed, because the changed files hold no mutable code: src/pkg/a.py"
+  FAKE_NO_MUTABLE_CODE=empty check rust crates/c/src/x.rs crates/c/src/x.rs "Rust mutation testing: passed, because the changed files hold no mutable code: crates/c/src/x.rs"
+  FAKE_NO_MUTABLE_CODE=empty check typescript packages/p/src/a.ts packages/p/src/a.ts "TypeScript mutation testing: passed, because the changed files hold no mutable code: packages/p/src/a.ts"
+  FAKE_MUTMUT_FAILS=1 check_fails python src/pkg/a.py "mutmut failed"
+
   FAKE_ALL_KILLED=1 check python src/pkg/a.py 'pkg.a.x*' "0 of 2 mutants survived"
   FAKE_ALL_KILLED=1 check python .github/scripts/script_a.py 'script_a.x*' "Python scripts mutation testing: 0 of 1 mutants survived"
   FAKE_ALL_KILLED=1 check rust crates/c/src/x.rs crates/c/src/x.rs "0 of 2 mutants survived"
   FAKE_ALL_KILLED=1 check typescript packages/p/src/a.ts packages/p/src/a.ts "0 of 2 mutants survived"
-  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 18 cases."
+  echo ".github/scripts/mutate.sh chose the expected files and reported them in all 25 cases."
 }
 
 # Writes fake uv, cargo, and pnpm, which append the module globs or files
@@ -60,8 +76,25 @@ case "$*" in
       [[ -f src/script_a.py && -f src/script_b.py && ! -e src/script_a_test.py && -f tests/script_a_test.py && ! -e tests/script_a.py && -f pyproject.toml && -n ${UV_PROJECT:-} ]] || { echo "fake uv: the scratch project is wrong: $(find . -type f | sort | tr '\n' ' ')" >&2; exit 1; }
     fi
     printf '%s\n' "${@:4}" >> "$FAKE_TOOL_ARGUMENTS"
+    # mutmut's own failures: pytest exiting with status 5, "no tests ran",
+    # when the project has no tests, or no match for the globs.
+    if [[ -n ${FAKE_NO_MUTABLE_CODE:-} || -n ${FAKE_MUTMUT_FAILS:-} ]]; then
+      echo "failed to collect stats. runner returned 5" >&2
+      exit 1
+    fi
     ;;
   "run mutmut results --all true")
+    if [[ ${FAKE_NO_MUTABLE_CODE:-} == empty ]]; then
+      exit 0
+    fi
+    if [[ ${FAKE_NO_MUTABLE_CODE:-} == elsewhere ]]; then
+      printf '    other.x_f__mutmut_1: not checked\n'
+      exit 0
+    fi
+    if [[ -n ${FAKE_MUTMUT_FAILS:-} ]]; then
+      printf '    pkg.a.x_f__mutmut_1: not checked\n'
+      exit 0
+    fi
     if [[ $PWD == */.mutants-scripts ]]; then
       printf '    script_a.x_f__mutmut_1: %s\n' "$([[ -n ${FAKE_ALL_KILLED:-} ]] && echo killed || echo survived)"
       exit 0
@@ -82,6 +115,10 @@ while (($# > 0)); do
   shift
 done
 mkdir -p target/mutants.out
+if [[ -n ${FAKE_NO_MUTABLE_CODE:-} ]]; then
+  echo '[]' > target/mutants.out/mutants.json
+  exit 0
+fi
 echo '[{}, {}]' > target/mutants.out/mutants.json
 if [[ -n ${FAKE_ALL_KILLED:-} ]]; then
   echo '{"total_mutants": 2, "missed": 0, "caught": 2, "timeout": 0, "unviable": 0}' > target/mutants.out/outcomes.json
@@ -102,6 +139,10 @@ while (($# > 0)); do
   shift
 done
 mkdir -p reports/mutation
+if [[ -n ${FAKE_NO_MUTABLE_CODE:-} ]]; then
+  echo '{"files": {"packages/p/src/a.ts": {"mutants": []}}}' > reports/mutation/mutation.json
+  exit 0
+fi
 survivor_status=Survived
 [[ -n ${FAKE_ALL_KILLED:-} ]] && survivor_status=Killed
 cat > reports/mutation/mutation.json << REPORT
@@ -120,7 +161,7 @@ make_repository() {
     "$work/repo/crates/c/src" "$work/repo/crates/c/tests" "$work/repo/packages/p/src"
   cd "$work/repo"
   cp "$script_dir/mutate.sh" .github/scripts/
-  touch src/pkg/__init__.py src/pkg/a.py src/pkg/b.py tests/test_a.py \
+  touch copier.yml src/pkg/__init__.py src/pkg/a.py src/pkg/b.py tests/test_a.py \
     crates/c/src/lib.rs crates/c/src/x.rs crates/c/tests/t.rs \
     packages/p/src/a.ts packages/p/src/b.ts packages/p/src/a.test.ts stryker.config.json \
     .github/scripts/script_a.py .github/scripts/script_b.py .github/scripts/script_a_test.py \
@@ -132,17 +173,13 @@ make_repository() {
 
 # Changes one file, runs .github/scripts/mutate.sh for one language, and
 # fails unless the tool got the expected globs or files and the report has
-# the expected headline. The script must exit 0, though the fake cargo
-# exits 2.
+# the expected headline, and lacks the optional text. The script must exit 0,
+# though the fake cargo exits 2. With PROJECT set, the repository lacks
+# copier.yml, as a project made from the template does.
 check() {
-  local language=$1 changed_file=$2 expected_arguments=$3 expected_headline=$4
-  git checkout --quiet -- .
-  git clean --quiet --force -d
-  : > "$FAKE_TOOL_ARGUMENTS"
-  echo "# changed" >> "$changed_file"
-
+  local language=$1 changed_file=$2 expected_arguments=$3 expected_headline=$4 unexpected_text=${5:-}
   local report arguments status=0
-  report=$(.github/scripts/mutate.sh "$language" HEAD) || status=$?
+  report=$(run_mutate "$language" "$changed_file") || status=$?
   if ((status != 0)); then
     echo "FAIL: after a change to $changed_file, mutate.sh $language exited with status $status, not 0." >&2
     exit 1
@@ -158,6 +195,44 @@ check() {
     echo "which lacks '$expected_headline'." >&2
     exit 1
   fi
+  if [[ -n $unexpected_text && $report == *"$unexpected_text"* ]]; then
+    echo "FAIL: after a change to $changed_file, mutate.sh $language reported:" >&2
+    echo "$report" >&2
+    echo "which has '$unexpected_text'." >&2
+    exit 1
+  fi
+}
+
+# Like check, but fails unless the script exits with a non-zero status and
+# prints the expected error.
+check_fails() {
+  local language=$1 changed_file=$2 expected_error=$3
+  local output status=0
+  output=$(run_mutate "$language" "$changed_file" 2>&1) || status=$?
+  if ((status == 0)); then
+    echo "FAIL: after a change to $changed_file, mutate.sh $language exited with status 0, not an error." >&2
+    exit 1
+  fi
+  if [[ $output != *"$expected_error"* ]]; then
+    echo "FAIL: after a change to $changed_file, mutate.sh $language printed:" >&2
+    echo "$output" >&2
+    echo "which lacks '$expected_error'." >&2
+    exit 1
+  fi
+}
+
+# Resets the repository, changes one file, and prints the report of
+# .github/scripts/mutate.sh for one language.
+run_mutate() {
+  local language=$1 changed_file=$2
+  git checkout --quiet -- .
+  git clean --quiet --force -d
+  if [[ -n ${PROJECT:-} ]]; then
+    rm copier.yml
+  fi
+  : > "$FAKE_TOOL_ARGUMENTS"
+  echo "# changed" >> "$changed_file"
+  .github/scripts/mutate.sh "$language" HEAD
 }
 
 main

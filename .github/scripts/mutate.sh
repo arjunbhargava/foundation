@@ -13,9 +13,16 @@
 # A change to this script, its workflow, or stryker.config.json mutates
 # every package.
 #
-# For python, the Python scripts in .github/scripts/ count as one more package,
-# reported separately. The shell scripts there aren't mutated, because mutmut
-# reads only Python and no shell mutation tool is pinned.
+# A project made from the template doesn't own the scripts in .github/scripts/:
+# it receives them through `copier update`, and its changes to them, if any,
+# aren't its code to test. So they are mutated only in the template
+# repository, which is the one with copier.yml (copier.yml leaves that file
+# out of every project). There, for python, the Python scripts count as one
+# more package, reported separately. The shell scripts there aren't mutated,
+# because mutmut reads only Python and no shell mutation tool is pinned.
+#
+# When nothing changed is mutable, for example a package that holds only
+# docstrings, the script says so in one line and succeeds.
 #
 # The report goes to stdout and, in GitHub Actions, to the job summary.
 # Surviving mutants don't fail the script: for now, mutation testing reports
@@ -47,7 +54,9 @@ main() {
 
 mutate_python() {
   mutate_python_source
-  mutate_python_scripts
+  if [[ -f copier.yml ]]; then
+    mutate_python_scripts
+  fi
 }
 
 mutate_python_source() {
@@ -123,10 +132,14 @@ run_mutmut() {
   # mutmut reuses results from earlier runs, which a changed test can make
   # wrong.
   rm -rf mutants
-  mkdir mutants
-  if ! uv run mutmut run "$@" 2>&1 | tee mutants/run.log; then
-    if grep -qF "Filtered for specific mutants, but nothing matches" mutants/run.log; then
-      report "$label" "$files" 0 0 "mutmut found no code to mutate in these files."
+  if ! uv run mutmut run "$@"; then
+    # With no mutant in the files, mutmut either says nothing matches or, if
+    # the project has no tests either, fails to collect any: pytest exits
+    # with status 5. Neither is a failure of the tool.
+    local generated_mutants
+    generated_mutants=$(uv run mutmut results --all true)
+    if ! any_mutant_matches "$generated_mutants" "$@"; then
+      report "$label" "$files" 0 0 ""
       return
     fi
     echo "error: mutmut failed; its output is above." >&2
@@ -180,7 +193,7 @@ mutate_rust() {
   local results_dir=target/mutants.out mutant_count
   mutant_count=$(jq length "$results_dir/mutants.json")
   if ((mutant_count == 0)); then
-    report Rust "$files" 0 0 "cargo-mutants found no code to mutate in these files."
+    report Rust "$files" 0 0 ""
     return
   fi
 
@@ -226,7 +239,7 @@ mutate_typescript() {
   local mutant_count
   mutant_count=$(jq '[.files[].mutants[]] | length' "$report_file")
   if ((mutant_count == 0)); then
-    report TypeScript "$files" 0 0 "StrykerJS found no code to mutate in these files."
+    report TypeScript "$files" 0 0 ""
     return
   fi
 
@@ -247,7 +260,7 @@ mutate_typescript() {
 # its workflow, or stryker.config.json, which only mutation testing reads,
 # counts as a change to every package's tests, so that the PR making it runs
 # every step here in CI. In a git pathspec, * also matches /,
-# so src/*.py includes src/foundation/quadrature.py.
+# so src/*.py includes src/pkg/module.py.
 files_to_mutate() {
   local tests=$1
   shift
@@ -264,6 +277,8 @@ report() {
   local language=$1 files=$2 survived=$3 total=$4 tool_counts=$5 survivor_list=${6:-}
   if [[ -z $files ]]; then
     echo "### $language mutation testing: no source or test file changed since the merge base with $base"
+  elif ((total == 0)); then
+    echo "### $language mutation testing: passed, because the changed files hold no mutable code: ${files//$'\n'/, }"
   else
     echo "### $language mutation testing: $survived of $total mutants survived"
     echo
@@ -277,6 +292,27 @@ report() {
       echo "$survivor_list"
     fi
   fi | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+}
+
+# Succeeds if a line of mutmut's results, "<mutant>: <status>", names a mutant
+# that matches one of the module globs. results is the output of `mutmut
+# results --all true`, which lists the mutants of every file.
+any_mutant_matches() {
+  local results=$1 mutant
+  shift
+  local glob
+  while IFS= read -r mutant; do
+    mutant=${mutant%%:*}
+    mutant=${mutant#"${mutant%%[![:space:]]*}"}
+    for glob in "$@"; do
+      # An unquoted glob is the point: [[ == ]] matches it as a pattern.
+      # shellcheck disable=SC2053
+      if [[ -n $mutant && $mutant == $glob ]]; then
+        return 0
+      fi
+    done
+  done <<< "$results"
+  return 1
 }
 
 # Prints the number of non-empty lines in its argument.
