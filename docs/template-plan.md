@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Plan: a team template repository
 
 Status: most of this plan is built; what remains is T16 (compute job

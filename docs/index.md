@@ -34,7 +34,6 @@ auto-mode
 install-script
 linear
 orchestration
-template-plan
 template-updates
 ```
 
