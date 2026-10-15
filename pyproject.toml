@@ -35,7 +35,7 @@ ignore = ["D107"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests aren't API reference; their names state the behaviour they check.
-"tests/**" = ["D"]
+"**/tests/**" = ["D"]
 ".github/scripts/*_test.py" = ["D"]
 "docs/*_test.py" = ["D"]
 
@@ -65,7 +65,16 @@ forbidden_modules = ["pytest"]
 [tool.pytest]
 # -n auto runs tests in parallel, so a test that depends on shared state or on
 # another test's order fails early instead of intermittently later.
-addopts = ["-n", "auto", "--doctest-modules"]
+#
+# importlib import mode imports each test file under its own path, so test
+# files in different distributions' tests/ directories may share a name, which
+# the default mode rejects. It doesn't put a test file's directory on sys.path,
+# so pythonpath lets the scripts' tests import the script beside them.
+#
+# conftest.py adds the src/ and tests/ of each uv workspace member to
+# testpaths when a run names no path.
+addopts = ["-n", "auto", "--doctest-modules", "--import-mode=importlib"]
+pythonpath = [".github/scripts"]
 testpaths = ["src", "tests", ".github/scripts"]
 strict = true
 filterwarnings = ["error"]

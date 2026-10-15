@@ -51,6 +51,20 @@ language the project has: Python, Rust, TypeScript, and C and C++.
   `mise run mutate` pass with a package that holds only docstrings.
 - `pyproject.toml`: Python dependencies and tool settings. `uv.lock` locks
   the dependencies, and `.python-version` pins Python.
+- `conftest.py`: adds the `src/` and `tests/` of each uv workspace member to
+  the paths pytest runs when it is given none.
+- More than one Python distribution: list each as a member in
+  `[tool.uv.workspace]` in `pyproject.toml`, and give it a `pyproject.toml`,
+  `src/<package>/`, and `tests/` of its own, as the root has. One `uv.lock`
+  and one `.venv` then cover all of them, and the tests, `docs/build.sh`,
+  `docs/conf.py`, and `mise run mutate` take their list of distributions from
+  the members, and `mutate` reports each separately. A new member also needs
+  its package added by hand to the toctree in `docs/api/python.md` and to
+  `[tool.importlinter]`, and, if it has a `lib/` directory, `source_paths =
+  ["src"]` under `[tool.mutmut]` in its own `pyproject.toml`, because mutmut
+  would mutate `lib/`. pytest imports test files by path, so two members may
+  have a test file of the same name, and a test can't import a helper beside
+  it by name.
 - `crates/foundation/`: the Rust crate, tested in its `tests/`. It is the
   template's example, there to prove the checks work. To delete its code,
   delete `src/verlet.rs`, `tests/verlet.rs`, and the `pub mod verlet;` line

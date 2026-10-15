@@ -262,7 +262,7 @@ echo "$name: passed."
 # .github/dependabot.yml.
 language_files() {
   case $1 in
-    python) echo pyproject.toml uv.lock .python-version src tests .config/mise/conf.d/python.toml docs/api/python.md ;;
+    python) echo pyproject.toml uv.lock .python-version conftest.py src tests .config/mise/conf.d/python.toml docs/api/python.md ;;
     rust) echo Cargo.toml Cargo.lock rust-toolchain.toml crates .config/mise/conf.d/rust.toml docs/api/rust.md .github/workflows/rust-advisories.yml ;;
     typescript) echo package.json pnpm-lock.yaml pnpm-workspace.yaml packages tsconfig.json biome.json .dependency-cruiser.cjs stryker.config.json .config/mise/conf.d/typescript.toml docs/api/typescript.md ;;
     cpp) echo CMakeLists.txt cpp CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml docs/api/cpp.md ;;
