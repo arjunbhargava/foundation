@@ -17,9 +17,8 @@ repository's name, or run `mise run setup:status`, which prints each step as
    turn on "Allow GitHub Actions to create and approve pull requests".
    Unlocks: [auto mode](docs/auto-mode.md)'s approvals. Who: a repository
    admin; an organization owner first, if the organization's setting is off.
-2. **Allow auto-merge** in
-   [Settings > General](https://github.com/OWNER/REPO/settings). Unlocks: the
-   auto-merge workflow. Who: a repository admin.
+2. **Allow auto-merge** in [Settings > General](https://github.com/OWNER/REPO/settings).
+   Unlocks: the auto-merge workflow. Who: a repository admin.
 3. **Publish the documentation site.**
    [Settings > Pages](https://github.com/OWNER/REPO/settings/pages): set
    Source to GitHub Actions. Unlocks: the deploy job of `docs-site.yml`. Who:
@@ -43,12 +42,11 @@ repository's name, or run `mise run setup:status`, which prints each step as
    locally. Unlocks: `mise run spend`. Who: the Cursor account's manager; a
    team admin for the first. No workflow reads a GitHub Actions secret yet.
 8. **Set up Linear** as [`docs/linear.md`](docs/linear.md) says. Unlocks:
-   issues that agents turn into pull requests. Who: a Linear workspace admin.
+   issues that agents turn into PRs. Who: a Linear workspace admin.
 9. **Optional: schedule `prune-review`** with a
    [Cursor automation](https://cursor.com/automations), as the
    [skill](.cursor/skills/prune-review/SKILL.md) says. Unlocks: regular
-   removal of dead code. Who: a Cursor user; a team admin for a service
-   account.
+   removal of dead code. Who: a Cursor user.
 
 ## Set up a local machine
 

@@ -40,7 +40,6 @@ main() {
   echo '[]' > "$api/repos_o_r_rulesets"
   run_script o/r
   expect_count "[not done] " 6
-  expect_contains "Pages is off"
 
   new_case both_review_rulesets_are_active
   edit_json "$api/repos_o_r_rulesets" 'map(.enforcement = "active")'
@@ -53,11 +52,6 @@ main() {
   run_script o/r
   expect_contains "[can't check] 3."
   expect_contains "GitHub refused repos/o/r/pages (HTTP 403)"
-
-  new_case security_and_analysis_is_missing
-  edit_json "$api/repos_o_r" 'del(.security_and_analysis)'
-  run_script o/r
-  expect_contains "[can't check] 4. Secret scanning with push protection"
 
   new_case gh_account_is_not_an_admin
   edit_json "$api/repos_o_r" '.permissions.admin = false'

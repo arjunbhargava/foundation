@@ -18,7 +18,8 @@
 #       Step 4, merge methods: .allow_merge_commit is true, and
 #       .allow_squash_merge and .allow_rebase_merge are false.
 #       Step 4, secret scanning: .security_and_analysis.secret_scanning and
-#       .secret_scanning_push_protection have status "enabled".
+#       .secret_scanning_push_protection have status "enabled"; a response
+#       without them counts as not done, and the detail says so.
 #   GET repos/{repo}/actions/permissions/workflow
 #       Step 1: .can_approve_pull_request_reviews is true.
 #   GET repos/{repo}/pages
@@ -180,14 +181,9 @@ is_active() {
 }
 
 check_secret_scanning() {
-  local url=$1 title="Secret scanning with push protection"
-  if [[ -z $settings_unreadable_reason && $(jq -r '.security_and_analysis | type' <<< "$repo_json") != object ]]; then
-    report "can't check" 4 "$title" "GitHub's answer has no security_and_analysis; a private repository needs GitHub Secret Protection to report it" "$url"
-    return 0
-  fi
-  check 4 "$title" "$url" repository \
+  check 4 "Secret scanning with push protection" "$1" repository \
     '.security_and_analysis | .secret_scanning.status == "enabled" and .secret_scanning_push_protection.status == "enabled"' \
-    "secret scanning or push protection is off; run apply.sh"
+    "off, or GitHub doesn't report it, as for a private repository without GitHub Secret Protection; run apply.sh"
 }
 
 report_unchecked_steps() {
