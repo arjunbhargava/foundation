@@ -106,11 +106,12 @@ agent's token included, could merge the PR from the merge box. Dismissing
 that approval instead would conflict with the approval workflow's rule of
 approving a PR at most once, so removing the label couldn't bring it back.
 
-Agents add the label with their own GitHub token and the owner adds it in
-the web UI; GitHub starts workflows for both, unlike for `GITHUB_TOKEN`
-([below](#the-auto-merge-workflow)). Between the label being added and the
-check's new run starting, a PR whose auto-merge is on could still merge;
-that window is a few seconds.
+Agents add the label through the Cursor GitHub App, acting as the owner, and
+the owner adds it in the web UI; GitHub starts workflows for both, as it
+doesn't for `GITHUB_TOKEN` ([below](#the-auto-merge-workflow)). On PR #75,
+the workflows' run started 2 seconds after an agent added the label. Until
+the check's new run starts, a PR whose auto-merge is on and that meets every
+other requirement can still merge.
 
 ## The approval workflow
 
