@@ -37,6 +37,11 @@ zizmor = "1.30.1" # lint:workflows
 # Move pyproject.toml's uv_build range with this pin. Outside that range, uv
 # fetches uv_build from PyPI instead of building with its built-in copy.
 uv = "0.12.21"
+# PLACEHOLDER, not a pin: the compute client, `compute-jobs` from
+# https://github.com/arjunbhargava/foundation-compute, has released no version
+# yet, so it isn't installed and every `mise run job:*` exits 2 saying so.
+# When it releases one, the owner pins it here in the form its release notes
+# give, and adds it to MISE_ENABLE_TOOLS where a CI job runs it.
 
 # Each setup task fails if its lockfile is out of date with its manifest, so
 # CI catches a manifest edited without relocking.
@@ -111,6 +116,28 @@ run = ".github/scripts/owned_paths_test.sh"
 [tasks."test:block-unlisted-tools-script"]
 description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
 run = ".github/scripts/block_unlisted_tools_test.sh"
+
+[tasks."test:compute-job-script"]
+description = "Check that .github/scripts/compute_job.sh refuses without the client, the server's variables, or a remote https endpoint, and otherwise passes arguments and exit codes through, with a fake client"
+run = ".github/scripts/compute_job_test.sh"
+
+# The compute client's commands, from docs/compute-jobs.md. Arguments after --
+# go to the client: `mise run job:observe -- pr81-search-3f9a2c1d`.
+[tasks."job:dry-run"]
+description = "Check a job file against the limits, print its maximum cost, and run its CPU smoke test on this machine; needs no server"
+run = ".github/scripts/compute_job.sh dry-run"
+
+[tasks."job:launch"]
+description = "Launch a job file on the shared compute server and print the job's name; needs SKYPILOT_API_SERVER_ENDPOINT and SKYPILOT_SERVICE_ACCOUNT_TOKEN"
+run = ".github/scripts/compute_job.sh launch"
+
+[tasks."job:observe"]
+description = "Show a job's state, progress, cost so far, and log tail, or list jobs; needs SKYPILOT_API_SERVER_ENDPOINT and SKYPILOT_SERVICE_ACCOUNT_TOKEN"
+run = ".github/scripts/compute_job.sh observe"
+
+[tasks."job:cancel"]
+description = "Cancel a job you launched; needs SKYPILOT_API_SERVER_ENDPOINT and SKYPILOT_SERVICE_ACCOUNT_TOKEN"
+run = ".github/scripts/compute_job.sh cancel"
 
 [tasks.docs]
 description = "Build the documentation site"
