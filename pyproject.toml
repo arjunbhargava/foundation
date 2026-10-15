@@ -44,9 +44,9 @@ convention = "google"
 
 [tool.pyright]
 typeCheckingMode = "strict"
-# mutants/ is mutmut's generated copy of src/. Setting exclude replaces
-# pyright's defaults, so the other three entries restore them.
-exclude = ["mutants", "**/node_modules", "**/__pycache__", "**/.*"]
+# mutants/ is mutmut's generated copy of a distribution's src/. Setting
+# exclude replaces pyright's defaults, so the other three entries restore them.
+exclude = ["**/mutants", "**/node_modules", "**/__pycache__", "**/.*"]
 
 # Module boundaries, which `mise run lint:python` checks with lint-imports.
 # Add a contract for each rule:
@@ -71,6 +71,8 @@ strict = true
 filterwarnings = ["error"]
 
 [tool.mutmut]
-# mutmut records which tests call each function, and can't see calls made in
-# pytest-xdist's worker processes, so it runs the tests in one process.
-pytest_add_cli_args = ["-n", "0"]
+# mutmut takes one src/ per run, and guesses lib/ before src/ in a directory
+# that has both, as the root of a workspace with a member in lib/ does.
+# .github/scripts/mutate.sh runs mutmut in each distribution's directory. A
+# member needs no [tool.mutmut] unless it has a lib/ directory of its own.
+source_paths = ["src"]
