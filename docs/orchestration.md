@@ -55,7 +55,8 @@ lines, such as "which files call this function". If the answer would be
 longer than the question that asked it, launch a worker instead.
 
 ```sh
-jq -n --rawfile prompt worker-prompt.md '{
+jq -n --rawfile prompt worker-prompt.md --arg name "$worker_name" '{
+  name: $name,
   prompt: {text: $prompt},
   model: {id: "claude-sonnet-5-5",
           params: [{id: "reasoning_effort", value: "high"}]},
@@ -69,6 +70,9 @@ jq -n --rawfile prompt worker-prompt.md '{
 - Build the body with `jq --rawfile`, so that the prompt's quotes and
   newlines are escaped. `CURSOR_API_KEY` is a cloud agent secret; never print
   it.
+- `name` is the worker's display name in Cursor's agent list, set as in
+  [Naming agents](#naming-agents). Without it, Cursor derives a name from the
+  prompt.
 - `startingRef` is the branch the worker starts from. A stacked PR starts from
   `main` after the PR below it merges.
 - Send a follow-up to a worker with
@@ -82,6 +86,31 @@ jq -n --rawfile prompt worker-prompt.md '{
   sidebar list. The owner has seen them disappear when deselected. Until
   that's solved, the links in the orchestrator's messages are the way to open
   a worker.
+
+### Naming agents
+
+`POST /v1/agents` accepts an optional `name`, a display name of at most 100
+characters. Set it on every launch, so the owner can tell orchestrators and
+workers apart by time and order in Cursor's agent list. `mise run spend`
+shows each run's name in its "Task" column, so the name also labels the spend
+report.
+
+- **Orchestrator**: `O <start date and time in UTC>`, for example
+  `O 2026-10-14 18:20Z`. The start time is the order key: a later
+  orchestrator sorts after an earlier one. It is a start time rather than a
+  counter because no counter has to be remembered through a
+  [handoff](#handoff). The outgoing orchestrator launches its successor
+  through the API with `name` set, so no model step is needed. A first
+  orchestrator that the owner starts renames itself in its first step with
+  the `cursor-cloud` `rename-chat` tool.
+- **Worker**: `<its orchestrator's name> / W <MM-DD HH:MMZ launch time> /
+  <task ID>`, for example `O 2026-10-14 18:20Z / W 10-15 01:12Z / SPEND-LABELS`.
+  A relaunched worker, or a worker launched for a follow-up, keeps the task ID
+  and gets a new launch time.
+- Add a short title for the task after the task ID only if the whole name
+  stays under 100 characters.
+
+Agents launched before this scheme keep their old names.
 
 ### Which model
 
@@ -218,6 +247,11 @@ orchestrator, in this order:
 4. **Queue**, in order, with the condition that frees each item.
 5. **Owner's open items**, to mention at natural pauses without nagging.
 6. **Standing rules that this page doesn't hold.**
+
+The outgoing orchestrator launches the successor through the API with `name`
+set to the successor's own start time, as in [Naming agents](#naming-agents).
+The handoff prompt says that the successor names its workers with that
+name.
 
 Then send each in-flight worker a follow-up with the new orchestrator's bcId,
 and stop. Don't contact the previous orchestrator from the new one.
