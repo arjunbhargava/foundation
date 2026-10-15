@@ -6,8 +6,8 @@
 # runs it, and docs/auto-mode.md says why.
 #
 # A PR is left alone if it isn't open, comes from a fork, has no agent label,
-# or github-actions[bot] has reviewed it before, so that an approval a person
-# or apply.sh dismissed stays dismissed.
+# has the needs-human-review label, or github-actions[bot] has reviewed it
+# before, so that an approval a person or apply.sh dismissed stays dismissed.
 #
 # Usage: .github/scripts/approve_agent_prs.sh <PR number>...
 #
@@ -82,6 +82,7 @@ reason_to_leave_alone() {
     if .state != "open" then "it is \(.state)"
     elif .head.repo.full_name != $repository then "it comes from a fork"
     elif (any(.labels[]; .name == "agent") | not) then "it has no agent label"
+    elif any(.labels[]; .name == "needs-human-review") then "it has the needs-human-review label, so a person reviews it"
     else empty
     end' <<< "$1"
 }

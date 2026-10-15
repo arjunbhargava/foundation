@@ -43,6 +43,10 @@ main() {
     '.auto_merge = {"merge_method": "merge"}' "[$reviewed]" true ""
   expect_merge_calls waits_while_the_pr_is_a_draft \
     '.draft = true' "[$reviewed]" true ""
+  expect_merge_calls keeps_auto_merge_off_while_the_pr_has_the_needs_human_review_label \
+    '.labels += [{"name": "needs-human-review"}]' "[$reviewed]" true ""
+  expect_merge_calls turns_auto_merge_off_when_the_needs_human_review_label_is_added \
+    '.labels += [{"name": "needs-human-review"}] | .auto_merge = {"merge_method": "merge"}' "[$reviewed]" true "$turn_off"
   expect_merge_calls does_nothing_when_allow_auto_merge_is_off \
     . "[$reviewed]" false ""
   expect_merge_calls still_turns_auto_merge_off_after_a_push_when_allow_auto_merge_is_off \
@@ -71,7 +75,7 @@ main() {
   if ((failures > 0)); then
     exit 1
   fi
-  echo "auto_merge.sh made the expected gh pr merge calls in all 18 cases."
+  echo "auto_merge.sh made the expected gh pr merge calls in all 20 cases."
 }
 
 # Puts first on PATH a gh that answers auto_merge.sh's requests from the files
