@@ -9,7 +9,7 @@ repository; a PR without the `agent` label still needs a person's approval.
 
 Status: in progress (T23 in [the template plan](template-plan.md)). The
 review ruleset, the approval workflow, the auto-merge workflow, and the
-owned-paths check are in place. Until the branch-update workflow lands, a PR
+owned-paths and needs-human-review checks are in place. Until the branch-update workflow lands, a PR
 that falls behind `main` waits for someone to update it.
 
 ## What changes
@@ -23,10 +23,12 @@ with `main`.
 | Approving reviews | 1, from a person | 1, which the approval workflow gives an agent PR |
 | Code owner's approval when a PR changes an owned path | Set | Set, but it didn't stop agent PR #54 ([below](#why-code-owner-review-isnt-enough)) |
 | `owned-paths` check: the PR changes no owned path | Not required | Required |
+| `needs-human-review` check: the PR has no `needs-human-review` label | Not required | Required |
 | Every review thread resolved | Not required | Required |
 
 In auto mode, the approval workflow's approval meets the count of 1, the
-`owned-paths` check fails while the PR changes an owned path, and each Bugbot
+`owned-paths` check fails while the PR changes an owned path, the
+`needs-human-review` check fails while the PR has that label, and each Bugbot
 finding blocks the merge until its thread is resolved. The auto-merge
 workflow turns on auto-merge once Bugbot has reviewed the latest commit, if
 the PR changes no owned path, and GitHub merges once every requirement
@@ -76,6 +78,40 @@ files or more, the most GitHub lists.
   take away an earlier line's owner. Like GitHub, it skips a line starting
   with `!`.
 
+## The needs-human-review label
+
+The `needs-human-review` label on a PR means a person must review it before
+it merges, so auto mode leaves it to the owner. An agent adds it in two
+cases, as `AGENTS.md` tells it to:
+
+- **A person asks to review the PR**, in a Linear issue, in Cursor, or in
+  chat. The agent that handles the request labels the PR it opens, and an
+  orchestrator puts the request in the worker's prompt
+  ([orchestration.md](orchestration.md#what-a-worker-prompt-contains)).
+- **The agent judges the PR to need it**, because it adds an important
+  feature or makes an architectural decision. The PR body says why under
+  "Needs a person".
+
+While a PR has the label, the approval workflow doesn't approve it, the
+auto-merge workflow keeps auto-merge off, and turns it off if it was on, and
+the `needs-human-review` check, which `.github/workflows/needs-human-review.yml`
+runs, fails, so only the owner's bypass merges it. When the owner removes the
+label, the check runs again and passes, the approval workflow approves the PR
+if it never has, and the auto-merge workflow turns auto-merge on once Bugbot
+has reviewed the latest commit.
+
+The workflow changes alone aren't enough, because an approval the bot gave
+before the label was added still counts, so anyone with write access, an
+agent's token included, could merge the PR from the merge box. Dismissing
+that approval instead would conflict with the approval workflow's rule of
+approving a PR at most once, so removing the label couldn't bring it back.
+
+Agents add the label with their own GitHub token and the owner adds it in
+the web UI; GitHub starts workflows for both, unlike for `GITHUB_TOKEN`
+([below](#the-auto-merge-workflow)). Between the label being added and the
+check's new run starting, a PR whose auto-merge is on could still merge;
+that window is a few seconds.
+
 ## The approval workflow
 
 `.github/workflows/approve-agent-prs.yml` approves an open PR from a branch in
@@ -83,7 +119,8 @@ this repository that has the `agent` label, while `main: review (auto mode)`
 is active and `main: review` isn't. In review mode it approves nothing,
 because `main: review` would count its approval as a person's. It runs when
 `agent-label.yml` finishes, after each push and when a PR is opened or
-reopened, and when a person adds the label; the workflow's comments say why.
+reopened, when a person adds the `agent` label, and when the
+`needs-human-review` label is removed; the workflow's comments say why.
 
 It approves a PR at most once, and doesn't act on a push: neither ruleset
 dismisses approvals on a push, and `owned-paths` runs again on each push, so
@@ -109,6 +146,8 @@ wasn't opened by Dependabot. For such a PR:
   finished reviewing its latest commit. A cancelled Bugbot run doesn't count.
   Bugbot gives it the same `neutral` conclusion as a review with findings, so
   the workflow reads the run's summary.
+- **Auto-merge stays off while the PR has the `needs-human-review` label**,
+  and adding the label turns it off ([above](#the-needs-human-review-label)).
 - **A push turns auto-merge off** until Bugbot has reviewed the new commit,
   because GitHub keeps auto-merge on after a push by anyone with write access.
 - **Auto-merge stays off while the PR changes an owned path**, and the owner
@@ -141,7 +180,7 @@ The workflow doesn't:
   Bugbot starting, 3 to 6 minutes before Bugbot finished. A PR labelled after
   Bugbot finishes waits until its next push, or until it is marked ready.
 
-To stop one PR from merging, select "Disable auto-merge" on it. To stop all
+To stop one PR from merging, add the `needs-human-review` label to it. To stop all
 of them, turn off "Allow auto-merge".
 
 ## What still needs the owner
@@ -171,7 +210,8 @@ logged in as a repository admin. Without a shell, use Settings > Rules >
 Rulesets: the first time, import `main-review-auto.json` with New ruleset >
 Import a ruleset; then set the enforcement status of one review ruleset to
 Active and the other to Disabled. After `main-review-auto.json` changes, as
-when it gained the rule that requires `owned-paths`, the ruleset on GitHub
+when it gained the rule that requires `owned-paths` and
+`needs-human-review`, the ruleset on GitHub
 matches it only once `apply.sh --auto` runs again, or once it is deleted and
 imported again in Settings.
 

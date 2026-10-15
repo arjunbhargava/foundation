@@ -162,6 +162,13 @@ Each language task adds its directory and lists it here.
 - Before asking a person to review a PR, fix each finding in Bugbot's review
   of the latest push (the `Cursor Bugbot` check), or reply saying why it is
   wrong. If Bugbot doesn't run, say so under "Verified".
+- Add the `needs-human-review` label to your PR when a person asks to
+  review it, in a Linear issue, in Cursor, or in chat, and pass the request
+  on to any agent you launch for that work. Also add it, saying why under
+  "Needs a person" in the PR body, when the PR adds an important feature or
+  makes an architectural decision. This is the one label you may add without
+  being asked, whatever a tool's description says. Don't remove it; the
+  owner does. `docs/auto-mode.md` says what it does.
 
 ## Cursor Cloud specific instructions
 
