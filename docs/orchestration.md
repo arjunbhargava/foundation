@@ -95,20 +95,19 @@ workers apart by time and order in Cursor's agent list. `mise run spend`
 shows each run's name in its "Task" column, so the name also labels the spend
 report.
 
-- **Orchestrator**: `O <start date and time in UTC>`, for example
-  `O 2026-10-14 18:20Z`. The start time is the order key: a later
-  orchestrator sorts after an earlier one. It is a start time rather than a
-  counter because no counter has to be remembered through a
-  [handoff](#handoff). The outgoing orchestrator launches its successor
-  through the API with `name` set, so no model step is needed. A first
-  orchestrator that the owner starts renames itself in its first step with
-  the `cursor-cloud` `rename-chat` tool.
-- **Worker**: `<its orchestrator's name> / W <MM-DD HH:MMZ launch time> /
-  <task ID>`, for example `O 2026-10-14 18:20Z / W 10-15 01:12Z / SPEND-LABELS`.
-  A relaunched worker, or a worker launched for a follow-up, keeps the task ID
-  and gets a new launch time.
-- Add a short title for the task after the task ID only if the whole name
-  stays under 100 characters.
+- **Orchestrator**: `Orchestrator <UTC date and time>: <short descriptor>`, for
+  example `Orchestrator 2026-10-15 00:21Z: foundation queue`.
+- **Worker**: `Worker <UTC date and time>: <short descriptor>`, for example
+  `Worker 2026-10-15 00:18Z: document agent names`. The descriptor is a few
+  plain words saying what the worker does. It is not the task ID, which stays
+  in the worker's prompt and PR. A relaunched worker, or a worker launched for
+  a follow-up, gets a new launch time.
+- **Date and time** is the agent's launch time, to the minute, so names sort
+  by time. A time stamp rather than a counter means nothing has to be
+  remembered through a [handoff](#handoff).
+- **Length**: at most 100 characters in total, the API's limit for `name`.
+- **First orchestrator**: an orchestrator that the owner starts renames itself
+  in its first step with the `cursor-cloud` `rename-chat` tool.
 
 Agents launched before this scheme keep their old names.
 
@@ -249,9 +248,10 @@ orchestrator, in this order:
 6. **Standing rules that this page doesn't hold.**
 
 The outgoing orchestrator launches the successor through the API with `name`
-set to the successor's own start time, as in [Naming agents](#naming-agents).
-The handoff prompt says that the successor names its workers with that
-name.
+set to the successor's own launch time and a descriptor, as in
+[Naming agents](#naming-agents), so no model step is needed. The handoff
+prompt says that the successor names each worker with the worker's own launch
+time.
 
 Then send each in-flight worker a follow-up with the new orchestrator's bcId,
 and stop. Don't contact the previous orchestrator from the new one.
