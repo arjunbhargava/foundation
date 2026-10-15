@@ -2,10 +2,9 @@
 # that the project with every language equals the repository root, that
 # Copier refuses a project with no language, that a project with one language
 # has only that language, and that `copier update` gives a project what a
-# new copy gives. Each variant job creates a project, as README.md says, and
-# runs `mise run check` in it. Only the
-# template repository has this workflow: copier.yml leaves it out of
-# projects. The template-checks ruleset requires only template-ok.
+# new copy gives. Each variant job creates a project, as .github/README.md
+# says, and runs `mise run check` in it. Only the template repository has this
+# workflow: copier.yml leaves it out of projects. The template-checks ruleset requires only template-ok.
 name: Template
 
 on:
