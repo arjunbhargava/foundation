@@ -3,206 +3,394 @@
 Status: **proposed**, awaiting the owner's approval (task T16 in
 [the template plan](template-plan.md)). Nothing on this page is built yet.
 
-This page is the plan for letting agents run long jobs, such as model training
-or simulations, on AWS machines through SkyPilot (decision D4), and for letting
-any agent see each job's progress and result. The owner chose SkyPilot and AWS
-on 2026-10-15. SkyPilot facts below come from its documentation for 0.14.0,
-read on 2026-10-15; prices are AWS on-demand list prices in `us-east-1`.
+This page is the plan for letting agents and people run long jobs on AWS,
+mostly GPU simulation (including evolutionary search over simulations) and
+ordinary ML training, without needing to know SkyPilot or AWS. A user picks a
+job kind and a hardware profile, runs three commands, and reads one status
+view. SkyPilot (decision D4) does the launching, on the owner's AWS account,
+which has negotiated rates. SkyPilot facts below come from its documentation
+for 0.14.0, read on 2026-10-15. Prices are AWS on-demand list prices in
+`us-east-1` from the same week; the negotiated rates are unknown, so every
+ceiling below is an upper bound.
+
+## For a user who has never used cloud
+
+You describe the job in a small file, check it, launch it, and watch it.
+Nothing starts a machine except `job:launch`, and every job stops itself at its
+maximum run time.
+
+```text
+$ mise run job:dry-run -- jobs/search.yaml
+jobs/search.yaml: kind search, profile gpu-sim, 2 nodes (16 L40S GPUs)
+Maximum cost: 2 × $30.13/h × 3 h = $180.78 (list price), within budget_usd 200
+Ran the command on this machine with COMPUTE_JOB_SMOKE=1: 2 generations, 20 evaluations, exit 0
+Ready to launch.
+
+$ mise run job:launch -- jobs/search.yaml
+Launched pr81-search-3f9a2c1d. Watch it with:
+  mise run job:observe -- pr81-search-3f9a2c1d
+
+$ mise run job:observe -- pr81-search-3f9a2c1d
+Job pr81-search-3f9a2c1d: RUNNING for 1 h 12 min of 3 h; cost so far about $72 (list price)
+Progress: generation 12 of 50, evaluating, 6,400 of 10,000 evaluations; best fitness 0.873
+```
+
+When something fails, the message says what happened and what to do:
+
+| You see | What it means | What to do |
+|---|---|---|
+| `SKYPILOT_API_SERVER_ENDPOINT is not set ...` | This machine isn't connected to the team's job server | Ask the owner for the two secrets; never start a server yourself |
+| `profile gpu-sim allows at most 2 nodes` | The job asks for more than the limits allow | Ask for fewer, or ask the owner to raise the limit |
+| `maximum cost $180.78 exceeds budget_usd 150` | The job could cost more than you said it may | Shorten `max_runtime_minutes`, use fewer nodes, or raise `budget_usd` within your task's budget |
+| `FAILED (exit 1)` in observe | Your command failed | Read the log tail observe prints, fix, push, and launch again |
+| `RECOVERING` in observe | AWS took a spot machine back; the job is restarting from its last checkpoint | Nothing, if the job checkpoints |
+| `driver supports CUDA 12.4, image needs 12.8` | The machine's GPU driver is older than your image | Use the default image, or ask the owner |
 
 ## Terms
 
-- **API server**: SkyPilot's server, which holds the cloud credentials and
-  the table of every cluster and managed job, and does the launching. A
-  **client** is the `sky` command or Python SDK pointed at it.
-- **Managed job**: a SkyPilot job that the API server watches, relaunching
-  it after a spot preemption and deleting its machine when it ends.
-- **Job file**: a YAML file in `jobs/` on a PR's branch, saying what to run,
-  on what hardware, for how long, and within what budget.
-- **Job name**: `pr<PR number>-<job file name>-<first 8 hex digits of the
-  job file's SHA-256>`, such as `pr81-train-small-3f9a2c1d`. The hash is
-  always the last 8 characters, so the name splits back into its parts.
-- **Job archive**: the copy of a job's run record, result, logs, and output
-  that the job writes to S3, so results survive the loss of the API server.
-- **Admin**: the person who provisions and operates the API server, with
-  the `compute-server-admin` skill. Agents are clients only.
+- **API server**: SkyPilot's server, which holds the AWS credentials and the
+  table of every managed job, and does the launching. A **client** is the
+  `sky` command or Python SDK pointed at it.
+- **Managed job**: a SkyPilot job that the API server watches, relaunching it
+  after a spot preemption and deleting its machines when it ends.
+- **Job file**: a YAML file in `jobs/` on a PR's branch, saying the job's
+  kind, profile, command, run time, and budget.
+- **Job kind**: `single`, `multi-node`, or `search` (below).
+- **Hardware profile**: a named machine choice, such as `gpu-sim`, that the
+  admin maps to AWS instance types in `limits.yaml`.
+- **Job name**: `pr<PR number>-<job file name>-<first 8 hex digits of the job
+  file's SHA-256>`, such as `pr81-search-3f9a2c1d`.
+- **Job archive**: the copy of a job's run record, progress, result, logs,
+  and output that the job writes to S3, so results survive the server.
+- **Admin**: the person who provisions and operates the API server, with the
+  `compute-server-admin` skill. Agents are clients only.
 
-## The requirement that shapes the design
+## Observing jobs from any agent
 
 Workers and orchestrators run on separate VMs with no shared state, and must
-see every job's status, log tail, result, run record, and cost so far,
-including a job another agent launched after that agent has stopped.
-SkyPilot's own state (`~/.sky`, `sky status`, `sky logs`, `sky jobs queue`)
-lives on the machine that runs the API server. Without a shared server, that
-is each launching machine, and no other machine sees it.
-
-## Options
+see every job's status, progress, log tail, result, run record, and cost so
+far, including a job another agent launched after that agent has stopped.
+SkyPilot's state lives on the machine that runs the API server; without a
+shared server, that is each launching machine, and no other machine sees it.
 
 | | (a) Job writes its record to S3 | (b) Shared SkyPilot API server | (c) Managed jobs without (b) |
 |---|---|---|---|
-| Who can see a job | Anyone with a read-only S3 key | Every client of the server: `sky jobs queue -u` lists all users' jobs | Only the launching machine |
-| What an agent holds | A read-only S3 key | An endpoint and a token; no AWS credentials | AWS launch credentials |
-| Launch path | A GitHub workflow, through OIDC | The client, through the server | The agent itself |
-| Limits enforced by | The workflow's validation | A server-side admin policy, which can reject or rewrite every request | Nothing central |
-| Spot recovery | None | Automatic, for managed jobs | Automatic |
-| Logs after the machine is gone | Kept in S3 | Kept on the server for 7 days by default, configurable | Kept on the controller |
-| Standing cost | About $0.03 per job-day | About $750 per month (below) | A controller VM while jobs run |
+| Who can see a job | Anyone with a read-only S3 key | Every client: `sky jobs queue -u` lists all users' jobs | Only the launching machine |
+| What an agent holds | A read-only S3 key | An endpoint and a token; no AWS launch credentials | AWS launch credentials |
+| Limits enforced by | A GitHub workflow's validation | A server-side admin policy, which can reject or rewrite every request | Nothing central |
+| Spot recovery | None | Automatic | Automatic |
+| Standing cost | About $1 a month | About $460 a month (below) | A controller VM while jobs run |
 
-(c) fails the requirement on its own. (b) meets it, and SkyPilot then runs
-managed jobs inside the API server ("consolidation mode", its default for a
-remote server), so (c) becomes part of (b).
+**Recommendation: (b) with the job archive from (a).** The shared server gives
+every agent the same view with an endpoint and a token, enforces limits on the
+server, and recovers preempted jobs. The archive keeps results and progress
+when the server isn't there. (c) fails the requirement on its own; with a
+remote server, SkyPilot runs managed jobs inside it ("consolidation mode"), so
+(c) becomes part of (b).
 
-## Option (b) in detail
+## The API server
 
-**Where it runs.** SkyPilot documents two deployments. The Helm chart on
-Kubernetes is the one it recommends for production: it alone has graceful
-upgrades, server-side authentication with roles, and a database other than
-the pod's disk. The cloud-VM deployment (`sky launch` of a VM running
-`sky api start --deploy`, 8+ vCPU and 16+ GB) "does not offer failover and
-graceful upgrading", and has "no authentication by default". This plan uses
-the Helm chart on Amazon EKS.
+**Where it runs.** The Helm chart on Amazon EKS, which SkyPilot recommends for
+production: it alone has graceful upgrades, server-side authentication with
+roles, and an external database. SkyPilot's cloud-VM deployment "does not
+offer failover and graceful upgrading" and has "no authentication by default".
 
 | Part | Choice | $/month |
 |---|---|---|
 | EKS control plane | Standard support, $0.10/h | 73 |
-| Nodes | 2 × m7i.2xlarge (8 vCPU, 32 GiB, $0.4032/h) in two zones, so the pod reschedules in minutes if one fails | 589 |
+| Node | 1 × m7i.2xlarge (8 vCPU, 32 GiB, $0.4032/h) | 294 |
 | Database | RDS PostgreSQL db.t4g.micro, Multi-AZ, 20 GB, 7-day backups | 28 |
 | Load balancer | Application Load Balancer, with TLS | 22 |
-| NAT gateway | One, for the private nodes | 35 |
-| Other | Node disks, Route 53 zone and health check, domain | 6 |
-| **Total** | | **about 750** |
+| NAT gateway | One, for the private node | 35 |
+| Other | Node disk, Route 53 zone and health check, domain | 6 |
+| **Total** | | **about 460** |
 
-The API server pod gets SkyPilot's minimum of 4 CPU and 8 GiB, which serves 8
+One node means about 10 minutes' downtime when the node fails, while EKS
+replaces it; running jobs continue meanwhile, and nothing is lost, because
+state is in RDS. A second node, $294 a month more, cuts that to about a
+minute. The pod gets SkyPilot's minimum of 4 CPU and 8 GiB, which serves 8
 long requests (such as log tails) at once, and 16 launching and 400 running
-managed jobs. Raising it to 6 CPU and 24 GiB later fits the same nodes.
+managed jobs. A search job is one managed job however many evaluations it
+runs, so this is ample.
 
-**Authentication and TLS.** The chart exposes the server through
-ingress-nginx by default, but Kubernetes archived ingress-nginx on
-2026-03-24, and it gets no more security fixes. This plan turns it off
-(`ingress-nginx.enabled=false`) and uses the AWS Load Balancer Controller's
-ALB instead (`ingress.ingressClassName=alb`), with an ACM certificate for a
-name such as `skypilot.<your domain>`; ACM renews it. Basic auth that
-nginx did is replaced by the API server's own (`apiService.enableUserManagement=true`),
-which keeps SkyPilot's two roles: `admin` (the owner) and `user`. Agents
-get a service-account token with the `user` role, so they can launch and
-read, but can't change the server's settings or admin policy. The `user`
-role can also cancel or tear down any job, so a token holder can stop
-another agent's job; the agents' rules forbid it, and the job archive keeps
-the evidence.
+**Authentication and TLS.** The chart's default ingress-nginx was archived by
+Kubernetes on 2026-03-24 and gets no more security fixes, so it is turned off
+(`ingress-nginx.enabled=false`) in favour of the AWS Load Balancer
+Controller's ALB with an ACM certificate for a name such as
+`skypilot.<your domain>`. The API server does basic auth itself
+(`apiService.enableUserManagement=true`), which keeps SkyPilot's two roles:
+`admin` (the owner) and `user`. Agents get a service-account token with the
+`user` role: they can launch and read, but can't change the server's settings
+or admin policy. A `user` can also cancel any job; the agents' rules forbid
+it, and the archive keeps the evidence.
 
-**Persistence and backup.** The job table, users, and tokens live in RDS
-PostgreSQL (`apiService.dbConnectionSecretName`), with automated backups and
-point-in-time restore for 7 days. That makes the pod stateless, so a pod or
-node loss loses nothing. Task logs are kept on the server, so set
-`jobs.controller.task_logs_gc_retention_hours` to 2160 (90 days), and the
-job archive keeps a second copy in S3.
+**Persistence and backup.** The job table, users, and tokens live in RDS, with
+point-in-time restore for 7 days, so the pod is stateless.
+`jobs.controller.task_logs_gc_retention_hours` is 2160 (90 days), and the
+archive keeps a second copy in S3.
 
-**Version pinning.** SkyPilot guarantees compatibility between adjacent
-minor versions from 0.10.0 on, and asks that the server be upgraded first.
-The client is pinned once, as `skypilot==0.14.0` in `compute/uv.lock`, and
-run through `mise run job:*`, because `observe` uses the Python SDK and a
-second pin in `mise.toml` would drift. The server's image and chart version
-are pinned in `compute/server/values.yaml`, and a test fails when the two
-pins name different minor versions. SkyPilot 0.14.0 supports Python up to
-3.13, and the repository pins 3.14, so `compute/` is a uv project of its
-own pinned to 3.13.
+**Versions.** SkyPilot guarantees compatibility between adjacent minor
+versions and asks that the server be upgraded first. The client is pinned once,
+as `skypilot==0.14.0` in `compute/uv.lock`, run through `mise run job:*`; the
+server's image and chart are pinned in `compute/server/values.yaml`; a test
+fails when they name different minor versions. SkyPilot 0.14.0 supports Python
+up to 3.13, so `compute/` is a uv project of its own, pinned to 3.13.
 
-**Upgrades and failures.**
+**Failures.** If the server is down, running jobs continue, but nothing can
+launch, and preempted jobs wait for it. A Route 53 health check emails the
+owner. A scheduled GitHub workflow, independent of the server, terminates any
+job machine past its maximum run time. If the database is lost, restore it;
+the archive still holds every result.
 
-- An upgrade is `helm upgrade` with the new image, then a PR that moves the
-  client pin. Clients retry while the pod restarts, and running jobs keep
-  running.
-- If the server is down, jobs keep running on their machines, but nothing
-  can launch, and preempted jobs aren't relaunched until it is back. A Route
-  53 health check emails the owner. A scheduled GitHub workflow,
-  independent of the server, terminates any job machine past its maximum
-  run time.
-- If the database is lost, restore it from backup; the job archive in S3
-  still holds every result.
+**What "set up once and forget" actually needs**, from AWS's and SkyPilot's
+lifecycles (the hours are my estimate):
 
-**Network.** If Cursor's agent network allowlist is on, it must include the
-server's host name. Agents need no AWS domains, because they never call AWS.
+| Task | How often |
+|---|---|
+| Upgrade EKS one minor version, and its add-ons (after 14 months, standard support ends and the control plane costs $0.60/h) | About yearly |
+| Update the node's AMI, for security fixes | Monthly |
+| Upgrade SkyPilot, then the client pin | Each minor release |
+| Rotate the agents' token (90 days) and the read-only S3 key | Quarterly |
+| Answer a health-check email | When it fires |
 
-**What "set up once and forget" actually needs.** Setup is once. These recur,
-from AWS's and SkyPilot's documented lifecycles; the hours are my
-estimate:
+About two hours a month plus half a day a year, all through the
+`compute-server-admin` skill.
 
-| Task | How often | Why |
+## Job kinds
+
+| Kind | What runs | Typical use | Nodes |
+|---|---|---|---|
+| `single` | One command on one machine | A simulation, a training run, an analysis | 1 |
+| `multi-node` | The same command on every node, with `MASTER_ADDR`, `NODE_RANK`, `NNODES`, and `GPUS_PER_NODE` set for `torchrun` | Distributed training | 2 to the profile's maximum |
+| `search` | One driver that dispatches many short evaluations to every GPU of every node, through `compute_jobs.fanout` | Evolutionary search, sweeps of short simulations | 1 to the profile's maximum |
+
+Every kind is one managed job, so `job:observe`, the archive, the limits, and
+the recovery behaviour are the same for all three. Ten independent long runs,
+such as seeds of a training run, are ten `single` jobs.
+
+### How a search fans out
+
+At 10,000 evaluations per generation, three SkyPilot mechanisms were
+compared:
+
+| | Ray inside one managed job | SkyPilot pools | One managed job per evaluation |
+|---|---|---|---|
+| How | `~/sky_templates/ray/start_cluster` on every node starts a user Ray cluster on port 6379, separate from SkyPilot's own Ray on 6380; the driver on rank 0 submits Ray tasks | A pool of identical workers; each evaluation is a managed job on a free worker | Each evaluation provisions its own machine |
+| Per-evaluation overhead | Milliseconds | A managed job's scheduling, per evaluation | Minutes, to provision and set up a machine |
+| Concurrency | Every GPU slot: Ray accepts fractional GPUs, such as 4 evaluations per GPU | One job per worker; SkyPilot's docs list several jobs per worker and fractional GPUs as not yet supported | The server's 16 launching jobs at once (400 running), and the quotas |
+| At 10,000 per generation | 10,000 Ray tasks; with 16 L40S at 4 per GPU and 10 s each, about 26 minutes | 10,000 managed jobs per generation in the job table; beta; job files may not carry their own working directory or file mounts | Not feasible |
+| Recovery | A preempted node restarts the whole job, so the driver checkpoints each generation | Per evaluation | Per evaluation |
+
+**Recommendation: Ray inside one managed job.** It is the only mechanism whose
+overhead is small next to a short evaluation, and it keeps the search one job
+to observe. Its costs are that the node count is fixed for the job's life, and
+that one preempted node restarts every node, so `fanout` checkpoints the
+population and random state after each generation, and `search` jobs default
+to on-demand machines. Users don't write Ray code:
+
+```python
+from compute_jobs import fanout, progress
+
+for generation in fanout.resume_generations(total=50):
+    candidates = optimizer.ask()
+    fitness = fanout.map(evaluate, candidates, gpus_per_evaluation=0.25)
+    optimizer.tell(candidates, fitness)
+    progress.report(
+        step=generation, step_name="generation", best=max(fitness), best_name="fitness"
+    )
+    fanout.checkpoint(generation, optimizer)
+```
+
+`fanout.map` connects with `ray.init(address="localhost:6379")`, never
+`"auto"`, and turns off forwarding of workers' output to the driver, so 10,000
+evaluations don't flood the log; it counts completed and failed evaluations in
+`progress.json` instead. Outside a job, with `COMPUTE_JOB_SMOKE=1`, it runs
+serially on the local machine, which is what `job:dry-run` uses.
+
+**Spot machines.** Every kind defaults to on-demand. `use_spot: true` is
+accepted for any kind; the dry run warns when the job doesn't write
+checkpoints, because a preemption then restarts it from the beginning, and,
+for multi-node and search jobs, preemption of any one node restarts all of
+them.
+
+## Hardware profiles
+
+Users name a profile; the admin policy turns it into SkyPilot resources, an
+ordered list of instance types tried in turn. Profiles live in
+`compute/server/limits.yaml`, which only the admin changes. A profile has
+families, GPUs per node, a maximum node count, a maximum run time, and
+`enabled`.
+
+| Profile | GPU, family | Fits | Per node, list price | Max nodes | Max $/h per job | Max per job-day |
+|---|---|---|---|---|---|---|
+| `cpu` | none; m7i, c7i | CPU simulations, analysis, small drivers | up to 64 vCPU, m7i.16xlarge $3.23/h | 4 | 12.90 | 310 |
+| `gpu-small` | 1 × L4 (g6), then 1 × T4 (g4dn) | Development, small simulations, inference | g6.xlarge $0.80/h | 1 | 0.80 | 19 |
+| `gpu-sim` | L40S (g6e): 1, 4, or 8 per node | Rendering simulators (Isaac Sim, RTX-based), GPU physics, and search | g6e.48xlarge, 8 GPUs, $30.13/h | 2 | 60.26 | 1,446 |
+| `gpu-train` | 8 × L40S (g6e.48xlarge), then 8 × A10G (g5.48xlarge, $16.29/h) | Training that fits in 44 GB per GPU | $30.13/h | 2 | 60.26 | 1,446 |
+| `gpu-train-large` | 8 × H100 (p5.48xlarge, $55.04/h), then 8 × A100 (p4d.24xlarge, $21.96/h) | Large training | $55.04/h | 2 | 110.08 | 2,642 |
+
+`gpu-train-large` is `enabled: false` until the admin opts in.
+
+**Which GPU fits which work.** Isaac Sim's documentation says "GPUs without RT
+Cores (A100, H100) are not supported", and names g6e (L40S) for AWS; L40S, L4,
+A10G, and T4 all have RT cores. So anything that renders goes on G family, and
+the P family is for training and for physics that never renders. I am unsure
+about three things: whether T4 (16 GB) is enough for a given scene, since
+Isaac Sim's minimum is 16 GB of VRAM; whether a project's simulator needs a
+newer driver than SkyPilot's AWS image has (Isaac Sim's tested driver is
+595.58.03), which the wrapper's check catches but only a custom machine image
+fixes; and the price and availability of G7e (RTX PRO 6000 Blackwell), which
+Isaac Sim's AWS page also names. The spike checks the first two.
+
+**Opting in to the P family.** The admin sets `enabled: true`, requests the
+"Running On-Demand P instances" quota (new accounts have 0; one p5.48xlarge
+needs 192 vCPUs), and reruns `compute-server:status`, which checks the account
+ceiling below. On-demand P capacity is often unavailable; AWS's path to
+guaranteed capacity is Capacity Blocks for ML, booked 1 to 182 days ahead and
+paid up front. Whether SkyPilot 0.14.0 can target a Capacity Block is
+something I haven't verified; check it at opt-in.
+
+**Spending ceiling.** D8 caps agent compute at $10,000 a day, which is $416.67
+an hour. EC2's vCPU quotas cap how much can run at once, so the worst case is
+each quota filled with the dearest allowed machine per vCPU, g6e.xlarge at
+$1.861 for 4 vCPUs, which is $0.465 per vCPU-hour:
+
+| Quota | Requested | Worst $/h |
 |---|---|---|
-| Upgrade EKS one minor version, and its add-ons | About yearly | Standard support lasts 14 months; after it, the control plane costs $0.60/h instead of $0.10/h |
-| Update the node group's AMI | Monthly | Security fixes |
-| Upgrade SkyPilot, then the client pin | Each minor release | A client more than one minor version behind may stop working |
-| Rotate the agents' token | Before it expires (90 days chosen; SkyPilot's default is 30) | Then update the Cursor secret |
-| Answer a health-check email | When it fires | Nothing launches while the server is down |
+| G and VT, on demand | 384 vCPUs | 178.66 |
+| G and VT, spot (at most the on-demand price) | 384 vCPUs | 178.66 |
+| Standard (m7i, c7i at about $0.05 per vCPU-hour) | 64 vCPUs | 3.23 |
+| P, on demand | 0 | 0 |
+| **Total** | | **360.55, or $8,653 a day** |
 
-Together that is about two hours a month, plus half a day a year for the EKS
-upgrade, done with the `compute-server-admin` skill.
+384 G vCPUs is two g6e.48xlarge, 16 L40S, on demand, and two more on spot,
+which is why `gpu-sim` and `gpu-train` allow 2 nodes; raising either means
+raising the quota and rechecking this sum.
+Opting in to one p5.48xlarge (192 P vCPUs, $55.04/h) means lowering the G spot
+quota to 256 vCPUs, which keeps the total at $356/h. `compute-server:status`
+computes this sum from the quotas and `limits.yaml`, and fails above
+$416.67/h. The per-job limits are the admin policy's: profile, node count,
+run time, and `budget_usd`. The daily budget action is the backstop, since AWS
+budget data lags by up to a day.
 
-## Recommendation
+## Environments
 
-**Use (b) with the job archive from (a).** The shared server gives every
-agent the same view of every job with only an endpoint and a token, enforces
-limits on the server, and recovers preempted jobs. The archive keeps results
-when the server isn't there. Its costs are about $750 a month and the
-operating work above, and every token holder can launch within the limits.
+A job runs in a container image, and the dependencies come from the job's own
+commit, so most users never write a Dockerfile.
+
+- **Default:** `ghcr.io/<owner>/<repository>/compute-job`, built by this
+  repository's CI from `compute/Dockerfile` on every push to `main`: an
+  `nvidia/cuda` runtime image on Ubuntu 24.04 (the agents' release), pinned by
+  digest, with mise and uv at the repository's pins. The job's setup runs
+  `uv sync --locked` from its commit, about 1–3 minutes per attempt, so the
+  job has exactly the packages the agent tested with.
+- **A project's own image:** a project made from the template has the same
+  Dockerfile and workflow, so it builds its own `compute-job` image in its own
+  CI. For the common changes it edits `compute/image.yaml`, not the
+  Dockerfile:
+
+  ```yaml
+  cuda: "12.8"                 # one of the CUDA versions the Dockerfile knows
+  apt_packages: [ffmpeg, libgl1]
+  base: default                # or an allowed vendor image, such as Isaac Sim's
+  ```
+
+  A vendor base, such as `nvcr.io/nvidia/isaac-sim:<version>`, is pinned by
+  digest in `limits.yaml` by the admin, with the vendor's licence terms (Isaac
+  Sim's container needs `ACCEPT_EULA=Y`). A job file names `image: project` to
+  use it.
+- **What the admin policy accepts:** an image from a repository listed in
+  `limits.yaml`, by digest only, with a GitHub build-provenance attestation
+  (from `actions/attest-build-provenance`) saying it was built from that
+  repository's `refs/heads/main`. Agents can't push images, and the
+  attestation stops a PR's workflow from passing off an image it built. Any
+  other image is rejected.
+- **Matching the agent's VM:** the agent's VM is x86_64 Ubuntu 24.04 with no
+  GPU and no Docker (checked 2026-10-15). So profiles list only x86 families,
+  and no Graviton (g5g, m7g, c7g). `uv.lock` covers every platform, so a
+  project needing CUDA wheels, such as PyTorch's, declares conflicting `cpu`
+  and `cuda` extras; the agent syncs `cpu`, and the job `cuda`. Before the
+  command, the wrapper fails the job if the driver supports an older CUDA than
+  the image, naming both. Agents can't run the image, so each image workflow
+  runs the wrapper and `uv sync --locked` inside the new image on a CPU
+  runner.
+
+## Progress
+
+A job reports progress by writing `progress.json`, through the helper
+`compute_jobs.progress.report(...)`. The wrapper uploads it to the archive at
+most every 30 seconds and at the end, and prints it to the log as one line
+starting `COMPUTE_PROGRESS` at most every 60 seconds.
+
+```json
+{
+  "schema": 1,
+  "phase": "evaluating",
+  "step": 12,
+  "step_name": "generation",
+  "steps_total": 50,
+  "done": 6400,
+  "total": 10000,
+  "failed": 3,
+  "best": {"name": "fitness", "value": 0.873, "higher_is_better": true},
+  "message": "",
+  "updated_at": "2026-10-15T03:26:00Z"
+}
+```
+
+Every field except `schema` and `updated_at` is optional. `job:observe` shows
+the latest progress first, then a log tail of 20 lines, so an agent never reads
+a whole log. It reads `progress.json` from the archive, and without the
+read-only S3 key, it reads the last `COMPUTE_PROGRESS` line from the log
+through the server. The archive is per machine, and rank 0 writes progress;
+observe learns rank 0's machine id from the first line of the job's log, which
+the server holds.
 
 ## How a job runs
 
-1. An agent commits `jobs/train-small.yaml` to its PR branch, then runs
-   `mise run job:launch -- jobs/train-small.yaml`. The client checks its
-   two variables, names the job, labels it with the PR and commit, and
-   submits it with `sky jobs launch`. It uploads the working tree at the
-   pushed commit, and refuses if the working tree has uncommitted changes.
-2. On the server, the admin policy checks the request against
-   `compute/server/limits.yaml` and rejects it, or rewrites it, before
-   anything launches. It requires `budget_usd > 0` and rejects a job whose
-   list price × maximum run time exceeds it. It allows only listed regions
-   and instance families, up to 8 GPUs and one node. It wraps the command in
-   `timeout` at the maximum run time, and forces
-   `aws.remote_identity: compute-jobs-job`. Without that, the default
+1. An agent commits `jobs/search.yaml` and pushes, then runs
+   `mise run job:dry-run` and `mise run job:launch`. The client checks its
+   configuration, names and labels the job, and submits it with
+   `sky jobs launch`, uploading the working tree at the pushed commit; it
+   refuses uncommitted changes.
+2. On the server, the admin policy turns the kind and profile into resources,
+   checks every limit, accepts only an allowed image, and forces
+   `aws.remote_identity: compute-jobs-job`. Without that, SkyPilot's default
    `LOCAL_CREDENTIALS` would copy the server's launch credentials onto the
-   job's machine. It also rejects any request whose config tries to change
-   these settings.
-   The policy also mounts `s3://<bucket>/checkpoints/<job name>/` at
-   `$COMPUTE_JOB_CHECKPOINT_DIR`, with SkyPilot's `MOUNT_CACHED` mode, so the
-   path is the same on every attempt of the job.
-3. On the machine, `python -m compute_jobs.run` runs the command. It writes
-   the run record and, at the end, `result.json`, `output/`, and the full
-   log to the job archive, and prints the run record and result into the
-   job's log, where clients read them.
-4. The API server relaunches a preempted job on a new machine, which resumes
-   from `$COMPUTE_JOB_CHECKPOINT_DIR`. Each attempt writes its own archive
-   prefix, and its run record names the attempt. The server deletes the
-   machine when the job ends.
-5. `.github/workflows/compute-watch.yml` runs every 15 minutes, with its
-   own `user`-role server token (SkyPilot has no read-only role) and an AWS
-   role through OIDC. It records each job
-   machine's id from EC2 tags, which the server sets and a job can't. It
-   terminates machines past their maximum run time plus 15 minutes, and
-   every job machine once the budget action has fired. It cancels the jobs
-   of PRs closed without merging. When a job ends, it comments on the PR
-   and adds a completed check run, `compute-job: <job name>`, which a
-   Cursor Automation on "CI completed" can start a follow-up agent from.
-   Cursor's "workflow run completed" trigger, which T16 names, fires only
-   for runs started by a push.
-6. Any agent runs `mise run job:observe -- pr81-train-small-3f9a2c1d`.
+   job's machines. It wraps the command in `timeout`, mounts
+   `s3://<bucket>/checkpoints/<job name>/` at `$COMPUTE_JOB_CHECKPOINT_DIR`
+   (the same path on every attempt), and rejects a config that tries to
+   change any of this.
+3. On each machine, `python -m compute_jobs.run` checks the driver, writes the
+   run record, runs the command (for `search`, starting Ray first), and writes
+   progress, the result, the output, and the log to the archive.
+4. The server relaunches a preempted job, which resumes from its checkpoint,
+   and deletes the machines when the job ends.
+5. Any agent runs `mise run job:observe`.
+6. Later (phase 2): `.github/workflows/compute-watch.yml` runs every 15
+   minutes, terminates machines past their deadline or all of them once the
+   budget action fires, cancels the jobs of closed, unmerged PRs, and, when a
+   job ends, comments on the PR and adds a check run, `compute-job: <job
+   name>`, which a Cursor Automation on "CI completed" can start a follow-up
+   agent from. (Cursor's "workflow run completed" trigger fires only for runs
+   started by a push.)
 
 ## Interface
 
 ### Client, the default
 
-The only client configuration is two variables, which are SkyPilot's own
-names, so the pinned client reads them directly:
+| Variable | Required | Meaning |
+|---|---|---|
+| `SKYPILOT_API_SERVER_ENDPOINT` | yes | The server's HTTPS URL |
+| `SKYPILOT_SERVICE_ACCOUNT_TOKEN` | yes | The agents' token, role `user` |
+| `COMPUTE_JOBS_AWS_ACCESS_KEY_ID`, `COMPUTE_JOBS_AWS_SECRET_ACCESS_KEY` | no | The read-only key of the IAM user `compute-jobs-observer`, for progress and output from the archive |
+| `COMPUTE_JOBS_BUCKET`, `COMPUTE_JOBS_AWS_REGION` | with the key | The archive's bucket and region |
 
-| Variable | Meaning |
-|---|---|
-| `SKYPILOT_API_SERVER_ENDPOINT` | The server's HTTPS URL, such as `https://skypilot.example.com` |
-| `SKYPILOT_SERVICE_ACCOUNT_TOKEN` | The agents' service-account token, role `user` |
-
-`mise run job:launch -- <job file>`, `job:observe`, and `job:cancel` check
-both before calling SkyPilot. With either unset, or with an endpoint that
-isn't `https://` or points at this machine, they exit 2 and start nothing.
-This matters because the `sky` client, with no endpoint, starts a local API
-server. The message is:
+The first two are SkyPilot's own names, so the pinned client reads them
+directly. `job:launch`, `job:observe`, and `job:cancel` check them before
+calling SkyPilot. With either unset, or with an endpoint that isn't `https://`
+or points at this machine, they exit 2 and start nothing, because the `sky`
+client with no endpoint starts a local API server:
 
 ```text
 SKYPILOT_API_SERVER_ENDPOINT is not set, so no job can be launched or
@@ -212,203 +400,179 @@ as Cursor secrets. The server is run with the compute-server-admin skill;
 an agent never starts one. Nothing was started.
 ```
 
-Observe output:
+`job:dry-run` needs neither: it checks the file against a copy of the limits
+and runs the command locally with `COMPUTE_JOB_SMOKE=1`.
 
-```text
-$ mise run job:observe -- pr81-train-small-3f9a2c1d
-Job pr81-train-small-3f9a2c1d: RUNNING, managed job 42, recovered 0 times
-Pull request: https://github.com/arjunbhargava/foundation/pull/81, commit 1a2b3c4
-Machine: g6.xlarge (1 × L4), spot, us-east-1, list price $0.39/h
-Elapsed: 1 h 12 min of 2 h maximum; cost so far about $0.47 (list price × elapsed)
-Run record: in the job log, and at s3://<bucket>/machines/AROA...:i-0abc.../run-record.json
-Last 20 log lines:
-...
-```
+| Command | Does | Exit codes |
+|---|---|---|
+| `mise run job:dry-run -- <job file>` | Validates, prices, and runs a smoke test locally | 0 ready, 1 invalid or the smoke test failed |
+| `mise run job:launch -- <job file>` | Launches and prints the job name | 0 launched, 1 rejected, 2 not configured |
+| `mise run job:observe -- [<job name>] [--pr N] [--lines N] [--json]` | Shows state, recoveries, progress, machine, cost so far, run record, and log tail; with no name, lists jobs | 0 read, 1 no such job, 2 not configured |
+| `mise run job:cancel -- <job name>` | Cancels a job the caller launched | 0, 1, 2 as above |
 
-- `--lines N` sets the log tail (default 20); `--json` prints one JSON
-  object; `--pr 81` lists that PR's jobs; no argument lists every job.
-- Exit 0 when the job was read, whatever its state; 1 when no job has that
-  name; 2 for missing or rejected configuration, naming the variable.
-- Cost so far is an estimate from SkyPilot's catalog price. The AWS bill lags
-  by up to a day.
-
-The job file:
+The job file, the same for every kind:
 
 ```yaml
-command: python -m myproject.train --epochs 10
-accelerators: L4:1        # SkyPilot syntax; omit for CPU only
-cpus: 4+
-use_spot: true
-max_runtime_minutes: 120  # 1 to limits.yaml's maximum, 1440 at first
-budget_usd: 5.0           # > 0; the task's compute budget bounds it
+kind: search              # single, multi-node, or search
+profile: gpu-sim          # a profile in limits.yaml
+nodes: 2                  # multi-node and search only
+command: python -m myproject.search
+max_runtime_minutes: 180  # 1 to the profile's maximum
+budget_usd: 200           # > 0; the task's compute budget bounds it
+use_spot: false           # default
+image: default            # or project
+uv_extras: [cuda]
 seed: 1234                # recorded, and passed as COMPUTE_JOB_SEED
 settings:                 # free-form; recorded, and passed as JSON
-  learning_rate: 3.0e-4
+  population: 10000
 ```
 
 ### Admin, apart from the client
 
 - The provisioning and operating code is in `compute/server/`: Helm values,
-  the admin policy package, IAM policy files, and the `limits.yaml` the
-  policy reads. It runs only through `MISE_ENV=admin mise run
+  the admin policy package, `limits.yaml`, IAM policy files, and scripts. It
+  runs only through `MISE_ENV=admin mise run
   compute-server:<provision|upgrade|rotate-token|status>`. Those tasks and
-  their tools (AWS CLI, eksctl, kubectl, Helm) are in `mise.admin.toml`,
-  which mise loads only when `MISE_ENV=admin`. So `mise run check`, CI, and
-  agents' machines neither list nor install them.
+  their tools (AWS CLI, eksctl, kubectl, Helm) are in `mise.admin.toml`, which
+  mise loads only when `MISE_ENV=admin`, so `mise run check`, CI, and agents
+  neither list nor install them.
 - Each admin task needs the AWS CLI profile named by
   `COMPUTE_SERVER_ADMIN_AWS_PROFILE`, an IAM Identity Center login on the
-  owner's machine. It is never a Cursor secret. Each task also asks the person
-  to type the cluster name before it changes anything.
-- `.cursor/skills/compute-server-admin/SKILL.md` covers provisioning,
-  upgrades, token rotation, restore, and the checks after each.
+  owner's machine, never a Cursor secret, and asks for the cluster name to be
+  typed before changing anything.
 - The always-applied `compute-cost` rule gains: "Never provision, change, or
   delete the compute API server, or run `MISE_ENV=admin` tasks, unless a
   person asked for it in this task. Never run `sky` directly; use
-  `mise run job:*`." Rules are written by people (finding F2), so this is a
-  draft for the owner to edit.
-- Copier: two questions. `compute` (default no) adds the client part.
-  `compute_server_admin` (default no, asked only when `compute` is yes) adds
-  `compute/server/`, `mise.admin.toml`, and the admin skill. I recommend
-  asking rather than leaving the admin part out. A team runs one server,
-  from one repository, and every other project needs only the client;
-  admin code in every project would be dead weight and something an agent
-  might run. But the repository that runs the server must be able to come
-  from the template too.
+  `mise run job:*`." People write the rules (finding F2), so this is a draft.
+- Copier asks `compute` (default no), which adds the client, and then
+  `compute_server_admin` (default no), which adds `compute/server/`,
+  `mise.admin.toml`, and the admin skill. A team runs one server from one
+  repository; every other project needs only the client.
 
-## Credentials and variables
+## Credentials
 
 | Name | Where | Secret? | Read by |
 |---|---|---|---|
-| `SKYPILOT_API_SERVER_ENDPOINT` | Cursor secret | no | client |
-| `SKYPILOT_SERVICE_ACCOUNT_TOKEN` | Cursor secret | yes | client |
-| `SKYPILOT_API_SERVER_ENDPOINT`, `SKYPILOT_SERVICE_ACCOUNT_TOKEN` (a second, `user`-role token) | GitHub environment `compute` | token: yes | watch |
-| `COMPUTE_JOBS_AWS_ROLE_ARN`, `COMPUTE_JOBS_AWS_REGION` | variables on `compute` | no | watch |
+| `SKYPILOT_API_SERVER_ENDPOINT`, `SKYPILOT_SERVICE_ACCOUNT_TOKEN` | Cursor secrets | token: yes | client |
+| `COMPUTE_JOBS_AWS_ACCESS_KEY_ID`, `COMPUTE_JOBS_AWS_SECRET_ACCESS_KEY`, `COMPUTE_JOBS_BUCKET`, `COMPUTE_JOBS_AWS_REGION` | Cursor secrets | key: yes | observe |
+| The same endpoint, and a second `user` token | GitHub environment `compute`, limited to `main` | token: yes | watch (phase 2) |
+| `COMPUTE_JOBS_AWS_ROLE_ARN`, `COMPUTE_JOBS_AWS_REGION` | variables on `compute` | no | watch (phase 2) |
 | `COMPUTE_SERVER_ADMIN_AWS_PROFILE` | the owner's shell only | no | admin tasks |
 
-The server's own AWS identity is the role `compute-jobs-launcher`, given to
-its pod through IAM Roles for Service Accounts (`rbac.serviceAccountAnnotations`),
-so no long-lived AWS key exists. If SkyPilot doesn't accept that identity,
-the fallback is an access key in the Kubernetes secret the chart reads
-(`awsCredentials`), rotated every 90 days. The job's machine runs as
+The server's AWS identity is the role `compute-jobs-launcher`, given to its pod
+through IAM Roles for Service Accounts, so no long-lived launch key exists; if
+SkyPilot doesn't accept that identity, the fallback is a key in the Kubernetes
+secret the chart reads, rotated every 90 days. Job machines run as
 `compute-jobs-job`, which can read the bucket, write only
-`machines/${aws:userid}/*` and `checkpoints/*`, and stop or terminate only
-its own instance. The archive is per machine, so one job can't alter
-another's results. Checkpoints can't be scoped the same way: a relaunch is a
-new instance, and IAM can't tie a prefix to a job name. So any job could
-overwrite another's checkpoints. That costs at most a restart from a bad
-checkpoint, and the archived results stay intact.
+`machines/${aws:userid}/*` (its own archive) and `checkpoints/*`, and stop or
+terminate only its own instance. So one job can't alter another's archive,
+but could overwrite another's checkpoints, which costs at most a restart. The
+read-only key exposes job logs and outputs, nothing more.
 
-## Portability: the agent's VM and the job's machine
+## Phasing
 
-| | Agent's VM (checked 2026-10-15) | Job's machine |
-|---|---|---|
-| CPU | x86_64 | x86_64 only: `limits.yaml` lists g4dn, g5, g6, g6e, m7i, and c7i, and no Graviton family (g5g, m7g, c7g) |
-| OS | Ubuntu 24.04, set up by `.cursor/install.sh` | SkyPilot's AWS image, running `compute/Dockerfile`'s image |
-| GPU | None, and no Docker | NVIDIA driver from SkyPilot's image; CUDA runtime from ours |
-| Tools | mise's pins, and `uv.lock` | The same pins: the image installs mise at `install.sh`'s version and runs `MISE_ENABLE_TOOLS=uv mise install`, and the job's setup runs `uv sync --locked` from the job's commit |
+**Phase 1, the first slice and the spike.** Enough to run a real search end to
+end, and to learn what the plan got wrong before building the rest:
 
-- `compute/Dockerfile` is the one definition of the job environment: an
-  `nvidia/cuda` runtime image on Ubuntu 24.04, the agents' release, pinned
-  by digest, which Dependabot's `docker` updates move. The image holds no
-  project dependencies. They come from the job's own lockfile, at a cost of
-  1–3 minutes per attempt. Baking them in would mean rebuilding an image of
-  several GB on every lockfile change.
-- `uv.lock` is one lock for every platform, so a project that needs CUDA
-  wheels, such as PyTorch's, declares conflicting `cpu` and `cuda` extras.
-  The agent syncs `cpu`, and a job file names `uv_extras: [cuda]`.
-- Before the command, the wrapper fails the job, naming both versions, if the
-  driver supports an older CUDA than the image's. The run record adds the
-  AMI id, driver, CUDA, Python, `uv.lock`'s SHA-256, and the image digest.
-- The admin policy accepts only `ghcr.io/<owner>/<repository>/compute-job`
-  by a digest that CI built from `main`. This repository is public, so its
-  image is; a private project's server needs a registry read token, which
-  the admin sets.
-- Agents can't run the image, so CI does: the image workflow runs the
-  wrapper and `uv sync --locked` inside the new image on a CPU runner. Agents
-  run `mise run job:dry-run -- <job file>` first, which checks the file
-  against the limits and runs the command natively on CPU. The GPU path is
-  first exercised by a real job.
+- The client, `job:dry-run`, `job:launch`, `job:observe`, the wrapper, the
+  archive, `progress.json`, and `fanout`.
+- A one-node server, the admin policy with the `cpu` and `gpu-small` profiles,
+  the default image, and the budget action.
+- The spike: a toy evolutionary search over a CPU stand-in simulation (a
+  10 ms function), 10,000 evaluations per generation for 5 generations, on 2
+  `cpu` nodes, launched by an agent through the real server and observed from
+  a second agent. List price: under $5 for the jobs, plus the server's hours.
+  It needs a compute budget from the owner, since tasks without one have $0.
+- Then one `gpu-small` job, to check the driver, the image, and CUDA wheels on
+  a real GPU.
 
-## Spending limits
+**Phase 2**, each useful alone: the `gpu-sim` and `gpu-train` profiles,
+project images, the watch workflow and its check run, the Cursor Automation,
+the skills and the rule, Copier's questions, and the docs. **Later:** the P
+family, when a project needs it, and GPU tests on a self-hosted runner.
 
-AWS budget data refreshes up to three times a day, and a daily budget acts on
-the previous full day's spend, so a budget action can fire a day late. Two
-limits act at once instead. The admin policy accepts only the instance
-families in `limits.yaml` (G for GPUs, M and C for CPU), and EC2's vCPU
-quotas cap how many machines of a family run at once. With 64 G-family
-vCPUs on demand, 64 on spot, and 64 Standard vCPUs, spend is at most about
-128 × $0.47 (g6e, the dearest G family per vCPU) + 64 × $0.20 ≈ $73 per
-hour, or $1,800 per day, under D8's $10,000. The budget action is the
-backstop: at $10,000 of actual spend in a day it denies `ec2:RunInstances`
-to `compute-jobs-launcher`, and the watch then terminates every job machine.
+**Hard to change later**, so phase 1 settles them: the job file's fields and
+kinds, the archive layout and `progress.json`'s schema, `job:observe`'s output
+and exit codes (agents' scripts will parse them), the job name format, and the
+credentials boundary (which variables a client has, and that only the admin
+touches AWS). **Easy to change:** the profiles and limits, quotas, the server's
+size, the image's contents, the watch, notifications, and Copier's questions.
 
 ## Setup for the owner
 
-Each step works in a phone browser except 5 and 9, which run the admin
-tasks from a laptop. Steps 1–4 can start now; 5–12 wait for the admin PRs.
+Each step works in a phone browser except 5 and 9, which run admin tasks from
+a laptop. Steps 1–4 can start now; the rest wait for phase 1's admin PR.
 
-1. Create an AWS account for agent jobs, `agent-jobs`, and sign in to it
-   with IAM Identity Center:
+1. Create an AWS account for agent jobs, `agent-jobs`, under the negotiated
+   agreement, and sign in to it with IAM Identity Center:
    <https://console.aws.amazon.com/organizations/v2/home/accounts>.
-2. Request vCPU quotas in `us-east-1`: "Running On-Demand G and VT
-   instances" and "All G and VT Spot Instance Requests", 64 each; check that
-   "Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances" is at
-   most 64: <https://console.aws.amazon.com/servicequotas/home/services/ec2/quotas>.
-3. Pick the server's host name, such as `skypilot.<your domain>`, and create
-   a Route 53 hosted zone for the domain, registering one (about $15 a year)
-   if you have none: <https://console.aws.amazon.com/route53/v2/hostedzones>.
+2. Request vCPU quotas in `us-east-1`: "Running On-Demand G and VT instances"
+   384, "All G and VT Spot Instance Requests" 384, and check that "Running
+   On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances" is at most 64;
+   leave "Running On-Demand P instances" at 0:
+   <https://console.aws.amazon.com/servicequotas/home/services/ec2/quotas>.
+3. Pick the server's host name, such as `skypilot.<your domain>`, and create a
+   Route 53 hosted zone for the domain, registering one (about $15 a year) if
+   you have none: <https://console.aws.amazon.com/route53/v2/hostedzones>.
 4. Add GitHub as an identity provider: OpenID Connect, URL
    `https://token.actions.githubusercontent.com`, audience
    `sts.amazonaws.com`:
    <https://console.aws.amazon.com/iam/home#/identity_providers/create>.
 5. On a laptop with the AWS CLI logged in to `agent-jobs`, set
    `COMPUTE_SERVER_ADMIN_AWS_PROFILE` and run
-   `MISE_ENV=admin mise run compute-server:provision`. It creates, from the
-   committed files, the EKS cluster, RDS database, ACM certificate, S3 bucket
-   (private, 90-day expiry), the roles `compute-jobs-launcher`,
+   `MISE_ENV=admin mise run compute-server:provision`. From the committed
+   files, it creates the EKS cluster, the RDS database, the ACM certificate,
+   the S3 bucket (private, 90-day expiry), the roles `compute-jobs-launcher`,
    `compute-jobs-job`, and `compute-jobs-watch`, the policy
-   `compute-jobs-deny-launch`, the Route 53 health check, and the server
-   with its admin policy. It prints the endpoint and the dashboard URL.
+   `compute-jobs-deny-launch`, the IAM user `compute-jobs-observer` and its
+   key, the health check, and the server with its admin policy. It prints the
+   endpoint, the dashboard URL, and the observer key once.
 6. Open the dashboard, change the initial admin password, and create two
    service accounts with role `user` and 90-day expiry, `agents` and `watch`.
-7. Add the Cursor secrets `SKYPILOT_API_SERVER_ENDPOINT` and
-   `SKYPILOT_SERVICE_ACCOUNT_TOKEN` (the `agents` token):
+7. Add the Cursor secrets `SKYPILOT_API_SERVER_ENDPOINT`,
+   `SKYPILOT_SERVICE_ACCOUNT_TOKEN` (the `agents` token),
+   `COMPUTE_JOBS_AWS_ACCESS_KEY_ID`, `COMPUTE_JOBS_AWS_SECRET_ACCESS_KEY`,
+   `COMPUTE_JOBS_BUCKET`, and `COMPUTE_JOBS_AWS_REGION`:
    <https://cursor.com/dashboard>, Cloud Agents > Secrets.
-8. Create the GitHub environment `compute`, limited to `main`, with the
-   `watch` token as `SKYPILOT_SERVICE_ACCOUNT_TOKEN`, the endpoint, and the
-   variables `COMPUTE_JOBS_AWS_ROLE_ARN` (the `compute-jobs-watch` ARN that
-   step 5 printed) and `COMPUTE_JOBS_AWS_REGION`:
-   <https://github.com/arjunbhargava/foundation/settings/environments/new>.
-9. Run `MISE_ENV=admin mise run compute-server:status`, which checks that a
+8. Create a daily cost budget, `compute-jobs-daily`, of $10,000, with email
+   alerts at 50% and 80%, and an action at 100% of actual cost that applies
+   `compute-jobs-deny-launch` to `compute-jobs-launcher` automatically:
+   <https://console.aws.amazon.com/costmanagement/home#/budgets/create>.
+   Alerts alone don't stop spend; the action and the quotas do.
+9. Run `MISE_ENV=admin mise run compute-server:status`. It checks that a
    request without a token is rejected, that the `agents` token can't change
-   the server's settings, and that the admin policy rejects a job over the
-   limits.
-10. Create a daily cost budget, `compute-jobs-daily`, of $10,000, with email
-    alerts at 50% and 80%, and an action at 100% of actual cost that applies
-    `compute-jobs-deny-launch` to `compute-jobs-launcher` automatically:
-    <https://console.aws.amazon.com/costmanagement/home#/budgets/create>.
-    Alerts alone don't stop spend; the action and the quotas do.
-11. If Cursor's agent network allowlist is on, add the server's host name.
-12. Create a Cursor Automation on "CI completed", filtered to checks named
-    `compute-job:`, that starts an agent to read the result:
-    <https://cursor.com/automations>.
+   the server's settings, that the admin policy rejects a job over the limits,
+   that the budget action exists, and that the quota ceiling is at most
+   $416.67 an hour.
+10. If Cursor's agent network allowlist is on, add the server's host name and
+    `<bucket>.s3.us-east-1.amazonaws.com`.
+11. Give the spike task a compute budget, in its Linear issue: $10 covers it.
+12. Phase 2: create the GitHub environment `compute`, limited to `main`, with
+    the `watch` token, the endpoint, `COMPUTE_JOBS_AWS_ROLE_ARN` (the
+    `compute-jobs-watch` ARN that step 5 printed), and
+    `COMPUTE_JOBS_AWS_REGION`:
+    <https://github.com/arjunbhargava/foundation/settings/environments/new>;
+    then a Cursor Automation on "CI completed", filtered to checks named
+    `compute-job:`: <https://cursor.com/automations>.
 
 ## Files touched
 
 - `compute/`: a uv project pinned to Python 3.13, with `skypilot==0.14.0`
-  (Apache-2.0) as the client, boto3 (Apache-2.0) for the job archive, and
-  moto (Apache-2.0) to fake S3 and EC2 in tests. Package `compute_jobs`:
-  `client_config.py` (the two variables and the refusal), `job_file.py`,
-  `launch.py`, `observe.py`, `run.py` (the wrapper), `run_record.py`, and
-  `archive.py` (the S3 layout); plus `Dockerfile` and `tests/`.
-- `compute/server/`: `values.yaml`, `admin_policy/` (a package with its own
-  tests), `limits.yaml`, `aws/*.json`, and `provision.sh`, `upgrade.sh`,
-  `rotate_token.sh`, `status.sh`; `mise.admin.toml`.
-- `.github/workflows/`: `compute-image.yml` (build on pushes to `main`, push
-  to `ghcr.io/arjunbhargava/foundation/compute-job`, then the smoke test),
-  `compute-watch.yml`, and a `compute` job in `ci.yml`.
+  (Apache-2.0) as the client, boto3 (Apache-2.0) for the archive, Ray
+  (Apache-2.0) for `fanout`, and moto (Apache-2.0) to fake S3 and EC2 in
+  tests. Package `compute_jobs`: `client_config.py`, `job_file.py`,
+  `dry_run.py`, `launch.py`, `observe.py`, `run.py` (the wrapper),
+  `run_record.py`, `archive.py`, `progress.py`, and `fanout.py`; plus
+  `Dockerfile`, `image.yaml`, and `tests/`; and `examples/toy_search/`, the
+  spike.
+- `compute/server/`: `values.yaml`, `admin_policy/` (with its own tests),
+  `limits.yaml`, `aws/*.json`, and the provision, upgrade, rotate, and status
+  scripts; `mise.admin.toml`.
+- `.github/workflows/`: `compute-image.yml` (build and attest on pushes to
+  `main`, then the smoke test), `compute-watch.yml`, and a `compute` job in
+  `ci.yml`.
 - `mise.toml`: `setup:compute`, `lint:compute`, `test:compute`, and
-  `job:launch`, `job:dry-run`, `job:observe`, `job:cancel`.
+  `job:dry-run`, `job:launch`, `job:observe`, `job:cancel`.
 - `.github/dependabot.yml` and its `.jinja` twin, through
   `mise run template:sync` (the `docker` ecosystem for `compute/`).
 - `.env.example`, `.github/CODEOWNERS` (`compute/server/`), `copier.yml`,
@@ -420,70 +584,86 @@ tasks from a laptop. Steps 1–4 can start now; 5–12 wait for the admin PRs.
 ## Acceptance criteria
 
 Each becomes a named test that needs no AWS account, network, or server,
-except the last two, which `compute-server:status` checks on the real server.
+except those marked "on the real server", which `compute-server:status` or the
+spike checks.
 
 1. With `SKYPILOT_API_SERVER_ENDPOINT` or `SKYPILOT_SERVICE_ACCOUNT_TOKEN`
    unset, or the endpoint not `https://` or local, `job:launch`,
-   `job:observe`, and `job:cancel` exit 2. The message names both variables,
-   the `compute-server-admin` skill, and the owner, and a fake `sky` on
-   `PATH` records no call.
+   `job:observe`, and `job:cancel` exit 2; the message names both variables,
+   the `compute-server-admin` skill, and the owner; and a fake `sky` on `PATH`
+   records no call.
 2. The default mise configuration lists no `compute-server:` task, and those
-   tasks exit with a message when `COMPUTE_SERVER_ADMIN_AWS_PROFILE` is
-   unset.
-3. A project created from the template with default answers has no
-   `compute/`; with `compute=true` it has the client and no
-   `compute/server/`, `mise.admin.toml`, or admin skill; with both true, it
-   has all three.
+   tasks exit with a message when `COMPUTE_SERVER_ADMIN_AWS_PROFILE` is unset.
+3. A project made from the template with default answers has no `compute/`;
+   with `compute=true` it has the client and no admin part; with both true, it
+   has both.
 4. The server pin in `values.yaml` and the client pin in `compute/uv.lock`
    name the same minor version.
-5. The admin policy rejects a job over the GPU, node, run-time, region, or
-   family limits, without `budget_usd`, or over it. It rejects a config that
-   sets `remote_identity` or `admin_policy`, and rewrites every accepted job
-   to `remote_identity: compute-jobs-job`, with the `timeout` wrapper.
-6. `job:launch` names the job, labels it with the PR and commit, refuses
-   uncommitted changes, and passes the SDK the task the tests expect.
-7. Observe prints state, recoveries, machine, cost so far, log tail, and run
-   record for a job from a fake SDK; `--json` and `--pr` work.
-8. The wrapper writes a complete run record and the final state to the
-   archive for exit 0, a nonzero exit, and the `timeout`.
-9. The job role's policy allows writes only under `machines/${aws:userid}/`
-   and `checkpoints/`, and the admin policy mounts the same
-   `checkpoints/<job name>/` path at `$COMPUTE_JOB_CHECKPOINT_DIR` on every
-   attempt.
-10. The watch terminates machines past their deadline, or all of them after
-    the budget action fired; cancels the jobs of closed, unmerged PRs; and
-    adds one `compute-job:` check run and one comment per finished job.
-11. `mise run check` passes with no AWS or server credentials.
-12. On the real server: a request without a token gets 401, and the `agents`
-    token can't change the server's settings.
-13. A `compute-job:` check run starts the Cursor Automation (checked by hand
-    in the watch PR; if it doesn't, the PR comment and observing remain).
-14. The image workflow's smoke test passes inside the built image; the
-    wrapper fails before the command when a fake `nvidia-smi` reports an
-    older CUDA than the image's; and the admin policy rejects a Graviton
-    family or any other image.
+5. The job file accepts each kind with its fields and rejects a missing or
+   unknown kind or profile, `nodes` on a `single` job, and `nodes` above the
+   profile's maximum.
+6. The admin policy maps each profile to its ordered instance types; rejects a
+   disabled profile, a job over any limit, without `budget_usd` or over it, an
+   image not allowed or not by digest, and a config that sets
+   `remote_identity` or `admin_policy`; and rewrites every accepted job with
+   `remote_identity: compute-jobs-job`, the `timeout` wrapper, and the
+   checkpoint mount.
+7. `job:dry-run` prints the maximum cost and runs the smoke test; it warns on
+   spot without checkpoints.
+8. `fanout.map` returns results in the candidates' order, counts failures in
+   progress, and runs serially with `COMPUTE_JOB_SMOKE=1`;
+   `resume_generations` resumes after the last checkpoint.
+9. `progress.report` writes a valid `progress.json`; the wrapper uploads it at
+   most every 30 s; observe shows it from the archive and, without the S3 key,
+   from the last `COMPUTE_PROGRESS` log line.
+10. Observe prints state, recoveries, progress, machine, cost so far, log
+    tail, and run record for every kind, from a fake SDK; `--json` and `--pr`
+    work.
+11. The wrapper writes a complete run record and final state for exit 0, a
+    nonzero exit, and the `timeout`, and fails before the command when a fake
+    `nvidia-smi` reports an older CUDA than the image's.
+12. The job role allows writes only under `machines/${aws:userid}/` and
+    `checkpoints/`.
+13. The quota ceiling check fails above $416.67 an hour.
+14. `mise run check` passes with no AWS or server credentials.
+15. On the real server: a request without a token gets 401, the `agents`
+    token can't change the server's settings, and the spike's search finishes
+    5 generations with progress visible from a second agent.
+16. Phase 2: the image workflow's smoke test passes inside the built image;
+    the policy rejects an image without a `main` attestation; the watch
+    terminates overdue machines and adds one `compute-job:` check run per
+    finished job, and the check run starts the Cursor Automation (checked by
+    hand).
 
-## Decisions for the owner
+## Recommended defaults for the owner's decisions
 
-- Accept about $750 a month and the operating work above for (b), or
-  choose (a) alone, which costs about $1 a month and has no server.
-- Two nodes or one: one saves $294 a month and adds about 10 minutes'
-  downtime when a node fails.
-- Should agents also get a read-only S3 key, to fetch large output files and
-  read results while the server is down? The client stays usable without it;
-  without it, only the owner reads the archive.
-
-## Not in this plan
-
-T16's GPU tests on a self-hosted GPU runner need a runner, which is a
-separate decision and cost; they are a follow-up.
+- One server node ($460 a month). Add the second ($294) if 10 minutes'
+  downtime on a node failure ever matters.
+- Agents get the read-only S3 key, so progress and outputs work while the
+  server is down.
+- Copier's `compute` and `compute_server_admin` questions default to no.
+- Every job defaults to on-demand machines; spot is opt-in.
+- The fan-out mechanism is Ray inside one managed job.
 
 ## Pull requests after approval
 
-Stacked, each within 500 lines: (2) the `compute/` project,
-`client_config.py` with its refusal, and the CI job; (3) the job file and
-`job:launch`; (4) `job:observe` and `job:cancel`; (5) the wrapper, run
-record, and archive; (6) the Dockerfile and image workflow; (7) the admin
-policy and `limits.yaml`; (8) `values.yaml`, `mise.admin.toml`, and the
-provision, upgrade, rotate, and status tasks; (9) the watch workflow; (10)
-the skills, the rule, Copier's questions, and the docs.
+Stacked; each is useful when it merges.
+
+1. `compute/` project, `client_config.py` with its refusal, the job file with
+   kinds and profiles, `job:dry-run`, and the CI job. Useful: agents can write
+   and check job files.
+2. Admin: `values.yaml`, `mise.admin.toml`, and the provision and status tasks
+   for a one-node server, with the IAM files. Useful: the owner can stand up
+   the server.
+3. The admin policy and `limits.yaml` with `cpu` and `gpu-small`. Useful: the
+   server enforces limits.
+4. The wrapper, run record, archive, and `progress.py`; `job:launch` and
+   `job:observe`. Useful: single jobs run and are observable.
+5. `fanout.py`, `multi-node` and `search`, and `examples/toy_search/`; then
+   the spike. Useful: the design is proved end to end.
+6. The default image, `compute-image.yml`, `image.yaml`, and the attestation
+   check; then the `gpu-small` job. Useful: GPU jobs run.
+7. The `gpu-sim` and `gpu-train` profiles.
+8. The watch workflow and check run.
+9. The skills, the rule, Copier's questions, `docs/architecture.md`, and this
+   page as a description.
