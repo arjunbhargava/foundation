@@ -89,10 +89,13 @@ make_fake_tools() {
 #!/usr/bin/env bash
 case "$*" in
   "workspace list --paths")
-    echo "$PWD"
+    # Like uv, print the current directory with its symbolic links resolved,
+    # which differs from $PWD on macOS, where the temporary directory is one.
+    root=$(pwd -P)
+    echo "$root"
     if [[ -z ${SINGLE_PACKAGE:-} ]]; then
-      echo "$PWD/lib"
-      echo "$PWD/tools"
+      echo "$root/lib"
+      echo "$root/tools"
     fi
     ;;
   "run mutmut run "*)
