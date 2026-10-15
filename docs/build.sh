@@ -12,12 +12,14 @@ rm -rf docs/_build docs/_generated
 
 # Python: sphinx-autoapi reads it during sphinx-build; enforce docstrings first.
 # Each distribution, the root project and each member of its uv workspace if
-# it has one, has a src/. docs/conf.py derives the same list.
+# it has one, with a src/. docs/conf.py derives the same list.
 if [[ -f pyproject.toml ]]; then
   distributions=$(uv workspace list --paths)
   source_directories=()
   for distribution in $distributions; do
-    source_directories+=("$distribution/src")
+    if [[ -d $distribution/src ]]; then
+      source_directories+=("$distribution/src")
+    fi
   done
   uv run ruff check --quiet "${source_directories[@]}"
 fi

@@ -58,7 +58,8 @@ language the project has: Python, Rust, TypeScript, and C and C++.
   `src/<package>/`, and `tests/` of its own, as the root has. One `uv.lock`
   and one `.venv` then cover all of them, and the tests, `docs/build.sh`,
   `docs/conf.py`, and `mise run mutate` take their list of distributions from
-  the members, and `mutate` reports each separately. A new member also needs
+  the members, and `mutate` reports each separately; a member without a
+  `src/` is skipped. A new member also needs
   its package added by hand to the toctree in `docs/api/python.md` and to
   `[tool.importlinter]`, and, if it has a `lib/` directory, `source_paths =
   ["src"]` under `[tool.mutmut]` in its own `pyproject.toml`, because mutmut

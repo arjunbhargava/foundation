@@ -14,7 +14,7 @@ repository_root = Path(__file__).resolve().parent.parent
 
 
 def python_source_directories() -> list[str]:
-    """List the src/ directory of each Python distribution.
+    """List the src/ directory of each Python distribution that has one.
 
     A distribution is the root project or, if the root pyproject.toml has a
     [tool.uv.workspace], each of its members. uv expands the members' globs
@@ -33,7 +33,8 @@ def python_source_directories() -> list[str]:
         capture_output=True,
         text=True,
     )
-    return [f"{path}/src" for path in listing.stdout.split()]
+    source_directories = [f"{path}/src" for path in listing.stdout.split()]
+    return [path for path in source_directories if Path(path).is_dir()]
 
 
 extensions = ["myst_parser"]

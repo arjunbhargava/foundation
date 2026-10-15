@@ -173,7 +173,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, refuses a project or package name in the wrong case, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; that a project named my-project names foundation only in links to the template; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, refuses a project or package name in the wrong case, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that a project named my-project names foundation only in links to the template; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -347,6 +347,61 @@ done
 if ! (cd "$work/python" && bash docs/build.sh > "$work/docs_build.log" 2>&1); then
   echo "FAIL: $name: the Python project's docs build failed; its output is below." >&2
   cat "$work/docs_build.log" >&2
+  exit 1
+fi
+echo "$name: passed."
+
+# A Python project that is a uv workspace gets its tests and its API pages,
+# and the docs build's docstring check, from the members listed in
+# pyproject.toml. The two members' test files share a name, which pytest's
+# default import mode rejects. The second member holds no function, so the
+# check below that fails on an undocumented function needs a new one, and the
+# third has no src/, which the docs build and the tests skip.
+name=a_uv_workspace_project_tests_and_documents_every_member
+project=$work/workspace
+copier copy --quiet --trust --defaults --vcs-ref=HEAD --data python=true . "$project"
+(
+  cd "$project"
+  for member in first second; do
+    mkdir -p "$member/src/member_$member" "$member/tests"
+    printf '[project]\nname = "member-%s"\nversion = "0.1.0"\nrequires-python = ">=3.12"\ndependencies = []\n\n[build-system]\nrequires = ["uv_build>=0.12.23,<0.13.0"]\nbuild-backend = "uv_build"\n' "$member" > "$member/pyproject.toml"
+    touch "$member/src/member_$member/py.typed"
+    printf 'def test_%s_member_runs() -> None:\n    pass\n' "$member" > "$member/tests/test_member.py"
+    awk -v page="python/member_$member/index" '{ print } $0 == "python/foundation/index" { print page }' docs/api/python.md > docs/api/python.md.new
+    mv docs/api/python.md.new docs/api/python.md
+  done
+  printf '"""The first member."""\n\n\ndef double(value: int) -> int:\n    """Return twice the value.\n\n    Args:\n        value: The number to double.\n\n    Returns:\n        The value times 2.\n\n    Examples:\n        >>> double(2)\n        4\n    """\n    return value * 2\n' > first/src/member_first/__init__.py
+  printf '"""The second member, which has no function."""\n' > second/src/member_second/__init__.py
+  mkdir third
+  printf '[project]\nname = "member-third"\nversion = "0.1.0"\nrequires-python = ">=3.12"\ndependencies = []\n' > third/pyproject.toml
+  printf '\n[tool.uv.workspace]\nmembers = ["first", "second", "third"]\n' >> pyproject.toml
+  uv lock --quiet
+  uv sync --quiet --locked --all-packages
+) > "$work/workspace_setup.log" 2>&1 || { cat "$work/workspace_setup.log" >&2; exit 1; }
+# pytest exits non-zero when a file fails to collect, which the loop below reports.
+collected_tests=$(cd "$project" && uv run pytest --collect-only -q 2>&1) || true
+for expected in first/tests/test_member.py::test_first_member_runs second/tests/test_member.py::test_second_member_runs first/src/member_first/__init__.py::member_first.double; do
+  if [[ $collected_tests != *"$expected"* ]]; then
+    echo "FAIL: $name: pytest in the workspace didn't collect $expected; it collected:" >&2
+    echo "$collected_tests" >&2
+    exit 1
+  fi
+done
+if ! (cd "$project" && bash docs/build.sh > "$work/workspace_docs_build.log" 2>&1); then
+  echo "FAIL: $name: the workspace's docs build failed; its output is below." >&2
+  cat "$work/workspace_docs_build.log" >&2
+  exit 1
+fi
+for member in first second; do
+  if [[ ! -f $project/docs/_build/html/api/python/member_$member/index.html ]]; then
+    echo "FAIL: $name: the docs have no API page for member_$member." >&2
+    exit 1
+  fi
+done
+printf '\n\ndef undocumented(value: int) -> int:\n    return value\n' >> "$project/first/src/member_first/__init__.py"
+if (cd "$project" && bash docs/build.sh > "$work/workspace_docs_build.log" 2>&1) || ! grep -q "first/src/member_first/__init__.py" "$work/workspace_docs_build.log"; then
+  echo "FAIL: $name: the docs build didn't fail on an undocumented function in the first member; its output is below." >&2
+  cat "$work/workspace_docs_build.log" >&2
   exit 1
 fi
 echo "$name: passed."
