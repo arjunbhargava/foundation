@@ -100,8 +100,9 @@ report.
 - **Worker**: `Worker <MM/DD HH:MMZ>: <short descriptor>`, for example
   `Worker 10/15 00:18Z: document agent names`. The descriptor is a few
   plain words saying what the worker does. It is not the task ID, which stays
-  in the worker's prompt and PR. A relaunched worker, or a worker launched for
-  a follow-up, gets a new launch time.
+  in the worker's prompt and PR. The name doesn't include its orchestrator's.
+  A relaunched worker, or a worker launched for a follow-up, gets a new launch
+  time.
 - **Date and time** is the agent's UTC launch time to the minute, with the
   date as `MM/DD` with no year, so names sort by time. A time
   stamp rather than a counter means nothing has to be remembered through a
