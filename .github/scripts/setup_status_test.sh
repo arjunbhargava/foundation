@@ -79,29 +79,10 @@ main() {
   expect_contains "the repository is unknown"
   expect_contains "Where: https://github.com/OWNER/REPO/settings/actions"
 
-  expect_setup_runs_every_setup_task_but_status
-
   if ((failures > 0)); then
     exit 1
   fi
   echo "setup_status.sh printed the expected status in all $cases cases."
-}
-
-# mise.toml's glob for the setup task leaves out setup:status, and with it any
-# language whose key starts with s, such as swift; this fails until it covers one.
-expect_setup_runs_every_setup_task_but_status() {
-  new_case setup_runs_every_setup_task_but_status
-  local setup_tree task
-  cd "$(dirname "$script")/../.."
-  setup_tree=$(mise tasks deps setup 2> /dev/null)
-  if [[ $setup_tree == *"setup:status"* ]]; then
-    fail "mise run setup runs setup:status, which reports and installs nothing; fix the glob in mise.toml."
-  fi
-  for task in $(mise tasks ls --no-header 2> /dev/null | awk '$1 ~ /^setup:/ && $1 != "setup:status" { print $1 }'); do
-    if [[ $setup_tree != *"$task"* ]]; then
-      fail "mise run setup doesn't run $task; widen the glob of the setup task in mise.toml."
-    fi
-  done
 }
 
 make_fake_gh() {

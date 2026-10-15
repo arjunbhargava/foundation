@@ -40,13 +40,11 @@ uv = "0.12.21"
 
 # Each setup task fails if its lockfile is out of date with its manifest, so
 # CI catches a manifest edited without relocking.
-# [!s] leaves out setup:status; test:setup-status-script fails until a language
-# whose key starts with s has an entry.
 [tasks.setup]
 description = "Install project dependencies"
-depends = ["setup:[!s]*"]
+depends = ["setup:*"]
 
-[tasks."setup:status"]
+[tasks."setup-status"]
 description = "Report which of README.md's manual setup steps are done, not done, or can't be checked, with a link for each; always exits 0; arguments after -- go to the script, such as owner/repo"
 run = ".github/scripts/setup_status.sh"
 

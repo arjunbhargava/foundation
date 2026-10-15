@@ -201,7 +201,7 @@ check or add a dependency, which D7 already requires the owner to approve.
 
 Auto mode needs "Allow GitHub Actions to create and approve pull requests"
 and "Allow auto-merge" on, and Bugbot on for the repository.
-`mise run setup:status` reports which manual setup steps are done.
+`mise run setup-status` reports which manual setup steps are done.
 
 ```sh
 mise exec -- .github/rulesets/apply.sh --dry-run --auto  # print the changes

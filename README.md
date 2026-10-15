@@ -9,7 +9,7 @@ this title with the project's name, and this sentence with what it does.
 GitHub copies no repository settings, and Cursor and Linear need setup of
 their own. Until these steps are done, auto mode, the documentation site, and
 Bugbot's review don't work. Replace `OWNER/REPO` in each link with this
-repository's name, or run `mise run setup:status`, which prints each step as
+repository's name, or run `mise run setup-status`, which prints each step as
 `done`, `not done`, or `can't check`, with its link.
 
 1. **Let Actions approve pull requests.**

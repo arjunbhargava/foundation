@@ -3,7 +3,7 @@
 # steps") are done, so that a person or an agent knows what to do before
 # relying on auto mode, the documentation site, or Bugbot.
 #
-# Usage: mise run setup:status [-- owner/repo]
+# Usage: mise run setup-status [-- owner/repo]
 #
 # The repository defaults to the one for the current directory. Each step
 # prints "done", "not done", or "can't check", with where to fix or check it.
