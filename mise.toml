@@ -78,7 +78,21 @@ depends = ["test:*"]
 
 [tasks.mutate]
 description = "Mutation-test the code changed since the merge base with origin/main, and report each mutant no test caught; check doesn't run it, because it's slow"
-depends = ["mutate:*"]
+# Not `depends = ["mutate:*"]`: mise fails with "task not found" when no
+# language defines a mutate:<language> task, as in a project with only C and
+# C++, which have no mutation tool.
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+language_tasks=$(mise tasks ls --no-header | awk '$1 ~ /^mutate:/ { print $1 }')
+if [[ -z $language_tasks ]]; then
+  echo "No language with a mutation tool is present, so nothing was mutated."
+  exit 0
+fi
+for language_task in $language_tasks; do
+  mise run "$language_task" -- "$@"
+done
+'''
 
 [tasks."test:mutate-script"]
 description = "Check which files .github/scripts/mutate.sh mutates and what it reports, with fake mutation tools"

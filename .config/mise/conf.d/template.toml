@@ -173,7 +173,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, refuses a project or package name in the wrong case, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; that a project named my-project names foundation only in links to the template; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, refuses a project or package name in the wrong case, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; that mutate succeeds in a project with only C and C++; that a project named my-project names foundation only in links to the template; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -325,6 +325,21 @@ for language in $languages; do
     exit 1
   fi
 done
+echo "$name: passed."
+
+# A project with only C and C++ has no mutate:<language> task, because those
+# languages have no mutation tool, and mutate must still succeed.
+name=mutate_succeeds_in_a_project_with_only_cpp
+mutate_output=$(MISE_TRUSTED_CONFIG_PATHS=$work/cpp mise --cd "$work/cpp" run mutate 2>&1) || {
+  echo "FAIL: $name: mise run mutate failed in the C++ project with the output below; mutate in mise.toml must succeed when no language defines a mutate:<language> task." >&2
+  echo "$mutate_output" >&2
+  exit 1
+}
+if ! grep -q "No language with a mutation tool is present" <<< "$mutate_output"; then
+  echo "FAIL: $name: mise run mutate in the C++ project succeeded but did not say that no language with a mutation tool is present; its output is below." >&2
+  echo "$mutate_output" >&2
+  exit 1
+fi
 echo "$name: passed."
 
 # The files that only describe or check the template, which _exclude in
