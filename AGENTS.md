@@ -9,6 +9,7 @@ the same thing:
 | Command | What it does |
 |---|---|
 | `mise run setup` | Install project dependencies. |
+| `mise run setup:status` | Report which of README.md's manual setup steps are `done`, `not done`, or `can't check`, with a link for each, using `gh` and its API; always exits 0 and prints no secret. Arguments after `--` go to the script: `mise run setup:status -- owner/repo`. |
 | `mise run fmt` | Format all code in place. `fmt:<language>` formats one language. |
 | `mise run lint` | Check formatting, lint, and types without changing files. |
 | `mise run lint:python` | Run only the Python checks. |
@@ -126,6 +127,9 @@ Each language task adds its directory and lists it here.
     Apple Clang on macOS, because the cloud agent image's default `c++` is a
     Clang that lacks the C++ standard library and sanitizer runtimes it
     needs.
+- On a project's first task, or when asked, run `mise run setup:status`
+  before you rely on auto mode, Pages, or Bugbot, and tell the person each
+  step it prints as `not done` or `can't check`, with its link.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
   them. People write those files (finding F2 in the plan).
 - The PR body follows the `reviewable-prs` rule.
