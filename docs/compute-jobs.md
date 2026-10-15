@@ -23,7 +23,7 @@ maximum run time.
 $ mise run job:dry-run -- jobs/search.yaml
 jobs/search.yaml: kind search, profile gpu-sim, 2 nodes (16 L40S GPUs)
 Maximum cost: 2 × $30.13/h × 3 h = $180.78 (list price), within budget_usd 200
-Ran the command on this machine with COMPUTE_JOB_SMOKE=1: 2 generations, 20 evaluations, exit 0
+Smoke test on this machine's CPU (COMPUTE_JOB_SMOKE=1): 2 generations, 20 evaluations, exit 0
 Ready to launch.
 
 $ mise run job:launch -- jobs/search.yaml
@@ -223,7 +223,7 @@ families, GPUs per node, a maximum node count, a maximum run time, and
 
 | Profile | GPU, family | Fits | Per node, list price | Max nodes | Max $/h per job | Max per job-day |
 |---|---|---|---|---|---|---|
-| `cpu` | none; m7i, c7i | CPU simulations, analysis, small drivers | up to 64 vCPU, m7i.16xlarge $3.23/h | 4 | 12.90 | 310 |
+| `cpu` | none; c7i, m7i | CPU simulations, analysis, small drivers | up to 16 vCPU, m7i.4xlarge $0.81/h | 4 | 3.23 | 77 |
 | `gpu-small` | 1 × L4 (g6), then 1 × T4 (g4dn) | Development, small simulations, inference | g6.xlarge $0.80/h | 1 | 0.80 | 19 |
 | `gpu-sim` | L40S (g6e): 1, 4, or 8 per node | Rendering simulators (Isaac Sim, RTX-based), GPU physics, and search | g6e.48xlarge, 8 GPUs, $30.13/h | 2 | 60.26 | 1,446 |
 | `gpu-train` | 8 × L40S (g6e.48xlarge), then 8 × A10G (g5.48xlarge, $16.29/h) | Training that fits in 44 GB per GPU | $30.13/h | 2 | 60.26 | 1,446 |
@@ -342,9 +342,13 @@ Every field except `schema` and `updated_at` is optional. `job:observe` shows
 the latest progress first, then a log tail of 20 lines, so an agent never reads
 a whole log. It reads `progress.json` from the archive, and without the
 read-only S3 key, it reads the last `COMPUTE_PROGRESS` line from the log
-through the server. The archive is per machine, and rank 0 writes progress;
-observe learns rank 0's machine id from the first line of the job's log, which
-the server holds.
+through the server. The archive is per machine, and rank 0 writes progress.
+Observe finds rank 0's machine from the first line of the job's log while the
+server is up, and from `index/<job name>/` when it isn't, so the read-only key
+alone serves progress, results, and logs. A job could write a false marker
+under another job's name, because the job role can't be scoped to one name;
+observe then shows both machines, and the phase 2 watch's index from EC2 tags,
+which the server sets and a job can't, is the authoritative mapping.
 
 ## How a job runs
 
@@ -361,9 +365,13 @@ the server holds.
    `s3://<bucket>/checkpoints/<job name>/` at `$COMPUTE_JOB_CHECKPOINT_DIR`
    (the same path on every attempt), and rejects a config that tries to
    change any of this.
-3. On each machine, `python -m compute_jobs.run` checks the driver, writes the
-   run record, runs the command (for `search`, starting Ray first), and writes
-   progress, the result, the output, and the log to the archive.
+3. On each machine, `python -m compute_jobs.run` checks the driver and writes
+   the run record. For `single` and `multi-node` it runs the command on every
+   node. For `search` it starts Ray on every node, runs the command only on
+   rank 0, and keeps the other nodes as Ray workers until rank 0 exits, so
+   there is one driver. It writes progress, the result, the output, and the
+   log to the archive, and an empty marker, `index/<job name>/<machine id>`,
+   so the archive can be found by job name without the server.
 4. The server relaunches a preempted job, which resumes from its checkpoint,
    and deletes the machines when the job ends.
 5. Any agent runs `mise run job:observe`.
@@ -401,11 +409,15 @@ an agent never starts one. Nothing was started.
 ```
 
 `job:dry-run` needs neither: it checks the file against a copy of the limits
-and runs the command locally with `COMPUTE_JOB_SMOKE=1`.
+and runs the command locally with `COMPUTE_JOB_SMOKE=1` and no GPU visible
+(`CUDA_VISIBLE_DEVICES=""`). A job's code reads `COMPUTE_JOB_SMOKE` to run a
+tiny CPU case, as `fanout` does. A command that can't run without a GPU sets
+`smoke: false` in the job file; the dry run then skips the smoke test, says so,
+and still exits 0 if the file is valid.
 
 | Command | Does | Exit codes |
 |---|---|---|
-| `mise run job:dry-run -- <job file>` | Validates, prices, and runs a smoke test locally | 0 ready, 1 invalid or the smoke test failed |
+| `mise run job:dry-run -- <job file>` | Validates, prices, and runs a CPU smoke test locally unless `smoke: false` | 0 ready, 1 invalid or the smoke test failed |
 | `mise run job:launch -- <job file>` | Launches and prints the job name | 0 launched, 1 rejected, 2 not configured |
 | `mise run job:observe -- [<job name>] [--pr N] [--lines N] [--json]` | Shows state, recoveries, progress, machine, cost so far, run record, and log tail; with no name, lists jobs | 0 read, 1 no such job, 2 not configured |
 | `mise run job:cancel -- <job name>` | Cancels a job the caller launched | 0, 1, 2 as above |
@@ -422,6 +434,7 @@ budget_usd: 200           # > 0; the task's compute budget bounds it
 use_spot: false           # default
 image: default            # or project
 uv_extras: [cuda]
+smoke: true              # false if the command can't run without a GPU
 seed: 1234                # recorded, and passed as COMPUTE_JOB_SEED
 settings:                 # free-form; recorded, and passed as JSON
   population: 10000
@@ -464,7 +477,7 @@ through IAM Roles for Service Accounts, so no long-lived launch key exists; if
 SkyPilot doesn't accept that identity, the fallback is a key in the Kubernetes
 secret the chart reads, rotated every 90 days. Job machines run as
 `compute-jobs-job`, which can read the bucket, write only
-`machines/${aws:userid}/*` (its own archive) and `checkpoints/*`, and stop or
+`machines/${aws:userid}/*` (its own archive), `index/*`, and `checkpoints/*`, and stop or
 terminate only its own instance. So one job can't alter another's archive,
 but could overwrite another's checkpoints, which costs at most a restart. The
 read-only key exposes job logs and outputs, nothing more.
@@ -608,22 +621,26 @@ spike checks.
    `remote_identity` or `admin_policy`; and rewrites every accepted job with
    `remote_identity: compute-jobs-job`, the `timeout` wrapper, and the
    checkpoint mount.
-7. `job:dry-run` prints the maximum cost and runs the smoke test; it warns on
-   spot without checkpoints.
-8. `fanout.map` returns results in the candidates' order, counts failures in
+7. `job:dry-run` prints the maximum cost and runs the smoke test with no GPU
+   visible; with `smoke: false` it skips it and exits 0 for a valid file; it
+   warns on spot without checkpoints.
+8. In a 2-node `search` job, the command runs once, on rank 0, and the
+   other node's GPUs receive evaluations. `fanout.map` returns results in the
+   candidates' order, counts failures in
    progress, and runs serially with `COMPUTE_JOB_SMOKE=1`;
    `resume_generations` resumes after the last checkpoint.
 9. `progress.report` writes a valid `progress.json`; the wrapper uploads it at
-   most every 30 s; observe shows it from the archive and, without the S3 key,
-   from the last `COMPUTE_PROGRESS` log line.
+   most every 30 s; observe shows it from the archive, finding the machine
+   through `index/` when the server is down, and, without the S3 key, from the
+   last `COMPUTE_PROGRESS` log line.
 10. Observe prints state, recoveries, progress, machine, cost so far, log
     tail, and run record for every kind, from a fake SDK; `--json` and `--pr`
     work.
 11. The wrapper writes a complete run record and final state for exit 0, a
     nonzero exit, and the `timeout`, and fails before the command when a fake
     `nvidia-smi` reports an older CUDA than the image's.
-12. The job role allows writes only under `machines/${aws:userid}/` and
-    `checkpoints/`.
+12. The job role allows writes only under `machines/${aws:userid}/`,
+    `index/`, and `checkpoints/`.
 13. The quota ceiling check fails above $416.67 an hour.
 14. `mise run check` passes with no AWS or server credentials.
 15. On the real server: a request without a token gets 401, the `agents`
