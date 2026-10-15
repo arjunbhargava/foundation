@@ -22,7 +22,7 @@ rm "$work/project/.copier-answers.yml"
 mkdir "$work/root"
 git ls-files --cached --others --exclude-standard | sort -u | while read -r file; do
   case $file in
-    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | *.jinja) ;;
+    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | .github/README.md | docs/template-plan.md | *.jinja) ;;
     *) if [[ -e $file ]]; then printf '%s\n' "$file"; fi ;;
   esac
 done | tar -cf - -T - | tar -xf - -C "$work/root"
@@ -148,6 +148,10 @@ for languages in "python rust typescript cpp" python rust typescript cpp; do
   data=$(printf -- '--data %s=true ' $languages)
   create "$work/updated" "$main" $data
   update "$work/updated" --vcs-ref="$working_tree"
+  # copier update doesn't delete a file that the template starts to exclude,
+  # and a main that predates the exclusion of docs/template-plan.md still
+  # creates it. Delete this line once main excludes the file.
+  rm -f "$work/updated/docs/template-plan.md"
   create "$work/new" "$working_tree" $data
   expect_equal "$name ($languages)" "$work/updated" "$work/new"
 done
@@ -161,7 +165,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -299,6 +303,30 @@ for language in $languages; do
     exit 1
   fi
 done
+echo "$name: passed."
+
+# The files that only describe or check the template, which _exclude in
+# copier.yml leaves out of every project (keep this list equal to the one
+# there). The Python project's docs build fails on a link or toctree entry to
+# a page that the project lacks.
+name=a_project_has_no_template_only_file_and_its_docs_build_passes
+for language in $languages; do
+  for path in .config/mise/conf.d/template.toml .github/workflows/template.yml .github/rulesets/template-checks.json .github/README.md docs/template-plan.md; do
+    if [[ -e $work/$language/$path ]]; then
+      echo "FAIL: $name: the $language project has $path, a file that only describes or checks the template. Add it to _exclude in copier.yml." >&2
+      exit 1
+    fi
+  done
+  if grep -nE 'Get started|template-plan' "$work/$language/README.md" >&2; then
+    echo "FAIL: $name: the $language project's README.md has the template's text on the lines above. Put it in .github/README.md, the template's own README." >&2
+    exit 1
+  fi
+done
+if ! (cd "$work/python" && bash docs/build.sh > "$work/docs_build.log" 2>&1); then
+  echo "FAIL: $name: the Python project's docs build failed; its output is below." >&2
+  cat "$work/docs_build.log" >&2
+  exit 1
+fi
 echo "$name: passed."
 
 # template:check-update's update function, sourced here with a shell function
