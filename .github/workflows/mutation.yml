@@ -16,6 +16,8 @@ on:
     paths:
       - src/**
       - tests/**
+      - '**/src/**'
+      - '**/tests/**'
       - crates/**
       - packages/**
       - .github/scripts/*.py

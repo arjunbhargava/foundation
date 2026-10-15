@@ -10,8 +10,9 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
 # --vcs-ref=HEAD makes copier read the working tree, including uncommitted
-# changes and untracked files that git doesn't ignore.
-copier copy --quiet --trust --defaults --vcs-ref=HEAD \
+# changes and untracked files that git doesn't ignore. template_repository
+# adds the lines for the template's own files to .github/CODEOWNERS.
+copier copy --quiet --trust --defaults --vcs-ref=HEAD --data template_repository=true \
   --data python=true --data rust=true --data typescript=true --data cpp=true \
   . "$work/project"
 rm "$work/project/.copier-answers.yml"
@@ -41,7 +42,8 @@ run = '''
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-copier copy --quiet --trust --defaults --vcs-ref=HEAD \
+# As in template:check.
+copier copy --quiet --trust --defaults --vcs-ref=HEAD --data template_repository=true \
   --data python=true --data rust=true --data typescript=true --data cpp=true \
   . "$work/project"
 
@@ -164,7 +166,10 @@ expect_equal "$name" "$work/updated" "$work/new"
 
 name=naming_a_project_from_main_with_copier_update_equals_a_new_project_with_that_name
 create "$work/updated" "$main" --data python=true --data rust=true --data typescript=true --data cpp=true
-update "$work/updated" --vcs-ref="$working_tree" --data project_name=my-project
+# A project from a main with the name and owner questions has recorded
+# package_name and github_repository, which a new project_name doesn't
+# change, so this gives all three.
+update "$work/updated" --vcs-ref="$working_tree" --data project_name=my-project --data package_name=my_project --data github_repository=arjunbhargava/my-project
 # As in the first test; delete it with that line.
 rm -f "$work/updated/docs/template-plan.md"
 create "$work/new" "$working_tree" --data python=true --data rust=true --data typescript=true --data cpp=true --data project_name=my-project
@@ -173,7 +178,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, refuses a project or package name in the wrong case, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; that mutate succeeds in a project with only C and C++; that a project named my-project names foundation only in links to the template; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, refuses a malformed project name, package name, GitHub owner or repository, copyright holder, or year, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes and its sidebar lists the operating guide as one entry; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that mutate succeeds in a project with only C and C++; that a project named my-project names foundation only in links to the template, and one with another owner and copyright holder names neither the root's nor a template-only file in CODEOWNERS and links its own repository's settings; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -196,9 +201,11 @@ if [[ -e $work/project ]]; then
 fi
 echo "$name: passed."
 
-name=copier_refuses_a_name_that_is_not_kebab_case_or_snake_case
+name=copier_refuses_a_malformed_name_owner_repository_copyright_holder_or_year
 for answer in project_name=My-Project project_name=my--project project_name=1project \
-  project_name=my-project- "project_name=my project" package_name=my-package package_name=my__package; do
+  project_name=my-project- "project_name=my project" package_name=my-package package_name=my__package \
+  github_owner=@octocat github_owner=a/b/c "github_owner=my org" "copyright_holder= " copyright_year=26 copyright_year=2O26 \
+  github_repository=my-project github_repository=a/b/c; do
   status=0
   copier copy --quiet --trust --defaults --vcs-ref=HEAD --data python=true --data "$answer" \
     . "$work/project" 2> "$work/stderr" || status=$?
@@ -223,7 +230,7 @@ twins=$(git ls-files --cached --others --exclude-standard '*.jinja' | while read
   if [[ -e ${twin%.jinja} ]]; then printf '%s\n' "$twin"; fi
 done)
 if [[ -z $twins ]]; then
-  echo "FAIL: $name: found no .jinja twin with a root copy, but AGENTS.md, README.md, and .github/dependabot.yml each have one." >&2
+  echo "FAIL: $name: found no .jinja twin with a root copy, but AGENTS.md, README.md, NOTICE, .github/CODEOWNERS, and .github/dependabot.yml each have one." >&2
   exit 1
 fi
 marker="This line is only in the twin."
@@ -262,7 +269,7 @@ echo "$name: passed."
 # .github/dependabot.yml.
 language_files() {
   case $1 in
-    python) echo pyproject.toml uv.lock .python-version src tests .config/mise/conf.d/python.toml docs/api/python.md ;;
+    python) echo pyproject.toml uv.lock .python-version conftest.py src tests .config/mise/conf.d/python.toml docs/api/python.md ;;
     rust) echo Cargo.toml Cargo.lock rust-toolchain.toml crates .config/mise/conf.d/rust.toml docs/api/rust.md .github/workflows/rust-advisories.yml ;;
     typescript) echo package.json pnpm-lock.yaml pnpm-workspace.yaml packages tsconfig.json biome.json .dependency-cruiser.cjs stryker.config.json .config/mise/conf.d/typescript.toml docs/api/typescript.md ;;
     cpp) echo CMakeLists.txt cpp CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml docs/api/cpp.md ;;
@@ -366,6 +373,85 @@ if ! (cd "$work/python" && bash docs/build.sh > "$work/docs_build.log" 2>&1); th
 fi
 echo "$name: passed."
 
+# The pages that docs/operating-guide.md lists belong in its toctree, so the
+# top level of the sidebar holds the project's own pages, the API reference,
+# and the one entry for the operating guide. Furo writes each top-level entry
+# as a toctree-l1 list item, and the pages under an entry as toctree-l2. The
+# page body repeats the toctrees, so only the sidebar's markup is read.
+name=a_projects_sidebar_lists_the_operating_guide_as_one_entry
+top_level_entries=$(sed -n '/class="sidebar-tree"/,/<\/aside>/p' "$work/python/docs/_build/html/index.html" \
+  | grep -o 'class="toctree-l1[^"]*"><a class="reference internal" href="[^"]*">[^<]*' | sed 's/.*">//')
+if [[ $(grep -cx 'Operating guide' <<< "$top_level_entries") -ne 1 ]]; then
+  printf 'FAIL: %s: the top level of the Python project'"'"'s sidebar should have "Operating guide" once, and has:\n%s\n' "$name" "$top_level_entries" >&2
+  exit 1
+fi
+for page_title in "Agent instructions" "Agent rules and skills" "Auto mode" "Orchestrating long-running agent work" \
+  "Linear conventions" "The setup script" "Pull template updates"; do
+  if grep -qx "$page_title" <<< "$top_level_entries"; then
+    printf 'FAIL: %s: the top level of the Python project'"'"'s sidebar lists "%s", which belongs under "Operating guide". Put its page in the toctree of docs/operating-guide.md.\n' "$name" "$page_title" >&2
+    exit 1
+  fi
+done
+echo "$name: passed."
+
+# A Python project that is a uv workspace, named foundation or otherwise, gets
+# its tests and its API pages, and the docs build's docstring check, from the
+# members listed in pyproject.toml. The two members' test files share a name,
+# which pytest's default import mode rejects. The second member holds no
+# function, so the check below that fails on an undocumented function needs a
+# new one, and the third has no src/, which the docs build and the tests skip.
+name=a_uv_workspace_project_tests_and_documents_every_member
+for project_name in foundation my-project; do
+  package=${project_name//-/_}
+  project=$work/workspace_$package
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD --data python=true --data "project_name=$project_name" . "$project"
+  (
+    cd "$project"
+    for member in first second; do
+      mkdir -p "$member/src/member_$member" "$member/tests"
+      printf '[project]\nname = "member-%s"\nversion = "0.1.0"\nrequires-python = ">=3.12"\ndependencies = []\n\n[build-system]\nrequires = ["uv_build>=0.12.23,<0.13.0"]\nbuild-backend = "uv_build"\n' "$member" > "$member/pyproject.toml"
+      touch "$member/src/member_$member/py.typed"
+      printf 'def test_%s_member_runs() -> None:\n    pass\n' "$member" > "$member/tests/test_member.py"
+      awk -v package="$package" -v page="python/member_$member/index" '{ print } $0 == "python/" package "/index" { print page }' docs/api/python.md > docs/api/python.md.new
+      mv docs/api/python.md.new docs/api/python.md
+    done
+    printf '"""The first member."""\n\n\ndef double(value: int) -> int:\n    """Return twice the value.\n\n    Args:\n        value: The number to double.\n\n    Returns:\n        The value times 2.\n\n    Examples:\n        >>> double(2)\n        4\n    """\n    return value * 2\n' > first/src/member_first/__init__.py
+    printf '"""The second member, which has no function."""\n' > second/src/member_second/__init__.py
+    mkdir third
+    printf '[project]\nname = "member-third"\nversion = "0.1.0"\nrequires-python = ">=3.12"\ndependencies = []\n' > third/pyproject.toml
+    printf '\n[tool.uv.workspace]\nmembers = ["first", "second", "third"]\n' >> pyproject.toml
+    uv lock --quiet
+    uv sync --quiet --locked --all-packages
+  ) > "$work/workspace_setup.log" 2>&1 || { cat "$work/workspace_setup.log" >&2; exit 1; }
+  # pytest exits non-zero when a file fails to collect, which the loop below reports.
+  collected_tests=$(cd "$project" && uv run pytest --collect-only -q 2>&1) || true
+  for expected in first/tests/test_member.py::test_first_member_runs second/tests/test_member.py::test_second_member_runs first/src/member_first/__init__.py::member_first.double; do
+    if [[ $collected_tests != *"$expected"* ]]; then
+      echo "FAIL: $name ($project_name): pytest in the workspace didn't collect $expected; it collected:" >&2
+      echo "$collected_tests" >&2
+      exit 1
+    fi
+  done
+  if ! (cd "$project" && bash docs/build.sh > "$work/workspace_docs_build.log" 2>&1); then
+    echo "FAIL: $name ($project_name): the workspace's docs build failed; its output is below." >&2
+    cat "$work/workspace_docs_build.log" >&2
+    exit 1
+  fi
+  for member in first second; do
+    if [[ ! -f $project/docs/_build/html/api/python/member_$member/index.html ]]; then
+      echo "FAIL: $name ($project_name): the docs have no API page for member_$member." >&2
+      exit 1
+    fi
+  done
+  printf '\n\ndef undocumented(value: int) -> int:\n    return value\n' >> "$project/first/src/member_first/__init__.py"
+  if (cd "$project" && bash docs/build.sh > "$work/workspace_docs_build.log" 2>&1) || ! grep -q "first/src/member_first/__init__.py" "$work/workspace_docs_build.log"; then
+    echo "FAIL: $name ($project_name): the docs build didn't fail on an undocumented function in the first member; its output is below." >&2
+    cat "$work/workspace_docs_build.log" >&2
+    exit 1
+  fi
+done
+echo "$name: passed."
+
 # The root's name, foundation, is left in a project named otherwise only
 # where it means the template: in links to the template's repository,
 # arjunbhargava/foundation, and in docs/template-updates.md, which says how a
@@ -398,6 +484,41 @@ for path in crates/foundation/Cargo.toml src/my_package/__init__.py; do
     exit 1
   fi
 done
+rm -rf "$project"
+echo "$name: passed."
+
+# The root's owner and copyright holder are left in a project with others
+# only in links to the template's repository, arjunbhargava/foundation, and
+# in docs/template-updates.md, which gives the defaults.
+name=a_project_names_its_own_owner_and_copyright_holder_and_no_template_only_file_in_codeowners
+project=$work/owned
+copier copy --quiet --trust --defaults --vcs-ref=HEAD \
+  --data python=true --data rust=true --data typescript=true --data cpp=true \
+  --data github_owner=my-org/maintainers --data "copyright_holder=Jane Doe" --data copyright_year=2030 \
+  . "$project"
+codeowners=$project/.github/CODEOWNERS
+if grep -v -e '^#' -e '^$' "$codeowners" | grep -v ' @my-org/maintainers$' >&2; then
+  echo "FAIL: $name: the lines above of the project's CODEOWNERS name an owner other than its github_owner, my-org/maintainers. Use github_owner in .github/CODEOWNERS.jinja." >&2
+  exit 1
+fi
+if grep -E '\.jinja |^/copier\.yml ' "$codeowners" >&2; then
+  echo "FAIL: $name: the project's CODEOWNERS lists the files above, which only the template has. Put them inside the template_repository block of .github/CODEOWNERS.jinja." >&2
+  exit 1
+fi
+if (cd "$project" && grep -rniI --exclude=.copier-answers.yml --exclude=template-updates.md -e arjun . | grep -v 'arjunbhargava/foundation' >&2); then
+  echo "FAIL: $name: the lines above name the root's owner or copyright holder. Use github_owner or copyright_holder in their .jinja twin." >&2
+  exit 1
+fi
+# github_repository defaults to the owner's organization and project_name.
+if grep -n 'github\.com/[^/ )]*/[^/ )]*/settings' "$project/README.md" | grep -v 'github\.com/my-org/foundation/settings' >&2; then
+  echo "FAIL: $name: the README's settings links above aren't for my-org/foundation, the project's github_repository. Use github_repository in README.md.jinja." >&2
+  exit 1
+fi
+copyright_line=$(sed -n 2p "$project/NOTICE")
+if [[ $copyright_line != "Copyright 2030 Jane Doe" ]]; then
+  echo "FAIL: $name: the project's NOTICE says \"$copyright_line\", not \"Copyright 2030 Jane Doe\". Use copyright_year and copyright_holder in NOTICE.jinja." >&2
+  exit 1
+fi
 rm -rf "$project"
 echo "$name: passed."
 

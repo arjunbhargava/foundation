@@ -1,9 +1,10 @@
 # Copier's settings for creating a project from this repository (decision D1
 # in docs/template-plan.md); .github/README.md says how. The repository root
-# is the project with every language, named foundation. The first two
-# questions name the project, and each question after them adds one language;
-# _exclude leaves out the files of each language a project doesn't use.
-# AGENTS.md, README.md, and .github/dependabot.yml are rendered from their
+# is the project with every language, named foundation. The first questions
+# name the project, its owner, its repository, and its copyright holder, and
+# each question after them adds one language; _exclude leaves out the files of
+# each language a project doesn't use. AGENTS.md, README.md, NOTICE,
+# .github/CODEOWNERS, and .github/dependabot.yml are rendered from their
 # .jinja twins; edit the twin, then run `mise run template:sync` to render the
 # root copy. _tasks puts the project's name in the other files that carry it.
 # The tasks in .config/mise/conf.d/template.toml check all of this, and
@@ -55,6 +56,70 @@ package_name:
     lowercase letters and digits in words joined by single underscores,
     starting with a letter, such as my_project.
     {% endif %}
+
+# The defaults are the root's, as for project_name.
+github_owner:
+  type: str
+  default: arjunbhargava
+  help: >-
+    GitHub user or team, such as octocat or my-org/maintainers, who must
+    review changes to the paths that .github/CODEOWNERS lists?
+  validator: >-
+    {% set name_characters = github_owner.replace("-", "").replace("/", "").replace("_", "") %}
+    {% set is_user_or_team = name_characters.isascii()
+      and name_characters.isalnum() and github_owner.count("/") <= 1
+      and github_owner[:1].isalnum() %}
+    {% if not is_user_or_team %}
+    The GitHub owner "{{ github_owner }}" is not a GitHub user or team: give
+    a user name such as octocat, or a team as org/team, without the @.
+    {% endif %}
+
+# The repository's name can differ from project_name, so it is a question of
+# its own. A team's owner is its organization, the part before the /.
+github_repository:
+  type: str
+  default: "{{ github_owner.split('/')[0] }}/{{ project_name }}"
+  help: >-
+    GitHub repository, as owner/name, such as octocat/my-project? The
+    README's links to the repository's settings name it.
+  validator: >-
+    {% set name_characters = github_repository.replace("-", "").replace("_", "").replace(".", "").replace("/", "") %}
+    {% set is_owner_and_name = name_characters.isascii()
+      and name_characters.isalnum() and github_repository.count("/") == 1
+      and not github_repository.startswith("/") and not github_repository.endswith("/") %}
+    {% if not is_owner_and_name %}
+    The GitHub repository "{{ github_repository }}" is not owner/name: give
+    it as octocat/my-project.
+    {% endif %}
+
+copyright_holder:
+  type: str
+  default: Arjun
+  help: Copyright holder that NOTICE names, such as a person or a company?
+  validator: >-
+    {% if not copyright_holder.strip() %}
+    The copyright holder is empty: give the person or company that holds
+    the copyright, such as --data "copyright_holder=Jane Doe".
+    {% endif %}
+
+copyright_year:
+  type: str
+  default: "2026"
+  help: Year that NOTICE gives for the copyright, such as 2027?
+  validator: >-
+    {% set is_year = copyright_year.isdigit() and copyright_year | length == 4 %}
+    {% if not is_year %}
+    The copyright year "{{ copyright_year }}" is not a four-digit year, such
+    as 2027.
+    {% endif %}
+
+# Not a question: true only when template:check and template:sync render the
+# repository root, so that the root's .github/CODEOWNERS also lists the files
+# only the template has. Copier neither asks nor records it.
+template_repository:
+  type: bool
+  when: false
+  default: false
 
 python:
   type: bool
@@ -166,7 +231,6 @@ _tasks:
 
       edit docs/conf.py -e 's/"foundation"/"{{ project_name }}"/g'
       edit docs/index.md -e 's/^# foundation$/# {{ project_name }}/'
-      edit NOTICE -e '1s/^foundation$/{{ project_name }}/'
 
       move_directory src/foundation src/{{ package_name }}
       move_directory crates/foundation crates/{{ project_name }}
@@ -202,6 +266,7 @@ _exclude:
     /pyproject.toml
     /uv.lock
     /.python-version
+    /conftest.py
     /src
     /tests
     /.config/mise/conf.d/python.toml

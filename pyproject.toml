@@ -35,7 +35,7 @@ ignore = ["D107"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests aren't API reference; their names state the behaviour they check.
-"tests/**" = ["D"]
+"**/tests/**" = ["D"]
 ".github/scripts/*_test.py" = ["D"]
 "docs/*_test.py" = ["D"]
 
@@ -44,9 +44,9 @@ convention = "google"
 
 [tool.pyright]
 typeCheckingMode = "strict"
-# mutants/ is mutmut's generated copy of src/. Setting exclude replaces
-# pyright's defaults, so the other three entries restore them.
-exclude = ["mutants", "**/node_modules", "**/__pycache__", "**/.*"]
+# mutants/ is mutmut's generated copy of a distribution's src/. Setting
+# exclude replaces pyright's defaults, so the other three entries restore them.
+exclude = ["**/mutants", "**/node_modules", "**/__pycache__", "**/.*"]
 
 # Module boundaries, which `mise run lint:python` checks with lint-imports.
 # Add a contract for each rule:
@@ -65,12 +65,23 @@ forbidden_modules = ["pytest"]
 [tool.pytest]
 # -n auto runs tests in parallel, so a test that depends on shared state or on
 # another test's order fails early instead of intermittently later.
-addopts = ["-n", "auto", "--doctest-modules"]
+#
+# importlib import mode imports each test file under its own path, so test
+# files in different distributions' tests/ directories may share a name, which
+# the default mode rejects. It doesn't put a test file's directory on sys.path,
+# so pythonpath lets the scripts' tests import the script beside them.
+#
+# conftest.py adds the src/ and tests/ of each uv workspace member to
+# testpaths when a run names no path.
+addopts = ["-n", "auto", "--doctest-modules", "--import-mode=importlib"]
+pythonpath = [".github/scripts"]
 testpaths = ["src", "tests", ".github/scripts"]
 strict = true
 filterwarnings = ["error"]
 
 [tool.mutmut]
-# mutmut records which tests call each function, and can't see calls made in
-# pytest-xdist's worker processes, so it runs the tests in one process.
-pytest_add_cli_args = ["-n", "0"]
+# mutmut takes one src/ per run, and guesses lib/ before src/ in a directory
+# that has both, as the root of a workspace with a member in lib/ does.
+# .github/scripts/mutate.sh runs mutmut in each distribution's directory. A
+# member needs no [tool.mutmut] unless it has a lib/ directory of its own.
+source_paths = ["src"]
