@@ -167,12 +167,17 @@ operating work above, and every token holder can launch within the limits.
    `LOCAL_CREDENTIALS` would copy the server's launch credentials onto the
    job's machine. It also rejects any request whose config tries to change
    these settings.
+   The policy also mounts `s3://<bucket>/checkpoints/<job name>/` at
+   `$COMPUTE_JOB_CHECKPOINT_DIR`, with SkyPilot's `MOUNT_CACHED` mode, so the
+   path is the same on every attempt of the job.
 3. On the machine, `python -m compute_jobs.run` runs the command. It writes
    the run record and, at the end, `result.json`, `output/`, and the full
    log to the job archive, and prints the run record and result into the
    job's log, where clients read them.
-4. The API server relaunches a preempted job, and deletes the machine when
-   the job ends.
+4. The API server relaunches a preempted job on a new machine, which resumes
+   from `$COMPUTE_JOB_CHECKPOINT_DIR`. Each attempt writes its own archive
+   prefix, and its run record names the attempt. The server deletes the
+   machine when the job ends.
 5. `.github/workflows/compute-watch.yml` runs every 15 minutes, with its
    own `user`-role server token (SkyPilot has no read-only role) and an AWS
    role through OIDC. It records each job
@@ -291,7 +296,12 @@ so no long-lived AWS key exists. If SkyPilot doesn't accept that identity,
 the fallback is an access key in the Kubernetes secret the chart reads
 (`awsCredentials`), rotated every 90 days. The job's machine runs as
 `compute-jobs-job`, which can read the bucket, write only
-`machines/${aws:userid}/*`, and stop or terminate only its own instance.
+`machines/${aws:userid}/*` and `checkpoints/*`, and stop or terminate only
+its own instance. The archive is per machine, so one job can't alter
+another's results. Checkpoints can't be scoped the same way: a relaunch is a
+new instance, and IAM can't tie a prefix to a job name. So any job could
+overwrite another's checkpoints. That costs at most a restart from a bad
+checkpoint, and the archived results stay intact.
 
 ## Spending limits
 
@@ -409,7 +419,10 @@ except the last two, which `compute-server:status` checks on the real server.
    record for a job from a fake SDK; `--json` and `--pr` work.
 8. The wrapper writes a complete run record and the final state to the
    archive for exit 0, a nonzero exit, and the `timeout`.
-9. The job role's policy allows writes only under `machines/${aws:userid}/`.
+9. The job role's policy allows writes only under `machines/${aws:userid}/`
+   and `checkpoints/`, and the admin policy mounts the same
+   `checkpoints/<job name>/` path at `$COMPUTE_JOB_CHECKPOINT_DIR` on every
+   attempt.
 10. The watch terminates machines past their deadline, or all of them after
     the budget action fired; cancels the jobs of closed, unmerged PRs; and
     adds one `compute-job:` check run and one comment per finished job.
