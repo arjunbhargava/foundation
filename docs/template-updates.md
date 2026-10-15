@@ -28,11 +28,13 @@ marks a conflict in one that has been edited: keep the project's text.
 
 The template asks for `project_name`, in kebab-case, and `package_name`, in
 snake_case, which defaults to `project_name` with `_` for `-`. It also asks
-for `github_owner`, which `.github/CODEOWNERS` names, and for
-`copyright_holder` and `copyright_year`, which `NOTICE` names. A project
-created before these questions has none of them in `.copier-answers.yml`, and
-`--defaults` then answers the template's own: `foundation`, `arjunbhargava`,
-`Arjun`, and `2026`. So its first update passes each answer that differs,
+for `github_owner`, which `.github/CODEOWNERS` names; `github_repository`,
+which the README's settings links name and which defaults to the owner's
+account and `project_name`; and `copyright_holder` and `copyright_year`,
+which `NOTICE` names. A project created before these questions has none of
+them in `.copier-answers.yml`, and `--defaults` then answers the template's
+own: `foundation`, `arjunbhargava`, `arjunbhargava/<project_name>`, `Arjun`,
+and `2026`. So its first update passes each answer that differs,
 such as:
 
 ```sh

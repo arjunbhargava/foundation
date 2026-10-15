@@ -1,11 +1,12 @@
 # Copier's settings for creating a project from this repository (decision D1
 # in docs/template-plan.md); .github/README.md says how. The repository root
 # is the project with every language, named foundation. The first questions
-# name the project, its owner, and its copyright holder, and each question
-# after them adds one language; _exclude leaves out the files of each language
-# a project doesn't use. AGENTS.md, README.md, NOTICE, .github/CODEOWNERS,
-# and .github/dependabot.yml are rendered from their .jinja twins; edit the
-# twin, then run `mise run template:sync` to render the root copy. _tasks puts the project's name in the other files that carry it.
+# name the project, its owner, its repository, and its copyright holder, and
+# each question after them adds one language; _exclude leaves out the files of
+# each language a project doesn't use. AGENTS.md, README.md, NOTICE,
+# .github/CODEOWNERS, and .github/dependabot.yml are rendered from their
+# .jinja twins; edit the twin, then run `mise run template:sync` to render the
+# root copy. _tasks puts the project's name in the other files that carry it.
 # The tasks in .config/mise/conf.d/template.toml check all of this, and
 # .github/workflows/template.yml runs them and `mise run check` in a project
 # with every language and in one with each language alone.
@@ -71,6 +72,24 @@ github_owner:
     {% if not is_user_or_team %}
     The GitHub owner "{{ github_owner }}" is not a GitHub user or team: give
     a user name such as octocat, or a team as org/team, without the @.
+    {% endif %}
+
+# The repository's name can differ from project_name, so it is a question of
+# its own. A team's owner is its organization, the part before the /.
+github_repository:
+  type: str
+  default: "{{ github_owner.split('/')[0] }}/{{ project_name }}"
+  help: >-
+    GitHub repository, as owner/name, such as octocat/my-project? The
+    README's links to the repository's settings name it.
+  validator: >-
+    {% set name_characters = github_repository.replace("-", "").replace("_", "").replace(".", "").replace("/", "") %}
+    {% set is_owner_and_name = name_characters.isascii()
+      and name_characters.isalnum() and github_repository.count("/") == 1
+      and not github_repository.startswith("/") and not github_repository.endswith("/") %}
+    {% if not is_owner_and_name %}
+    The GitHub repository "{{ github_repository }}" is not owner/name: give
+    it as octocat/my-project.
     {% endif %}
 
 copyright_holder:

@@ -59,11 +59,14 @@ name, or with `.` to use the repository the agent is working in, and
    kebab-case; `package_name`, which defaults to it with `_` for `-`, names
    the Python package, the Rust library, and the C++ namespace.
    `github_owner` is the GitHub user, or `org/team`, that `CODEOWNERS` names
-   as the reviewer of the project's owned paths, and `copyright_holder` and
-   `copyright_year` go in `NOTICE`. Their defaults are the template author's,
+   as the reviewer of the project's owned paths. `github_repository`, which
+   defaults to the owner's account and `project_name`, is the `owner/name`
+   that the README's links to the repository's settings use; give it if the
+   repository's name differs. `copyright_holder` and `copyright_year` go in
+   `NOTICE`. Their defaults are the template author's,
    so give your own. Each language is `true` or `false`, and at least one
    must be `true`. Or leave out `--defaults` and the `--data` flags to answer
-   the name, owner, and copyright questions, then one yes/no question per language: `python`, `rust`, `typescript`, and `cpp`.
+   the name, owner, repository, and copyright questions, then one yes/no question per language: `python`, `rust`, `typescript`, and `cpp`.
    `--trust` lets Copier run the template's task that writes the name into
    the files and directories that carry it, which `_tasks` in
    [`copier.yml`](../copier.yml) lists.
