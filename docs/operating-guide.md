@@ -23,6 +23,7 @@ reference, not here.
   template's later changes with Copier.
 
 ```{toctree}
+:hidden:
 :maxdepth: 1
 
 agent-instructions
