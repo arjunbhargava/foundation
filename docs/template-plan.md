@@ -71,7 +71,7 @@ a person has recorded a different choice here.
 | D1 | How projects are created from the template and receive later updates | Copier | A GitHub template copies files once; later changes to rules and skills never reach existing projects. Copier can pull them in later, and can include only the languages a project needs. Cost: one more tool, and some combinations of languages go untested. |
 | D2 | Tool version manager and command runner | `mise` | `mise.toml` pins the tools that more than one language, or the docs build, runs (such as `uv`) and defines the shared commands; each language's own tools and commands are in `.config/mise/conf.d/<language>.toml`. Works the same locally, in agents, and in CI. |
 | D3 | Python dependency manager | `uv`; switch to `pixi` for projects that need compiled scientific libraries | `uv` is fast and handles normal Python packages. `pixi` uses conda-forge, which also packages MPI, HDF5, CUDA libraries, and compilers. |
-| D4 | Where compute jobs run | SkyPilot | One job description runs on the major clouds, GPU providers, Kubernetes, or a Slurm cluster. Switch to Slurm with Apptainer if the team has a university or lab cluster, since those clusters usually don't allow Docker. |
+| D4 | Where compute jobs run | **Decided (owner, 2026-10-15):** SkyPilot, on AWS | One job description runs on the major clouds, GPU providers, Kubernetes, or a Slurm cluster. Switch to Slurm with Apptainer if the team has a university or lab cluster, since those clusters usually don't allow Docker. |
 | D5 | Licence | **Decided:** Apache-2.0, copyright the repository owner | Permissive, requires attribution through `NOTICE`, and grants an explicit patent licence. Projects may pick their own. |
 | D6 | Merge method | Merge commits; no squash | The rules ask for commit history that reads as the review story. Squashing erases it. |
 | D7 | Which changes need a person to approve a plan before coding | New module; change to a public interface or data format; new dependency; compute spend above the cost limit | Planning has a cost and only pays off for larger changes. |
@@ -394,9 +394,12 @@ PR descriptions were often longer than the code they described, and full of
 
 **T16. Compute job support.** Needs: T6, D4, D8.
 
-**Deferred** (owner, 2026-10-02): the owner will run compute jobs on their own
-cloud, so D4's choice of launcher waits until that setup is known. T18 doesn't
-wait for this task.
+**Split** (owner, 2026-10-15): SkyPilot on AWS. The server, its admin tasks,
+and the client are built in
+[foundation-compute](https://github.com/arjunbhargava/foundation-compute);
+this repository keeps the integration that [Compute jobs](compute-jobs.md)
+describes. Where they differ from the list below, they win. T18 doesn't wait
+for this task.
 
 - A base container image (`Dockerfile`) with pinned CUDA versions. CI builds
   it, tags it with the commit, and pushes it to GitHub's container registry.

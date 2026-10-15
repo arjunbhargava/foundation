@@ -48,6 +48,8 @@ the same thing:
 | `mise run test:auto-merge-script` | Check when `.github/scripts/auto_merge.sh` turns auto-merge on and off, and which PRs it leaves alone, with a fake `gh`. |
 | `mise run test:approve-agent-prs-script` | Check which PRs `.github/scripts/approve_agent_prs.sh` approves, in auto mode and review mode, with a fake `gh`. |
 | `mise run test:needs-human-review-script` | Check that `.github/scripts/needs_human_review.sh` fails a PR with the `needs-human-review` label and passes one without. |
+| `mise run test:compute-job-script` | Check that `.github/scripts/compute_job.sh` refuses without the compute client, the server's variables, or a remote https endpoint, and otherwise calls the client, with a fake one. |
+| `mise run job:dry-run`, `job:launch`, `job:observe`, `job:cancel` | Check, launch, follow, or cancel a compute job; read the `compute-jobs` skill first. Arguments after `--` go to the client: `mise run job:observe -- pr81-search-3f9a2c1d`. Until the client is pinned, they exit 2 and start nothing. |
 | `mise run test:owned-paths-script` | Check which changed paths `.github/scripts/owned_paths.sh` finds in `.github/CODEOWNERS`, and when it can't tell, with a fake `gh`. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 {% if python or rust or typescript %}

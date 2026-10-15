@@ -62,6 +62,7 @@ jobs:
       approve-agent-prs-script: ${{ steps.diff.outputs.approve-agent-prs-script }}
       owned-paths-script: ${{ steps.diff.outputs.owned-paths-script }}
       needs-human-review-script: ${{ steps.diff.outputs.needs-human-review-script }}
+      compute-job-script: ${{ steps.diff.outputs.compute-job-script }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -106,6 +107,7 @@ jobs:
             echo "approve-agent-prs-script=$(changed .github/scripts/approve_agent_prs.sh .github/scripts/approve_agent_prs_test.sh .github/rulesets/main-review.json .github/rulesets/main-review-auto.json)"
             echo "owned-paths-script=$(changed .github/scripts/owned_paths.sh .github/scripts/owned_paths_test.sh)"
             echo "needs-human-review-script=$(changed .github/scripts/needs_human_review.sh .github/scripts/needs_human_review_test.sh)"
+            echo "compute-job-script=$(changed .github/scripts/compute_job.sh .github/scripts/compute_job_test.sh)"
           } >> "$GITHUB_OUTPUT"
 
   install-script:
@@ -329,6 +331,21 @@ jobs:
       - run: bash .github/scripts/block_unlisted_tools.sh
       - run: mise run test:needs-human-review-script
 
+  compute-job-script:
+    needs: changes
+    if: needs.changes.outputs.compute-job-script == 'true'
+    runs-on: ubuntu-latest
+    env:
+      # No tool that mise pins, as for language-listings.
+      MISE_ENABLE_TOOLS: none
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run test:compute-job-script
+
   ci-ok:
     # The only required CI check. A skipped job means its files didn't
     # change or its language's manifest is missing, and counts as passing.
@@ -350,6 +367,7 @@ jobs:
       - approve-agent-prs-script
       - owned-paths-script
       - needs-human-review-script
+      - compute-job-script
     if: always()
     runs-on: ubuntu-latest
     steps:
