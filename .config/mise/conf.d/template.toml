@@ -372,6 +372,20 @@ for languages in "python rust typescript cpp" $languages; do
 done
 echo "$name: passed."
 
+# A name left as foundation keeps its directory: the crate's, here.
+name=a_project_that_renames_only_its_package_keeps_the_crate
+project=$work/package_only
+copier copy --quiet --trust --defaults --vcs-ref=HEAD --data rust=true --data python=true \
+  --data package_name=my_package . "$project"
+for path in crates/foundation/Cargo.toml src/my_package/__init__.py; do
+  if [[ ! -e $project/$path ]]; then
+    echo "FAIL: $name: the project with package_name=my_package lacks $path." >&2
+    exit 1
+  fi
+done
+rm -rf "$project"
+echo "$name: passed."
+
 # template:check-update's update function, sourced here with a shell function
 # in place of copier. The fake fails the calls that copier_errors names, with
 # the error each holds ("" succeeds), and changes a tracked file and adds an
