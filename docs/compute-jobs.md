@@ -15,11 +15,14 @@ on 2026-10-15.
   on what hardware, for how long, and within what budget.
 - **Job id**: `pr<PR number>-<job file name>-<first 8 hex digits of the job
   file's SHA-256>`, such as `pr81-train-small-3f9a2c1d`. It is also the
-  SkyPilot cluster name. The prefix `pr81-train-small-` finds every job
-  launched from that file, whatever its content was.
-- **Job record**: the files under `s3://$COMPUTE_JOBS_BUCKET/jobs/<job id>/`,
-  written by the workflows, and under `machines/<machine id>/`, written by the
-  job's machine (layout below). It is the only state that observers read.
+  SkyPilot cluster name. Because the hash is always the last 8 characters,
+  the id splits back into PR, name, and hash.
+- **Job record**: the files under
+  `s3://$COMPUTE_JOBS_BUCKET/jobs/pr<N>/<name>/<hash>/`, written by the
+  workflows, and under `machines/<machine id>/`, written by the job's machine
+  (layout below). It is the only state that observers read. Listing
+  `jobs/pr81/train-small/` finds every job launched from that file, whatever
+  its content was, and no other file's jobs.
 - **Observer**: any agent or person reading a job record with
   `mise run job:observe`.
 
@@ -43,7 +46,7 @@ everyone shares a SkyPilot API server.
 | Logs after the machine is gone | Kept in S3 until the lifecycle rule deletes them (90 days) | Lost for plain clusters unless synced down first | Kept on the controller for 7 days by default |
 | Failure modes | Status is self-reported: a machine that dies without warning shows as `lost` after 3 missed heartbeats (3 min), until the watch workflow confirms it in EC2 | Server down means nothing can be observed or launched | Controller loss loses the queue; with (b), the server runs the controller |
 | Spot recovery | None; the job records `preempted`, and the agent relaunches from its checkpoint | None for plain clusters | Automatic relaunch |
-| Code we maintain | About 1,100 lines of Python (wrapper, observe, launch, watch) plus tests and four workflows | Deployment and configuration | Configuration |
+| Code we maintain | About 1,100 lines of Python (wrapper, observe, launch, watch) plus tests and three workflows | Deployment and configuration | Configuration |
 
 **Recommendation: (a).** It is the only option that meets the requirement
 without a server, gives observers read-only access, and keeps logs after the
@@ -78,22 +81,25 @@ alongside them.
 4. `.github/workflows/compute-watch.yml` runs every 15 minutes. It
    terminates any job machine past its maximum run time plus 15 minutes, or
    cancelled more than 10 minutes ago, and every job machine once the budget
-   action has fired. It cancels the jobs of PRs closed without merging, and
-   marks `lost` the jobs whose machine is gone.
-5. When a job ends, the watch comments on its PR once, and starts
-   `.github/workflows/compute-job-ended.yml` for it with
-   `workflow_dispatch`, one of the two events that `GITHUB_TOKEN` may start.
-   That run's completion is the "workflow run completed" event on which a
-   Cursor Automation starts a follow-up agent to read the result, as T16
-   asks. An agent that is still running learns of the end from the PR
-   comment, through a PR subscription, or by observing.
+   action has fired. It cancels the jobs of PRs closed without merging. It
+   marks a job `lost` only when its machine is gone and the machine's last
+   state is `running` or absent; a job whose machine wrote a final state
+   keeps it.
+5. When a job ends, the watch comments on its PR once, and adds a completed
+   check run named `compute-job: <job id>`, with conclusion `neutral` and the
+   final state in its title, to the PR's head commit. Cursor's "CI
+   completed" automation trigger, filtered to that name, starts a follow-up
+   agent to read the result. T16's "workflow run completed" trigger can't do
+   this: Cursor fires it only for runs started by a push, not for scheduled
+   or dispatched runs. An agent that is still running learns of the end from
+   the PR comment, through a PR subscription, or by observing.
 6. Any agent runs `mise run job:observe -- pr81-train-small-3f9a2c1d`.
 
 The launch workflow runs on the `pull_request_target` types `opened`,
 `synchronize`, `reopened`, and `closed`, because the default types omit
-`closed`. On each run it lists the records under the prefix
-`pr<N>-<name>-` for every job file the PR adds, changes, or deletes, so a
-deleted file's jobs are found without its content:
+`closed`. On each run it lists `jobs/pr<N>/<name>/` for every job file the
+PR adds, changes, or deletes, so a deleted file's jobs are found without its
+content:
 
 - A changed file launches its new content and cancels the file's older jobs
   that are still running.
@@ -129,7 +135,8 @@ learning_rate = 3e-4
 nodes per job (1), and idle minutes before autodown (5), and lists the
 allowed regions and instance families.
 
-**Job record.** The workflows write under `jobs/<job id>/`. The machine
+**Job record.** The workflows write under `jobs/pr<N>/<name>/<hash>/`,
+shortened to `jobs/…/` in the table. The machine
 writes only under `machines/<machine id>/`, where the machine id is
 `<role id>:<instance id>`: the value of IAM's `aws:userid` for an EC2
 instance role, so the job role's policy can limit each machine to its own
@@ -138,9 +145,9 @@ workflows' mapping, never a machine's.
 
 | Object | Written by | Contents |
 |---|---|---|
-| `jobs/<job id>/launch.json` | launch workflow | Job file, PR, commit, image digest, instance type, region, spot, list price in USD/h, launch time, machine id |
-| `jobs/<job id>/status.json` | launch workflow, watch | `state` before the machine starts (`launching`, `launch_failed`), or after it is gone (`cancelled`, `lost`), and `message` |
-| `jobs/<job id>/cancel` | launch workflow, watch | Present when cancelled |
+| `jobs/…/launch.json` | launch workflow | Job file, PR, commit, image digest, instance type, region, spot, list price in USD/h, launch time, machine id |
+| `jobs/…/status.json` | launch workflow, watch | `state` before the machine starts (`launching`, `launch_failed`), or after it is gone (`cancelled`, `lost`), and `message` |
+| `jobs/…/cancel` | launch workflow, watch | Present when cancelled |
 | `machines/<machine id>/status.json` | wrapper | `state`, `heartbeat_at`, `started_at`, `ended_at`, `exit_code`, `message` |
 | `machines/<machine id>/run-record.json` | wrapper | Commit, uncommitted changes, image digest, settings, seed, GPU model and driver, CPU, memory, start and end times |
 | `machines/<machine id>/logs/000001.txt`, … | wrapper | Combined stdout and stderr, in order |
@@ -153,9 +160,10 @@ write; neither goes in git.
 
 `state` is one of `launching`, `launch_failed`, `running`, `succeeded`,
 `failed`, `timed_out`, `cancelled`, `preempted`, or `lost`. Observe shows the
-workflows' state when it is `cancelled` or `lost`, and otherwise the
-machine's state once the machine has written one. It shows `lost` when a
-`running` job's heartbeat is more than 180 s old.
+first that applies: the machine's final state (`succeeded`, `failed`,
+`timed_out`, `cancelled`, or `preempted`); the workflows' `cancelled` or
+`lost`; `lost`, when a `running` job's heartbeat is more than 180 s old; the
+machine's `running`; and the workflows' `launching` or `launch_failed`.
 
 **Observe command**, read-only:
 
@@ -278,6 +286,9 @@ another; it goes in `COMPUTE_JOBS_AWS_REGION`.
     <https://github.com/arjunbhargava/foundation/settings/environments/new>.
 11. If Cursor's agent network allowlist is on, add `s3.us-east-1.amazonaws.com`
     and `<bucket>.s3.us-east-1.amazonaws.com`.
+12. After PR 7, create a Cursor Automation with the trigger "CI completed",
+    filtered to checks named `compute-job:`, that starts an agent to read
+    the job's result: <https://cursor.com/automations>.
 
 The policy files land with the code that needs them, so steps 5–8 wait for
 those PRs; steps 1–4 can start now.
@@ -296,8 +307,7 @@ those PRs; steps 1–4 can start now.
   by digest), and `tests/`.
 - `.github/workflows/`: `compute-image.yml` (build on pushes to `main`, push
   to `ghcr.io/arjunbhargava/foundation/compute-job`), `compute-launch.yml`,
-  `compute-watch.yml`, `compute-job-ended.yml`, and a `compute` job in
-  `ci.yml`. Runner minutes are free for this public repository; a private
+  `compute-watch.yml`, and a `compute` job in `ci.yml`. Runner minutes are free for this public repository; a private
   project's watch uses about 2,900 minutes a month, $23 at GitHub's
   $0.008 per Linux minute.
 - `mise.toml`: `setup:compute`, `lint:compute`, `test:compute`, and
@@ -332,13 +342,19 @@ Each becomes a named test, run against moto with no AWS account or network.
 8. The launcher refuses when no budget action exists or it has fired.
 9. The watch terminates machines past their deadline, cancelled, or after the
    budget action fired; cancels the jobs of PRs closed without merging; and
-   comments and starts `compute-job-ended.yml` once per finished job.
+   comments and adds the `compute-job: <job id>` check run once per
+   finished job. It never replaces a machine's final state with `lost`.
 10. A changed job file cancels the file's older running jobs, a deleted file
     or a PR closed without merging cancels them, and an unchanged file
-    launches nothing.
+    launches nothing; none of these touches the jobs of `train-small` when
+    the file is `train`.
 11. The job role's policy allows writes only under `machines/${aws:userid}/`,
     and observe ignores a machine prefix that `launch.json` doesn't name.
 12. `mise run check` passes with no AWS credentials.
+13. A `compute-job:` check run, added by a workflow on a test PR, starts a
+    Cursor Automation on "CI completed". This one is checked by hand in
+    PR 7, and needs no AWS. If it doesn't fire, the PR comment and
+    observing remain, and the plan returns to the owner.
 
 ## Not in this plan
 
@@ -360,5 +376,5 @@ CPU-sized settings.
 Stacked, each within 500 lines: (2) the `compute/` project, `job_record.py`,
 `run_record.py`, and the CI job; (3) observe; (4) the wrapper; (5) the
 Dockerfile and image workflow; (6) job files, the launcher, and the launch
-workflow; (7) the watch and job-ended workflows; (8) the skill, the rule,
+workflow; (7) the watch workflow; (8) the skill, the rule,
 and the docs.
