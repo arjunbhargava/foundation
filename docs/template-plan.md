@@ -394,9 +394,14 @@ PR descriptions were often longer than the code they described, and full of
 
 **T16. Compute job support.** Needs: T6, D4, D8.
 
-**Planned** (owner, 2026-10-15): SkyPilot on AWS. The plan, which awaits the
-owner's approval, is [Compute jobs: plan](compute-jobs.md); where it differs
-from the list below, the plan wins. T18 doesn't wait for this task.
+**Split** (owner, 2026-10-15): SkyPilot on AWS. The server, its admin tasks,
+and the client package are built in
+[foundation-compute](https://github.com/arjunbhargava/foundation-compute),
+whose first plan is
+[this repository's plan at `0a2f134`](https://github.com/arjunbhargava/foundation/blob/0a2f134ea7d5ccaf8d6bfe5f598dcc273f2049e2/docs/compute-jobs.md).
+This repository keeps the integration layer that
+[Compute jobs](compute-jobs.md) describes. Where either differs from the list
+below, they win. T18 doesn't wait for this task.
 
 - A base container image (`Dockerfile`) with pinned CUDA versions. CI builds
   it, tags it with the commit, and pushes it to GitHub's container registry.
