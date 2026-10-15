@@ -1,0 +1,31 @@
+{# Copier renders this into each project's .github/CODEOWNERS. The root copy
+is its render with the default answers and template_repository: edit this
+file, then run `mise run template:sync`. -#}
+# Paths that need the owner's review, which the owned-paths check enforces in
+# auto mode. Add each public interface file here when it is created.
+/.cursor/                @{{ github_owner }}
+/.github/                @{{ github_owner }}
+/mise.toml               @{{ github_owner }}
+/.config/mise/           @{{ github_owner }}
+/AGENTS.md               @{{ github_owner }}
+/deny.toml               @{{ github_owner }}
+/docs/architecture.md    @{{ github_owner }}
+/.dependency-cruiser.cjs @{{ github_owner }}
+/pyproject.toml          @{{ github_owner }}
+/CMakeLists.txt          @{{ github_owner }}
+/biome.json              @{{ github_owner }}
+/tsconfig.json           @{{ github_owner }}
+/.clang-tidy             @{{ github_owner }}
+/.clang-format           @{{ github_owner }}
+/Doxyfile                @{{ github_owner }}
+/CMakePresets.json       @{{ github_owner }}
+/stryker.config.json     @{{ github_owner }}
+/docs/build.sh           @{{ github_owner }}
+/docs/conf.py            @{{ github_owner }}
+/Cargo.toml              @{{ github_owner }}
+/package.json            @{{ github_owner }}
+{% if template_repository %}
+# Files only the template has, which copier.yml leaves out of projects.
+/AGENTS.md.jinja         @{{ github_owner }}
+/copier.yml              @{{ github_owner }}
+{% endif %}
