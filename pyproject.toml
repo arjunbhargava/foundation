@@ -9,6 +9,11 @@ dependencies = []
 requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+# The import package in src/. Without this, uv_build derives it from the
+# project's name, and the template's package_name question may differ.
+module-name = "foundation"
+
 [dependency-groups]
 dev = [
     "import-linter>=2.15",

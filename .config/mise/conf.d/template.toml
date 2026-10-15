@@ -11,7 +11,7 @@ trap 'rm -rf "$work"' EXIT
 
 # --vcs-ref=HEAD makes copier read the working tree, including uncommitted
 # changes and untracked files that git doesn't ignore.
-copier copy --quiet --defaults --vcs-ref=HEAD \
+copier copy --quiet --trust --defaults --vcs-ref=HEAD \
   --data python=true --data rust=true --data typescript=true --data cpp=true \
   . "$work/project"
 rm "$work/project/.copier-answers.yml"
@@ -41,7 +41,7 @@ run = '''
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-copier copy --quiet --defaults --vcs-ref=HEAD \
+copier copy --quiet --trust --defaults --vcs-ref=HEAD \
   --data python=true --data rust=true --data typescript=true --data cpp=true \
   . "$work/project"
 
@@ -61,7 +61,7 @@ description = "Run template:check, so that lint and check include it"
 depends = ["template:check"]
 
 [tasks."template:check-update"]
-description = "Check that copier update gives a project what a new copy gives: each variant created from origin/main and updated to the working tree, and a Python project given Rust; needs origin/main, so check doesn't run it"
+description = "Check that copier update gives a project what a new copy gives: each variant created from origin/main and updated to the working tree, a Python project given Rust, and a project from origin/main given a name; needs origin/main, so check doesn't run it"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -95,7 +95,7 @@ main=$(git rev-parse origin/main)
 create() {
   local project=$1 commit=$2
   shift 2
-  copier copy --quiet --defaults --vcs-ref="$commit" "$@" "$template" "$project"
+  copier copy --quiet --trust --defaults --vcs-ref="$commit" "$@" "$template" "$project"
   git -C "$project" init --quiet
   git -C "$project" add --all
   git -C "$project" commit --quiet --message "Create the project"
@@ -116,7 +116,7 @@ create() {
 update() {
   local project=$1 stderr_file=$work/update_stderr
   shift
-  if copier update --quiet --defaults "$@" "$project" 2> "$stderr_file"; then
+  if copier update --quiet --trust --defaults "$@" "$project" 2> "$stderr_file"; then
     cat "$stderr_file" >&2
     return 0
   fi
@@ -128,7 +128,7 @@ update() {
   echo "copier update failed to delete its temporary directory (see the error above); retrying once." >&2
   git -C "$project" reset --quiet --hard
   git -C "$project" clean --quiet --force -d -x
-  copier update --quiet --defaults "$@" "$project"
+  copier update --quiet --trust --defaults "$@" "$project"
 }
 
 failures=0
@@ -161,11 +161,19 @@ create "$work/updated" "$working_tree" --data python=true
 update "$work/updated" --vcs-ref="$working_tree" --data rust=true
 create "$work/new" "$working_tree" --data python=true --data rust=true
 expect_equal "$name" "$work/updated" "$work/new"
+
+name=naming_a_project_from_main_with_copier_update_equals_a_new_project_with_that_name
+create "$work/updated" "$main" --data python=true --data rust=true --data typescript=true --data cpp=true
+update "$work/updated" --vcs-ref="$working_tree" --data project_name=my-project
+# As in the first test; delete it with that line.
+rm -f "$work/updated/docs/template-plan.md"
+create "$work/new" "$working_tree" --data python=true --data rust=true --data typescript=true --data cpp=true --data project_name=my-project
+expect_equal "$name" "$work/updated" "$work/new"
 exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, refuses a project or package name in the wrong case, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes; that a project named my-project names foundation only in links to the template; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -174,7 +182,7 @@ trap 'rm -rf "$work"' EXIT
 name=copier_refuses_a_project_with_no_language_and_writes_nothing
 
 status=0
-copier copy --quiet --defaults --vcs-ref=HEAD \
+copier copy --quiet --trust --defaults --vcs-ref=HEAD \
   --data python=false --data rust=false --data typescript=false --data cpp=false \
   . "$work/project" 2> "$work/stderr" || status=$?
 if ((status == 0)) || ! grep -q "No language was chosen" "$work/stderr"; then
@@ -186,6 +194,20 @@ if [[ -e $work/project ]]; then
   echo "FAIL: $name: copier refused, but wrote $work/project." >&2
   exit 1
 fi
+echo "$name: passed."
+
+name=copier_refuses_a_name_that_is_not_kebab_case_or_snake_case
+for answer in project_name=My-Project project_name=my--project project_name=1project \
+  project_name=my-project- "project_name=my project" package_name=my-package package_name=my__package; do
+  status=0
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD --data python=true --data "$answer" \
+    . "$work/project" 2> "$work/stderr" || status=$?
+  if ((status == 0)) || ! grep -q "Validation error for question '${answer%%=*}'" "$work/stderr"; then
+    echo "FAIL: $name: for --data \"$answer\", copier exited with status $status and printed the output below; expected the error from the validator of ${answer%%=*} in copier.yml." >&2
+    cat "$work/stderr" >&2
+    exit 1
+  fi
+done
 echo "$name: passed."
 
 # template:check can't see which file Copier used while a twin's render
@@ -208,7 +230,7 @@ marker="This line is only in the twin."
 for twin in $twins; do
   printf '%s\n' "$marker" >> "$work/template/$twin"
 done
-copier copy --quiet --defaults --data python=true "$work/template" "$work/twins"
+copier copy --quiet --trust --defaults --data python=true "$work/template" "$work/twins"
 for twin in $twins; do
   if [[ $(tail -n 1 "$work/twins/${twin%.jinja}") != "$marker" ]]; then
     echo "FAIL: $name: the project's ${twin%.jinja} is its root copy, not the render of $twin." >&2
@@ -276,7 +298,7 @@ name=a_single_language_project_has_only_its_language_files_names_and_dependabot_
 languages="python rust typescript cpp"
 for language in $languages; do
   project=$work/$language
-  copier copy --quiet --defaults --vcs-ref=HEAD --data "$language=true" . "$project"
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD --data "$language=true" . "$project"
   for path in $(language_files "$language"); do
     if [[ ! -e $project/$path ]]; then
       echo "FAIL: $name: the $language project lacks $path, one of its own files." >&2
@@ -327,6 +349,41 @@ if ! (cd "$work/python" && bash docs/build.sh > "$work/docs_build.log" 2>&1); th
   cat "$work/docs_build.log" >&2
   exit 1
 fi
+echo "$name: passed."
+
+# The root's name, foundation, is left in a project named otherwise only
+# where it means the template: in links to the template's repository,
+# arjunbhargava/foundation, and in docs/template-updates.md, which says how a
+# project created before the name questions adopts them.
+# .copier-answers.yml records the template's path.
+name=a_renamed_project_has_no_file_or_line_with_the_template_name
+for languages in "python rust typescript cpp" $languages; do
+  project=$work/renamed
+  data=$(printf -- '--data %s=true ' $languages)
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD $data --data project_name=my-project . "$project"
+  leftover_paths=$(cd "$project" && find . -iname '*foundation*')
+  leftover_lines=$(cd "$project" && grep -rniI --exclude=.copier-answers.yml --exclude=template-updates.md foundation . | grep -v 'arjunbhargava/foundation' || true)
+  if [[ -n $leftover_paths$leftover_lines ]]; then
+    printf 'FAIL: %s: the %s project named my-project still names foundation in these paths and lines:\n%s\n%s\nAdd each to _tasks in copier.yml, or use project_name or package_name in its .jinja twin.\n' \
+      "$name" "$languages" "$leftover_paths" "$leftover_lines" >&2
+    exit 1
+  fi
+  rm -rf "$project"
+done
+echo "$name: passed."
+
+# A name left as foundation keeps its directory: the crate's, here.
+name=a_project_that_renames_only_its_package_keeps_the_crate
+project=$work/package_only
+copier copy --quiet --trust --defaults --vcs-ref=HEAD --data rust=true --data python=true \
+  --data package_name=my_package . "$project"
+for path in crates/foundation/Cargo.toml src/my_package/__init__.py; do
+  if [[ ! -e $project/$path ]]; then
+    echo "FAIL: $name: the project with package_name=my_package lacks $path." >&2
+    exit 1
+  fi
+done
+rm -rf "$project"
 echo "$name: passed."
 
 # template:check-update's update function, sourced here with a shell function

@@ -1,18 +1,60 @@
 # Copier's settings for creating a project from this repository (decision D1
 # in docs/template-plan.md); .github/README.md says how. The repository root
-# is the project with every language. Each question below adds one language,
-# and _exclude leaves out the files of each language a project doesn't use.
+# is the project with every language, named foundation. The first two
+# questions name the project, and each question after them adds one language;
+# _exclude leaves out the files of each language a project doesn't use.
 # AGENTS.md, README.md, and .github/dependabot.yml are rendered from their
 # .jinja twins; edit the twin, then run `mise run template:sync` to render the
-# root copy. The tasks in .config/mise/conf.d/template.toml check all of
-# this, and .github/workflows/template.yml runs them and `mise run check` in
-# a project with every language and in one with each language alone.
+# root copy. _tasks puts the project's name in the other files that carry it.
+# The tasks in .config/mise/conf.d/template.toml check all of this, and
+# .github/workflows/template.yml runs them and `mise run check` in a project
+# with every language and in one with each language alone.
 
 # Removes the line break after a {% ... %} tag and the indentation before
 # it, so that a tag on a line of its own leaves no blank line.
 _envops:
   trim_blocks: true
   lstrip_blocks: true
+
+# The default is the root's name, so that a project created before this
+# question existed keeps its files' names when `copier update --defaults`
+# first asks it.
+project_name:
+  type: str
+  default: foundation
+  help: >-
+    Project name, in lowercase kebab-case, such as my-project? It names the
+    Python distribution, the Rust crate, the TypeScript packages' npm scope,
+    the CMake project, and the docs site.
+  validator: >-
+    {% set letters_and_digits = project_name.replace("-", "") %}
+    {% set is_kebab_case = letters_and_digits.isascii()
+      and letters_and_digits.isalnum() and project_name == project_name.lower()
+      and project_name[:1].isalpha() and "--" not in project_name
+      and not project_name.endswith("-") %}
+    {% if not is_kebab_case %}
+    The project name "{{ project_name }}" is not lowercase kebab-case: give
+    lowercase letters and digits in words joined by single hyphens, starting
+    with a letter, such as my-project.
+    {% endif %}
+
+package_name:
+  type: str
+  default: "{{ project_name | replace('-', '_') }}"
+  help: >-
+    Package name, in lowercase snake_case? It names the Python import
+    package, the Rust library, and the C++ namespace and include directory.
+  validator: >-
+    {% set letters_and_digits = package_name.replace("_", "") %}
+    {% set is_snake_case = letters_and_digits.isascii()
+      and letters_and_digits.isalnum() and package_name == package_name.lower()
+      and package_name[:1].isalpha() and "__" not in package_name
+      and not package_name.endswith("_") %}
+    {% if not is_snake_case %}
+    The package name "{{ package_name }}" is not lowercase snake_case: give
+    lowercase letters and digits in words joined by single underscores,
+    starting with a letter, such as my_project.
+    {% endif %}
 
 python:
   type: bool
@@ -58,6 +100,77 @@ language_names:
     {%- else -%}
     {{ names | join(" and ") }}
     {%- endif -%}
+
+# Puts the project's name in each file and directory that carries the root's
+# name, foundation, apart from the .jinja twins. A twin can't rename a
+# directory, and Dependabot edits pyproject.toml and the lockfiles, so a twin
+# of one would fall behind its root copy. A distribution, crate, npm scope,
+# CMake project, or docs title takes project_name, and an identifier takes
+# package_name. Copier runs this in the project after each copy and update,
+# so it must work on a project it has already renamed. test:template checks
+# that a renamed project has no name left over; add each new file that names
+# the project here. Copier runs tasks only when given --trust.
+_tasks:
+  - when: "{{ project_name != 'foundation' or package_name != 'foundation' }}"
+    command: |
+      set -eu
+
+      # edit <file> <sed arguments>: edit the file in place, if the project
+      # has it. Each `-e t` ends a line's edits after a replacement, so the
+      # next pattern can't match the name just written.
+      edit() {
+        file=$1
+        shift
+        if [ -e "$file" ]; then
+          sed "$@" "$file" > "$file.renamed"
+          mv "$file.renamed" "$file"
+        fi
+      }
+
+      # move_directory <from> <to>: on copier update, <to> already holds the
+      # project's files, and Copier has just written the template's into
+      # <from>, so this merges them. A name left as foundation leaves its
+      # directory alone.
+      move_directory() {
+        if [ -d "$1" ] && [ "$1" != "$2" ]; then
+          mkdir -p "$2"
+          cp -R "$1/." "$2/"
+          rm -rf "$1"
+        fi
+      }
+
+      edit pyproject.toml -e 's/^name = "foundation"$/name = "{{ project_name }}"/' -e t -e 's/foundation/{{ package_name }}/g'
+      edit uv.lock -e 's/^name = "foundation"$/name = "{{ project_name }}"/'
+      edit tests/test_quadrature.py -e 's/foundation/{{ package_name }}/g'
+      edit docs/api/python.md -e 's/foundation/{{ package_name }}/g'
+
+      # ponytail: renaming the package in Cargo.lock in place keeps it
+      # valid while the lockfile has no other package; with dependencies,
+      # cargo sorts packages by name, and `cargo --locked` would fail. Then
+      # relock here with `cargo update --workspace --offline`.
+      edit Cargo.toml -e 's|"crates/foundation"|"crates/{{ project_name }}"|'
+      edit Cargo.lock -e 's/^name = "foundation"$/name = "{{ project_name }}"/'
+      edit crates/foundation/Cargo.toml -e '1,/^name = /s/"foundation"/"{{ project_name }}"/' -e t -e 's/"foundation"/"{{ package_name }}"/'
+      edit crates/foundation/src/verlet.rs -e 's/foundation/{{ package_name }}/g'
+      edit crates/foundation/tests/verlet.rs -e 's/foundation/{{ package_name }}/g'
+      edit docs/api/rust.md -e 's/foundation/{{ package_name }}/g'
+
+      edit packages/statistics/package.json -e 's|"@foundation/|"@{{ project_name }}/|'
+
+      edit CMakeLists.txt -e 's/^project(foundation /project({{ project_name }} /'
+      edit cpp/include/foundation/interpolation.hpp -e 's/foundation/{{ package_name }}/g'
+      edit cpp/src/interpolation.cpp -e 's/foundation/{{ package_name }}/g'
+      edit cpp/tests/interpolation_test.cpp -e 's/foundation/{{ package_name }}/g'
+      edit .config/mise/conf.d/cpp.toml -e 's|foundation/interpolation.hpp|{{ package_name }}/interpolation.hpp|'
+      edit docs/api/cpp.md -e 's/foundation/{{ package_name }}/g'
+
+      edit docs/conf.py -e 's/"foundation"/"{{ project_name }}"/g'
+      edit docs/index.md -e 's/^# foundation$/# {{ project_name }}/'
+      edit NOTICE -e '1s/^foundation$/{{ project_name }}/'
+
+      move_directory src/foundation src/{{ package_name }}
+      move_directory crates/foundation crates/{{ project_name }}
+      move_directory cpp/include/foundation cpp/include/{{ package_name }}
 
 _exclude:
   # Copier's defaults, which setting _exclude replaces.

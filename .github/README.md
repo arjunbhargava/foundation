@@ -55,12 +55,19 @@ name, or with `.` to use the repository the agent is working in, and
    `mise` isn't on PATH yet. The script doesn't edit shell files.
 
 2. **Copy the template.** This command answers every question, so Copier
-   never prompts. Each language is `true` or `false`, and at least one must be
-   `true`. Or leave out `--defaults` and the `--data` flags to answer
-   one yes/no question per language: `python`, `rust`, `typescript`, and `cpp`.
+   never prompts. `project_name` is the project's name in lowercase
+   kebab-case; `package_name`, which defaults to it with `_` for `-`, names
+   the Python package, the Rust library, and the C++ namespace. Each
+   language is `true` or `false`, and at least one must be `true`. Or leave
+   out `--defaults` and the `--data` flags to answer the two name questions,
+   then one yes/no question per language: `python`, `rust`, `typescript`, and `cpp`.
+   `--trust` lets Copier run the template's task that writes the name into
+   the files and directories that carry it, which `_tasks` in
+   [`copier.yml`](../copier.yml) lists.
 
    ```sh
-   mise exec uv@0.12.21 pipx:copier@9.18.2 -- copier copy --defaults \
+   mise exec uv@0.12.21 pipx:copier@9.18.2 -- copier copy --defaults --trust \
+     --data project_name=my-project \
      --data python=true --data rust=true --data typescript=false --data cpp=false \
      gh:arjunbhargava/foundation my-project
    ```

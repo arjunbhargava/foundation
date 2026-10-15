@@ -65,17 +65,17 @@ language the project has: {{ language_names }}.
 ## Where code lives
 
 {% if python %}
-- `src/foundation/`: the Python package, tested in `tests/`. `quadrature.py`
+- `src/{{ package_name }}/`: the Python package, tested in `tests/`. `quadrature.py`
   is the template's example, there to prove the checks work. To delete it,
-  delete `src/foundation/quadrature.py` and `tests/test_quadrature.py`, and
-  keep `src/foundation/__init__.py`, which `docs/api/python.md` and
+  delete `src/{{ package_name }}/quadrature.py` and `tests/test_quadrature.py`, and
+  keep `src/{{ package_name }}/__init__.py`, which `docs/api/python.md` and
   `[tool.importlinter]` in `pyproject.toml` name. `mise run check` and
   `mise run mutate` pass with a package that holds only docstrings.
 - `pyproject.toml`: Python dependencies and tool settings. `uv.lock` locks
   the dependencies, and `.python-version` pins Python.
 {% endif %}
 {% if rust %}
-- `crates/foundation/`: the Rust crate, tested in its `tests/`. It is the
+- `crates/{{ project_name }}/`: the Rust crate, tested in its `tests/`. It is the
   template's example, there to prove the checks work. To delete its code,
   delete `src/verlet.rs`, `tests/verlet.rs`, and the `pub mod verlet;` line
   in `src/lib.rs`, and keep the crate, which `Cargo.toml`, `Cargo.lock`, and
@@ -98,7 +98,7 @@ language the project has: {{ language_names }}.
   `.dependency-cruiser.cjs`, and `pnpm-workspace.yaml` lists the packages.
 {% endif %}
 {% if cpp %}
-- `cpp/`: the C and C++ code, with public headers in `include/foundation/`,
+- `cpp/`: the C and C++ code, with public headers in `include/{{ package_name }}/`,
   sources in `src/`, and tests in `tests/`. `interpolation` is the template's
   example, there to prove the checks work. Replace it instead of deleting it:
   `CMakeLists.txt` names `src/interpolation.cpp` and

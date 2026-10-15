@@ -1,8 +1,8 @@
-# Project name
+# foundation
 
 A project in Python, Rust, TypeScript, and C and C++, created from the
 [foundation](https://github.com/arjunbhargava/foundation) template. Replace
-this title with the project's name, and this sentence with what it does.
+this sentence with what the project does.
 
 ## Finish setup: manual steps
 
@@ -76,8 +76,8 @@ people, agents, and CI. The ones used most:
 ## Pull template updates
 
 In a project with no uncommitted changes, run
-`mise exec -- copier update --defaults`, resolve any conflicts it marks, and
-run `mise run check`. [Pulling template updates](docs/template-updates.md)
+`mise exec -- copier update --defaults --trust`, resolve any conflicts it
+marks, and run `mise run check`. [Pulling template updates](docs/template-updates.md)
 has the details.
 
 ## Learn more
