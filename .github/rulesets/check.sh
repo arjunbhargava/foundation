@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # Checks the ruleset files in this directory: each is valid JSON, none
-# requires a PR's branch to be up to date with main, main-checks.json alone
-# requires the merge queue that tests each PR with main instead, the workflow
-# reporting each required check runs on merge_group, and the
-# auto-mode review ruleset (docs/auto-mode.md) differs from main-review.json
+# requires a PR's branch to be up to date with main, and the auto-mode review ruleset (docs/auto-mode.md) differs from main-review.json
 # only in its name, whether review threads must be resolved, and its rule
 # requiring the owned-paths and needs-human-review checks, so an edit to one
 # review ruleset is made to both. It also checks those values against
@@ -27,19 +24,10 @@ for file in *.json; do
     exit 1
   fi
   if jq -e 'any(.rules[]; .parameters.strict_required_status_checks_policy == true)' "$file" > /dev/null; then
-    echo "error: $file sets strict_required_status_checks_policy to true, so a PR behind main needs Update branch before it merges. Set it to false: the merge queue in main-checks.json tests each PR with main." >&2
-    exit 1
-  fi
-  if [[ $file != main-checks.json ]] && jq -e 'any(.rules[]; .type == "merge_queue")' "$file" > /dev/null; then
-    echo "error: $file has a merge_queue rule; only main-checks.json may, because a branch has one merge queue." >&2
+    echo "error: $file sets strict_required_status_checks_policy to true, so a PR behind main needs Update branch before it merges. Set it to false, as docs/auto-mode.md says." >&2
     exit 1
   fi
 done
-
-if ! jq -e 'any(.rules[]; .type == "merge_queue" and .parameters.merge_method == "MERGE")' main-checks.json > /dev/null; then
-  echo "error: main-checks.json must have a merge_queue rule with merge_method MERGE: without it, no check tests a PR with the main it merges into, and merge commits are the only merge method apply.sh allows." >&2
-  exit 1
-fi
 
 # Arguments: a review ruleset file, a jq condition on its pull_request rule's
 # parameters, and the error to print, after the file name, if it is false.
@@ -70,21 +58,4 @@ if ! diff -u <(jq -S "$without_auto_mode_fields" main-review.json) \
   exit 1
 fi
 
-# The merge queue waits for every required check on the merge-group commit,
-# so a check whose workflow doesn't run on merge_group stalls the queue until
-# check_response_timeout_minutes. A check is named after its job's id.
-required_checks=$(jq -r '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' ./*.json | sort -u)
-for check in $required_checks; do
-  reported_on_merge_group=false
-  for workflow in ../workflows/*.yml; do
-    if grep -qE "^  $check:" "$workflow" && grep -qE '^  merge_group:' "$workflow"; then
-      reported_on_merge_group=true
-    fi
-  done
-  if [[ $reported_on_merge_group != true ]]; then
-    echo "error: the rulesets require the $check check, but no workflow in .github/workflows/ has a job $check and runs on merge_group, so the merge queue would wait for it until it times out. Add merge_group: to the on: of the workflow that reports it." >&2
-    exit 1
-  fi
-done
-
-echo "The ruleset files are valid JSON, main-checks.json alone has the merge queue and none requires up-to-date branches, every required check runs on merge_group, and the review rulesets differ only in name, thread resolution, and the rule requiring the owned-paths and needs-human-review checks, with the values docs/auto-mode.md gives."
+echo "The ruleset files are valid JSON, none requires up-to-date branches, and the review rulesets differ only in name, thread resolution, and the rule requiring the owned-paths and needs-human-review checks, with the values docs/auto-mode.md gives."

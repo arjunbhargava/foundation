@@ -27,7 +27,7 @@ the same thing:
 {% if cpp %}
 | `mise run lint:cpp` | Run only the C and C++ checks: clang-format, a check that no `#include` uses `../`, and a build with clang-tidy and compiler warnings as errors. |
 {% endif %}
-| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON, that `main-checks.json` alone has the merge queue and none requires up-to-date branches, that each required check's workflow runs on `merge_group`, and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks. |
+| `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON, that none requires up-to-date branches, and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks. |
 | `mise run lint:workflows` | Run only the GitHub Actions workflow checks: actionlint, and zizmor's offline security audits. A finding in a workflow is suppressed with a `# zizmor: ignore[<audit>]` comment. |
 | `mise run lint:language-listings` | Check that each place that must list every language, such as the CI jobs and this table, lists each language in `.config/mise/conf.d/`, and name each place that lacks one. |
 | `mise run lint:open-items` | Check that each item on `docs/open-items.md` has every field, a unique id below the next id, and no date later than today, and name each item that doesn't. |
