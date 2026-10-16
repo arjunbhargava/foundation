@@ -58,6 +58,7 @@ jobs:
       rulesets: ${{ steps.diff.outputs.rulesets }}
       workflows: ${{ steps.diff.outputs.workflows }}
       language-listings: ${{ steps.diff.outputs.language-listings }}
+      open-items: ${{ steps.diff.outputs.open-items }}
       auto-merge-script: ${{ steps.diff.outputs.auto-merge-script }}
       approve-agent-prs-script: ${{ steps.diff.outputs.approve-agent-prs-script }}
       owned-paths-script: ${{ steps.diff.outputs.owned-paths-script }}
@@ -100,6 +101,7 @@ jobs:
             echo "workflows=$(changed .github/workflows/ .github/scripts/lint_workflows.sh .github/scripts/lint_workflows_test.sh)"
             # The files the check reads, which are those that list the languages.
             echo "language-listings=$(changed .github/scripts/language_listings.sh .github/scripts/language_listings_test.sh .config/mise/conf.d/ .github/workflows/ docs/build.sh docs/api/ AGENTS.md .github/README.md copier.yml)"
+            echo "open-items=$(changed .github/scripts/open_items.sh .github/scripts/open_items_test.sh docs/open-items.md docs/template-open-items.md)"
             # The script runs owned_paths.sh, which reads .github/CODEOWNERS.
             echo "auto-merge-script=$(changed .github/scripts/auto_merge.sh .github/scripts/auto_merge_test.sh .github/scripts/owned_paths.sh .github/CODEOWNERS)"
             # The script reads the review rulesets' names from their files.
@@ -274,6 +276,22 @@ jobs:
       - run: mise run lint:language-listings
       - run: mise run test:language-listings-script
 
+  open-items:
+    needs: changes
+    if: needs.changes.outputs.open-items == 'true'
+    runs-on: ubuntu-latest
+    env:
+      # As in language-listings: the check runs no tool that mise pins.
+      MISE_ENABLE_TOOLS: none
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash .cursor/install.sh
+      - run: bash .github/scripts/block_unlisted_tools.sh
+      - run: mise run lint:open-items
+      - run: mise run test:open-items-script
+
   auto-merge-script:
     needs: changes
     if: needs.changes.outputs.auto-merge-script == 'true'
@@ -347,6 +365,7 @@ jobs:
       - rulesets
       - workflows
       - language-listings
+      - open-items
       - auto-merge-script
       - approve-agent-prs-script
       - owned-paths-script
