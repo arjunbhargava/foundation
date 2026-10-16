@@ -4,7 +4,16 @@ The decisions and manual steps that only a person can do, and the known gaps
 in the code and docs, kept here so that no one has to remember them. Every
 pull request keeps this page current: it adds each follow-up it lists and
 deletes each item it resolves, as `.cursor/skills/open-items/SKILL.md` says.
-Git history keeps deleted items. `mise run lint:open-items` checks the format.
+Git history keeps deleted items. `mise run lint:open-items` checks the
+[format](#format).
+
+The template's own items are in `docs/template-open-items.md`, which projects
+made from the template don't get, so each project's page starts empty.
+
+```{include} template-open-items.md
+```
+
+## Format
 
 "Needs a person" holds decisions and manual steps that only a person can do.
 "Technical debt" holds known gaps, follow-ups, and stale text. Each item is
@@ -26,10 +35,4 @@ For example:
 
 ```text
 - **OI-12** Turn on GitHub Pages. **Why:** the docs site doesn't publish until it is on. **Action:** in Settings > Pages, set Source to GitHub Actions. **Added in:** [#34](https://github.com/arjunbhargava/foundation/pull/34). **Last confirmed:** 2026-10-16.
-```
-
-The template's own items are in `docs/template-open-items.md`, which projects
-made from the template don't get, so each project's page starts empty.
-
-```{include} template-open-items.md
 ```
