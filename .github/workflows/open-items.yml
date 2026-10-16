@@ -1,9 +1,7 @@
-# Each week, lists the open items on docs/open-items.md whose "last
-# confirmed" date is more than 30 days old in one issue, which it opens or
-# updates, so that a person rechecks them; it closes the issue when there
-# are none. An issue needs only issues: write, while a PR would need
-# contents: write, and GitHub starts no checks on a PR that GITHUB_TOKEN
-# opens.
+# Each week, lists the open items on docs/open-items.md last confirmed more
+# than 30 days ago in one issue, which it opens or updates, and closes when
+# there are none. An issue needs only issues: write; a PR would need
+# contents: write, and GitHub starts no checks on a PR that GITHUB_TOKEN opens.
 name: Open items
 
 on:

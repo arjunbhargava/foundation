@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
-# Checks the open items on docs/open-items.md, and in the template
-# repository docs/template-open-items.md, which that page includes. Every
-# non-blank line under a "## Needs a person" or "## Technical debt" heading
-# must be one item in the page's format, ids must be unique and below the
-# next id that the page gives, and no "last confirmed" date may be later
-# than today in UTC+14, the earliest time zone, so that a person anywhere
-# can write their own date. .cursor/skills/open-items/SKILL.md says when a
-# PR adds or removes an item.
-#
+# Checks the open items on docs/open-items.md and, in the template
+# repository, docs/template-open-items.md. Every non-blank line under a
+# "## Needs a person" or "## Technical debt" heading must be one item in the
+# page's format, ids must be unique and below the page's next id, and no
+# "last confirmed" date may be later than today in UTC+14, the earliest time
+# zone, so that a person anywhere can write their own date. Prints an error
+# naming the file and line of each problem, and exits 1 if there was one.
 # With --confirmed-before YYYY-MM-DD, also prints each item last confirmed
-# before that date as a Markdown list entry, for .github/workflows/open-items.yml.
-#
-# Prints an error for each problem, naming the file, the line, and what to
-# fix, then exits with status 1 if there was one. Keep it working under bash
-# 3.2, the version macOS ships.
+# before that date, for .github/workflows/open-items.yml. Keep it working
+# under bash 3.2, the version macOS ships.
 #
 # Usage: .github/scripts/open_items.sh [--confirmed-before YYYY-MM-DD] [file...]
-# Without files, it reads the pages named above, from the repository root.
+# Without files, it reads the pages named above.
 set -euo pipefail
 
 item_pattern='^- \*\*OI-([1-9][0-9]*)\*\* ([^ ].*) \*\*Why:\*\* ([^ ].*) \*\*Action:\*\* ([^ ].*) \*\*Added in:\*\* \[#([0-9]+)\]\(https://github\.com/[^/ ]+/[^/ ]+/pull/([0-9]+)\)\. \*\*Last confirmed:\*\* ([0-9]{4}-[0-9]{2}-[0-9]{2})\.$'
@@ -73,14 +68,8 @@ check_file() {
   while IFS= read -r line || [[ -n $line ]]; do
     line_number=$((line_number + 1))
     case $line in
-      "## Needs a person" | "## Technical debt")
-        in_items=true
-        continue
-        ;;
-      "#"*)
-        in_items=false
-        continue
-        ;;
+      "## Needs a person" | "## Technical debt") in_items=true && continue ;;
+      "#"*) in_items=false && continue ;;
     esac
     if [[ $line =~ $next_id_pattern ]]; then
       next_id=${BASH_REMATCH[1]}
@@ -129,14 +118,14 @@ check_item() {
 }
 
 check_next_id() {
-  local files=$1 id
+  local pages=$1 id
   if ((next_id_lines != 1)); then
-    report "$files: found $next_id_lines lines that read \"The next item's id is OI-<n>.\"; keep exactly one, above the items."
+    report "$pages: found $next_id_lines lines that read \"The next item's id is OI-<n>.\"; keep exactly one, above the items."
     return
   fi
   for id in $seen_ids; do
     if ((id >= next_id)); then
-      report "$files: OI-$id is not below the next id, OI-$next_id. Set the next id to one more than the largest id ever used."
+      report "$pages: OI-$id is not below the next id, OI-$next_id. Set the next id to one more than the largest id ever used."
     fi
   done
 }

@@ -264,9 +264,7 @@ and stop. Don't contact the previous orchestrator from the new one.
 
 The handoff lives in chat, not in the repository: it changes with every
 merge, and a committed copy would be out of date within an hour and add a PR
-for the owner to review. This page holds what doesn't change. The open
-items are the exception, because each PR that changes one updates the page
-in the same PR, so it stays current without a PR of its own.
+for the owner to review. This page holds what doesn't change.
 
 ## Failure modes seen so far
 

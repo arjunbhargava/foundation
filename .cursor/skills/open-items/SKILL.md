@@ -37,11 +37,8 @@ line; take the next id after `main`'s.
 
 ## Staleness
 
-"Last confirmed" is the last date on which a person or agent checked that the
-item still holds and that its text is accurate, not the date it was added or
-edited. Each Monday, `.github/workflows/open-items.yml` lists the items not
-confirmed in 30 days in the issue "Open items not confirmed in 30 days".
-
-`mise run lint:open-items` fails on a malformed item, a missing field, a
-duplicate id, an id at or above the next id, or a date later than today. No
-check requires a PR to touch the page; this skill does.
+"Last confirmed" is the last date on which someone checked that the item
+still holds and its text is accurate, not the date it was added or edited.
+Each Monday, `.github/workflows/open-items.yml` lists the items not confirmed
+in 30 days in one issue. `mise run lint:open-items` checks the format; no
+check requires a PR to touch the page.

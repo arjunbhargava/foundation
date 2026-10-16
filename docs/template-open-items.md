@@ -1,6 +1,4 @@
-<!-- The template repository's own open items, which docs/open-items.md
-includes and which that page's format applies to. copier.yml leaves this file
-out of projects. -->
+<!-- The template's own open items, which docs/open-items.md includes; projects don't get this file. -->
 The next item's id is OI-25.
 
 ## Needs a person

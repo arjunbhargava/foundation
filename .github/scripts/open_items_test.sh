@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests .github/scripts/open_items.sh: each case writes a page of open items,
 # runs the script on it, and checks whether it passes or fails, and what it
-# prints. The first case runs it on the repository's own pages.
+# prints. lint:open-items runs it on the repository's own pages.
 #
 # Usage: mise run test:open-items-script
 set -euo pipefail
@@ -17,15 +17,6 @@ old_item="- **OI-1** Turn on Pages. **Why:** the site doesn't publish. **Action:
 new_item="- **OI-2** Pin the tool. **Why:** a release can break CI. **Action:** pin it. **Added in:** $link. **Last confirmed:** 2026-10-01."
 
 main() {
-  local status=0 output
-  output=$("$script" 2>&1) || status=$?
-  cases=$((cases + 1))
-  if ((status != 0)); then
-    echo "FAIL: passes_on_the_repositorys_own_open_items: open_items.sh exited with status $status and printed:
-$output" >&2
-    failures=$((failures + 1))
-  fi
-
   expect_check passes_on_well_formed_items passes "is well formed" \
     "$old_item" "$new_item"
   expect_check lists_only_the_items_confirmed_before_the_date passes "OI-1, last confirmed 2026-01-05" \
