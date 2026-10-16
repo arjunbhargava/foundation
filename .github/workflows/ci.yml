@@ -104,7 +104,8 @@ jobs:
             echo "auto-merge-script=$(changed .github/scripts/auto_merge.sh .github/scripts/auto_merge_test.sh .github/scripts/owned_paths.sh .github/CODEOWNERS)"
             # The script reads the review rulesets' names from their files.
             echo "approve-agent-prs-script=$(changed .github/scripts/approve_agent_prs.sh .github/scripts/approve_agent_prs_test.sh .github/rulesets/main-review.json .github/rulesets/main-review-auto.json)"
-            echo "owned-paths-script=$(changed .github/scripts/owned_paths.sh .github/scripts/owned_paths_test.sh)"
+            # The test also checks the repository's own .github/CODEOWNERS.
+            echo "owned-paths-script=$(changed .github/scripts/owned_paths.sh .github/scripts/owned_paths_test.sh .github/CODEOWNERS)"
             echo "needs-human-review-script=$(changed .github/scripts/needs_human_review.sh .github/scripts/needs_human_review_test.sh)"
           } >> "$GITHUB_OUTPUT"
 
