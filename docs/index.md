@@ -11,6 +11,7 @@ the pages that are the same in every project made from the template.
 
 README <project-readme>
 architecture
+open-items
 ```
 
 ```{toctree}

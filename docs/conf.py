@@ -86,7 +86,8 @@ html_theme_options = {
     },
 }
 # .venv is the environment of the docs build's own uv project, docs/pyproject.toml.
-exclude_patterns = ["_build", ".venv"]
+# open-items.md includes template-open-items.md, so it is no page of its own.
+exclude_patterns = ["_build", ".venv", "template-open-items.md"]
 
 # The page that includes each of these root files, which a link to the file
 # from another root file leads to. docs/conf_test.py checks the page names.
