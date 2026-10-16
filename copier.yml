@@ -57,13 +57,13 @@ package_name:
     starting with a letter, such as my_project.
     {% endif %}
 
-# The defaults are the root's, as for project_name.
+# No default: a project must name its owner, not take the root's.
 github_owner:
   type: str
-  default: arjunbhargava
   help: >-
     GitHub user or team, such as octocat or my-org/maintainers, who must
-    review changes to the paths that .github/CODEOWNERS lists?
+    review changes to the paths that .github/CODEOWNERS lists? This question
+    has no default; you must answer it.
   validator: >-
     {% set name_characters = github_owner.replace("-", "").replace("/", "").replace("_", "") %}
     {% set is_user_or_team = name_characters.isascii()
@@ -92,10 +92,12 @@ github_repository:
     it as octocat/my-project.
     {% endif %}
 
+# No default, as for github_owner.
 copyright_holder:
   type: str
-  default: Arjun
-  help: Copyright holder that NOTICE names, such as a person or a company?
+  help: >-
+    Copyright holder that NOTICE names, such as a person or a company? This
+    question has no default; you must answer it.
   validator: >-
     {% if not copyright_holder.strip() %}
     The copyright holder is empty: give the person or company that holds
@@ -256,6 +258,7 @@ _exclude:
   - /.github/rulesets/template-checks.json
   - /.github/README.md
   - /docs/template-plan.md
+  - /docs/template-open-items.md
   # Each language's files: its manifest and the files listed with it in the
   # changes job of .github/workflows/ci.yml, its API page, and its workflows.
   # Keep each block equal to the language's list in test:template.

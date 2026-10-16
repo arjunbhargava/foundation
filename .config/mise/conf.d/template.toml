@@ -11,8 +11,10 @@ trap 'rm -rf "$work"' EXIT
 
 # --vcs-ref=HEAD makes copier read the working tree, including uncommitted
 # changes and untracked files that git doesn't ignore. template_repository
-# adds the lines for the template's own files to .github/CODEOWNERS.
+# adds the lines for the template's own files to .github/CODEOWNERS. The
+# owner and copyright holder have no defaults, so they are the root's.
 copier copy --quiet --trust --defaults --vcs-ref=HEAD --data template_repository=true \
+  --data github_owner=arjunbhargava --data copyright_holder=Arjun \
   --data python=true --data rust=true --data typescript=true --data cpp=true \
   . "$work/project"
 rm "$work/project/.copier-answers.yml"
@@ -23,7 +25,7 @@ rm "$work/project/.copier-answers.yml"
 mkdir "$work/root"
 git ls-files --cached --others --exclude-standard | sort -u | while read -r file; do
   case $file in
-    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | .github/README.md | docs/template-plan.md | *.jinja) ;;
+    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | .github/README.md | docs/template-plan.md | docs/template-open-items.md | *.jinja) ;;
     *) if [[ -e $file ]]; then printf '%s\n' "$file"; fi ;;
   esac
 done | tar -cf - -T - | tar -xf - -C "$work/root"
@@ -42,8 +44,9 @@ run = '''
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-# As in template:check.
+# As in template:check, including the root's owner and copyright holder.
 copier copy --quiet --trust --defaults --vcs-ref=HEAD --data template_repository=true \
+  --data github_owner=arjunbhargava --data copyright_holder=Arjun \
   --data python=true --data rust=true --data typescript=true --data cpp=true \
   . "$work/project"
 
@@ -93,11 +96,15 @@ git -C "$template" --work-tree="$PWD" commit --quiet --allow-empty --message "Th
 working_tree=$(git -C "$template" rev-parse HEAD)
 main=$(git rev-parse origin/main)
 
+# The projects are the root's, so they name its owner and copyright holder,
+# which have no default. A main that still has the defaults accepts them too.
+root_answers=(--data github_owner=arjunbhargava --data copyright_holder=Arjun)
+
 # create <project> <commit> <copier options>: create a project and commit it.
 create() {
   local project=$1 commit=$2
   shift 2
-  copier copy --quiet --trust --defaults --vcs-ref="$commit" "$@" "$template" "$project"
+  copier copy --quiet --trust --defaults --vcs-ref="$commit" "${root_answers[@]}" "$@" "$template" "$project"
   git -C "$project" init --quiet
   git -C "$project" add --all
   git -C "$project" commit --quiet --message "Create the project"
@@ -178,7 +185,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, refuses a malformed project name, package name, GitHub owner or repository, copyright holder, or year, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes and its sidebar lists the operating guide as one entry; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that mutate succeeds in a project with only C and C++, and otherwise runs each mutate:<language> task with the arguments after --; that a project named my-project names foundation only in links to the template, and one with another owner and copyright holder names neither the root's nor a template-only file in CODEOWNERS and links its own repository's settings; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, refuses a project that omits github_owner or copyright_holder and names the question, refuses a malformed project name, package name, GitHub owner or repository, copyright holder, or year, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes and its sidebar lists the operating guide as one entry; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that mutate succeeds in a project with only C and C++, and otherwise runs each mutate:<language> task with the arguments after --; that a project named my-project names foundation only in links to the template, and one with another owner and copyright holder names neither the root's nor a template-only file in CODEOWNERS and links its own repository's settings; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -186,8 +193,12 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 name=copier_refuses_a_project_with_no_language_and_writes_nothing
 
+# The owner and copyright holder have no default in copier.yml, so every
+# project this task creates answers them, except in the tests that omit one.
+owner_data=(--data github_owner=octocat --data "copyright_holder=Jane Doe")
+
 status=0
-copier copy --quiet --trust --defaults --vcs-ref=HEAD \
+copier copy --quiet --trust --defaults --vcs-ref=HEAD "${owner_data[@]}" \
   --data python=false --data rust=false --data typescript=false --data cpp=false \
   . "$work/project" 2> "$work/stderr" || status=$?
 if ((status == 0)) || ! grep -q "No language was chosen" "$work/stderr"; then
@@ -201,13 +212,35 @@ if [[ -e $work/project ]]; then
 fi
 echo "$name: passed."
 
+# Copier 9.18.2 prints a traceback ending in: Question "github_owner" is required
+name=copier_refuses_a_project_that_omits_the_github_owner_or_the_copyright_holder
+for omitted in github_owner copyright_holder; do
+  case $omitted in
+    github_owner) answers=(--data "copyright_holder=Jane Doe") ;;
+    copyright_holder) answers=(--data github_owner=octocat) ;;
+  esac
+  status=0
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD --data python=true "${answers[@]}" \
+    . "$work/project" 2> "$work/stderr" || status=$?
+  if ((status == 0)) || ! grep -q "Question \"$omitted\" is required" "$work/stderr"; then
+    echo "FAIL: $name: without $omitted, copier exited with status $status and printed the output below; expected a non-zero status and an error naming $omitted. Give $omitted no default in copier.yml." >&2
+    cat "$work/stderr" >&2
+    exit 1
+  fi
+  if [[ -e $work/project ]]; then
+    echo "FAIL: $name: without $omitted, copier refused, but wrote $work/project." >&2
+    exit 1
+  fi
+done
+echo "$name: passed."
+
 name=copier_refuses_a_malformed_name_owner_repository_copyright_holder_or_year
 for answer in project_name=My-Project project_name=my--project project_name=1project \
   project_name=my-project- "project_name=my project" package_name=my-package package_name=my__package \
   github_owner=@octocat github_owner=a/b/c "github_owner=my org" "copyright_holder= " copyright_year=26 copyright_year=2O26 \
   github_repository=my-project github_repository=a/b/c; do
   status=0
-  copier copy --quiet --trust --defaults --vcs-ref=HEAD --data python=true --data "$answer" \
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD "${owner_data[@]}" --data python=true --data "$answer" \
     . "$work/project" 2> "$work/stderr" || status=$?
   if ((status == 0)) || ! grep -q "Validation error for question '${answer%%=*}'" "$work/stderr"; then
     echo "FAIL: $name: for --data \"$answer\", copier exited with status $status and printed the output below; expected the error from the validator of ${answer%%=*} in copier.yml." >&2
@@ -237,7 +270,7 @@ marker="This line is only in the twin."
 for twin in $twins; do
   printf '%s\n' "$marker" >> "$work/template/$twin"
 done
-copier copy --quiet --trust --defaults --data python=true "$work/template" "$work/twins"
+copier copy --quiet --trust --defaults "${owner_data[@]}" --data python=true "$work/template" "$work/twins"
 for twin in $twins; do
   if [[ $(tail -n 1 "$work/twins/${twin%.jinja}") != "$marker" ]]; then
     echo "FAIL: $name: the project's ${twin%.jinja} is its root copy, not the render of $twin." >&2
@@ -305,7 +338,7 @@ name=a_single_language_project_has_only_its_language_files_names_and_dependabot_
 languages="python rust typescript cpp"
 for language in $languages; do
   project=$work/$language
-  copier copy --quiet --trust --defaults --vcs-ref=HEAD --data "$language=true" . "$project"
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD "${owner_data[@]}" --data "$language=true" . "$project"
   for path in $(language_files "$language"); do
     if [[ ! -e $project/$path ]]; then
       echo "FAIL: $name: the $language project lacks $path, one of its own files." >&2
@@ -377,7 +410,7 @@ echo "$name: passed."
 # a page that the project lacks.
 name=a_project_has_no_template_only_file_and_its_docs_build_passes
 for language in $languages; do
-  for path in .config/mise/conf.d/template.toml .github/workflows/template.yml .github/rulesets/template-checks.json .github/README.md docs/template-plan.md; do
+  for path in .config/mise/conf.d/template.toml .github/workflows/template.yml .github/rulesets/template-checks.json .github/README.md docs/template-plan.md docs/template-open-items.md; do
     if [[ -e $work/$language/$path ]]; then
       echo "FAIL: $name: the $language project has $path, a file that only describes or checks the template. Add it to _exclude in copier.yml." >&2
       exit 1
@@ -426,7 +459,7 @@ name=a_uv_workspace_project_tests_and_documents_every_member
 for project_name in foundation my-project; do
   package=${project_name//-/_}
   project=$work/workspace_$package
-  copier copy --quiet --trust --defaults --vcs-ref=HEAD --data python=true --data "project_name=$project_name" . "$project"
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD "${owner_data[@]}" --data python=true --data "project_name=$project_name" . "$project"
   (
     cd "$project"
     for member in first second; do
@@ -483,7 +516,7 @@ name=a_renamed_project_has_no_file_or_line_with_the_template_name
 for languages in "python rust typescript cpp" $languages; do
   project=$work/renamed
   data=$(printf -- '--data %s=true ' $languages)
-  copier copy --quiet --trust --defaults --vcs-ref=HEAD $data --data project_name=my-project . "$project"
+  copier copy --quiet --trust --defaults --vcs-ref=HEAD "${owner_data[@]}" $data --data project_name=my-project . "$project"
   leftover_paths=$(cd "$project" && find . -iname '*foundation*')
   leftover_lines=$(cd "$project" && grep -rniI --exclude=.copier-answers.yml --exclude=template-updates.md foundation . | grep -v 'arjunbhargava/foundation' || true)
   if [[ -n $leftover_paths$leftover_lines ]]; then
@@ -498,7 +531,7 @@ echo "$name: passed."
 # A name left as foundation keeps its directory: the crate's, here.
 name=a_project_that_renames_only_its_package_keeps_the_crate
 project=$work/package_only
-copier copy --quiet --trust --defaults --vcs-ref=HEAD --data rust=true --data python=true \
+copier copy --quiet --trust --defaults --vcs-ref=HEAD "${owner_data[@]}" --data rust=true --data python=true \
   --data package_name=my_package . "$project"
 for path in crates/foundation/Cargo.toml src/my_package/__init__.py; do
   if [[ ! -e $project/$path ]]; then
@@ -510,8 +543,7 @@ rm -rf "$project"
 echo "$name: passed."
 
 # The root's owner and copyright holder are left in a project with others
-# only in links to the template's repository, arjunbhargava/foundation, and
-# in docs/template-updates.md, which gives the defaults.
+# only in links to the template's repository, arjunbhargava/foundation.
 name=a_project_names_its_own_owner_and_copyright_holder_and_no_template_only_file_in_codeowners
 project=$work/owned
 copier copy --quiet --trust --defaults --vcs-ref=HEAD \
