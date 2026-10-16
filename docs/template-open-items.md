@@ -1,5 +1,5 @@
 <!-- The template's own open items, which docs/open-items.md includes; projects don't get this file. -->
-The next item's id is OI-27.
+The next item's id is OI-28.
 
 ## Needs a person
 
@@ -32,3 +32,4 @@ The next item's id is OI-27.
 - **OI-22** Optional: lint:language-listings doesn't check that CODEOWNERS lists each language's manifest. **Why:** a new language's manifest could merge in auto mode without the owner's review. **Action:** decide whether to add the check. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
 - **OI-23** Optional: `mise run spend` fails outright when the agent listing answers HTTP 429. **Why:** a rate limit loses the whole report instead of only its labels. **Action:** decide whether it should print the totals without labels. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
 - **OI-26** Unverified: merge queue availability for a personal-account repository; admin-bypass merges and Dependabot behaviour with a queue. **Why:** GitHub's documentation offers the queue only to organizations, and if the owner's bypass can't queue a PR that fails `owned-paths`, while `main: checks`, which holds the queue rule, has no bypass, owned-path PRs can't merge. **Action:** after OI-25, merge one owned-path PR with the bypass and one Dependabot PR, and say what happens; if the bypass can't queue it, remove "Require merge queue" from `main: checks` in Settings > Rules and revert as OI-25 says. **Added in:** [#94](https://github.com/arjunbhargava/foundation/pull/94). **Last confirmed:** 2026-10-16.
+- **OI-27** With the merge queue, a line added to CODEOWNERS on `main` doesn't rerun `owned-paths` on open PRs, as Update branch's push did. **Why:** a queued PR can merge a newly owned path in auto mode on its earlier pass. **Action:** decide whether a CODEOWNERS change should rerun `owned-paths` on open PRs, or accept the gap. **Added in:** [#94](https://github.com/arjunbhargava/foundation/pull/94). **Last confirmed:** 2026-10-16.
