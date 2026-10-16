@@ -5,6 +5,11 @@
 # runs the base branch's copy of this file, with GITHUB_SHA set to that
 # branch's latest commit, which the job checks out, so a PR can't change the
 # check that judges it. No code from the PR runs.
+#
+# On merge_group the job passes without judging, for the reasons in
+# owned-paths.yml: a labelled PR is in the queue only through the owner's
+# bypass. Adding the label to a queued agent PR fails the PR-level check, and
+# auto_merge.sh removes the PR from the queue.
 name: Needs human review
 
 on:
@@ -12,6 +17,7 @@ on:
   # runs the PR's code with the job's token.
   pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  merge_group:
 
 permissions: {}
 
@@ -25,15 +31,19 @@ jobs:
   needs-human-review:
     # One run at a time per PR, in event order, so the check's latest result
     # matches the label's latest state when it is added and removed quickly.
+    # Merge-group runs have no PR number, so each gets its own group; sharing
+    # one would cancel all but the latest pending run and stall the queue.
     concurrency:
-      group: needs-human-review-${{ github.event.pull_request.number }}
+      group: needs-human-review-${{ github.event.pull_request.number || github.run_id }}
     runs-on: ubuntu-latest
     permissions:
       contents: read # check out the base branch
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - env:
+      - if: github.event_name == 'pull_request_target'
+        env:
           LABEL_NAMES: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: .github/scripts/needs_human_review.sh "$LABEL_NAMES"

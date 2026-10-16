@@ -4,6 +4,14 @@
 # of this file, with GITHUB_SHA set to that branch's latest commit, which the
 # job checks out, so a PR can't change the check that judges it. No code from
 # the PR runs.
+#
+# On merge_group the job passes without judging, because the merge queue
+# requires the check there too, and the PR-level check already decided:
+# GitHub queues a PR only once it meets the rulesets, so a PR that changes an
+# owned path is in the queue only through the owner's bypass, which a failing
+# merge-group check would undo. A push to a queued PR removes it from the
+# queue. The merge-group run uses the PR's copy of this file, but a PR that
+# changes it changes an owned path.
 name: Owned paths
 
 on:
@@ -12,6 +20,7 @@ on:
   # PR's code with the job's token.
   pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, synchronize, reopened, edited]
+  merge_group:
 
 permissions: {}
 
@@ -28,10 +37,12 @@ jobs:
       contents: read # check out the base branch
       pull-requests: read # list the PR's files
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - env:
+      - if: github.event_name == 'pull_request_target'
+        env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: .github/scripts/owned_paths.sh "$PR_NUMBER"
