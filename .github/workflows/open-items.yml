@@ -1,0 +1,57 @@
+# Each week, lists the open items on docs/open-items.md last confirmed more
+# than 30 days ago in one issue, which it opens or updates, and closes when
+# there are none. An issue needs only issues: write; a PR would need
+# contents: write, and GitHub starts no checks on a PR that GITHUB_TOKEN opens.
+name: Open items
+
+on:
+  schedule:
+    # Mondays at 07:23 UTC. GitHub delays or drops runs at the start of an hour.
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Naming bash explicitly adds -o pipefail, which the default shell lacks.
+    shell: bash
+
+jobs:
+  unconfirmed-open-items:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # open, update, and close the issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          title="Open items not confirmed in 30 days"
+          cutoff=$(date -u -d '30 days ago' +%F)
+          unconfirmed_items=$(.github/scripts/open_items.sh --confirmed-before "$cutoff")
+          issue=$(gh issue list --state open --search "in:title \"$title\"" --json number,title |
+            jq -r --arg title "$title" 'map(select(.title == $title)) | .[0].number // empty')
+
+          if [[ -z $unconfirmed_items ]]; then
+            echo "Every open item was confirmed on or after $cutoff."
+            [[ -z $issue ]] || gh issue close "$issue" --comment "Every open item was confirmed on or after $cutoff."
+            exit 0
+          fi
+
+          page=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/open-items.md
+          {
+            echo "These [open items]($page) were last confirmed before $cutoff, more than 30 days ago. For each, check that it still holds and set its last confirmed date to today, or delete it if it is resolved, as \`.cursor/skills/open-items/SKILL.md\` says. The next weekly run updates this issue, and closes it when none is left."
+            echo
+            echo "$unconfirmed_items"
+          } > issue_body.md
+          if [[ -n $issue ]]; then
+            gh issue edit "$issue" --body-file issue_body.md
+          else
+            gh issue create --title "$title" --body-file issue_body.md
+          fi
