@@ -61,7 +61,7 @@ description = "Check formatting, lint, and types without changing files"
 depends = ["lint:*"]
 
 [tasks."lint:rulesets"]
-description = "Check that the ruleset files are valid JSON and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks"
+description = "Check that the ruleset files are valid JSON, that none requires up-to-date branches, and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks"
 run = ".github/rulesets/check.sh"
 
 [tasks."lint:workflows"]

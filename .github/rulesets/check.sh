@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Checks the ruleset files in this directory: each is valid JSON, and the
-# auto-mode review ruleset (docs/auto-mode.md) differs from main-review.json
+# Checks the ruleset files in this directory: each is valid JSON, none
+# requires a PR's branch to be up to date with main, and the auto-mode review ruleset (docs/auto-mode.md) differs from main-review.json
 # only in its name, whether review threads must be resolved, and its rule
 # requiring the owned-paths and needs-human-review checks, so an edit to one
 # review ruleset is made to both. It also checks those values against
@@ -16,11 +16,15 @@ cd "$(dirname "$0")"
 
 # Requires .github/workflows/owned-paths.yml and needs-human-review.yml to
 # pass, as reported by GitHub Actions, integration_id 15368.
-auto_mode_checks_rule='{"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": true, "required_status_checks": [{"context": "owned-paths", "integration_id": 15368}, {"context": "needs-human-review", "integration_id": 15368}]}}'
+auto_mode_checks_rule='{"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": false, "required_status_checks": [{"context": "owned-paths", "integration_id": 15368}, {"context": "needs-human-review", "integration_id": 15368}]}}'
 
 for file in *.json; do
   if ! jq empty "$file"; then
     echo "error: .github/rulesets/$file is not valid JSON; fix the parse error above." >&2
+    exit 1
+  fi
+  if jq -e 'any(.rules[]; .parameters.strict_required_status_checks_policy == true)' "$file" > /dev/null; then
+    echo "error: $file sets strict_required_status_checks_policy to true, so a PR behind main needs Update branch before it merges. Set it to false, as docs/auto-mode.md says." >&2
     exit 1
   fi
 done
@@ -54,4 +58,4 @@ if ! diff -u <(jq -S "$without_auto_mode_fields" main-review.json) \
   exit 1
 fi
 
-echo "The ruleset files are valid JSON, and the review rulesets differ only in name, thread resolution, and the rule requiring the owned-paths and needs-human-review checks, with the values docs/auto-mode.md gives."
+echo "The ruleset files are valid JSON, none requires up-to-date branches, and the review rulesets differ only in name, thread resolution, and the rule requiring the owned-paths and needs-human-review checks, with the values docs/auto-mode.md gives."

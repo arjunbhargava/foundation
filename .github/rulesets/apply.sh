@@ -32,18 +32,20 @@
 # making it; it still reads the existing rulesets to decide between create
 # and update. --auto turns auto mode on; running without it turns it off.
 #
-# Switching to a merge queue, which GitHub offers only to repositories owned
-# by an organization:
-#   1. In main-checks.json, and in template-checks.json if it exists, set
-#      strict_required_status_checks_policy to false. Add this rule to
-#      main-checks.json. Apart from merge_method, the values are GitHub's
-#      defaults.
-#        { "type": "merge_queue", "parameters": {
-#            "merge_method": "MERGE", "grouping_strategy": "ALLGREEN",
-#            "check_response_timeout_minutes": 60, "max_entries_to_build": 5,
-#            "max_entries_to_merge": 5, "min_entries_to_merge": 1,
-#            "min_entries_to_merge_wait_minutes": 5 } }
-#   2. Rerun this script. CI already runs on merge_group.
+# No ruleset requires a PR's branch to be up to date with main
+# (strict_required_status_checks_policy is false), so a PR can merge without
+# being tested against the latest main (docs/auto-mode.md). A merge queue
+# would test it, but GitHub offers one only to repositories owned by an
+# organization. After the organization move, add this rule to
+# main-checks.json, keep strict false, and rerun this script; the
+# owned-paths and needs-human-review workflows must first run on merge_group
+# and auto_merge.sh must dequeue, as PR #94's commits 6fb59dc, 6ff2391, and
+# a19138e did before that PR dropped them.
+#   { "type": "merge_queue", "parameters": {
+#       "merge_method": "MERGE", "grouping_strategy": "ALLGREEN",
+#       "check_response_timeout_minutes": 60, "max_entries_to_build": 5,
+#       "max_entries_to_merge": 5, "min_entries_to_merge": 1,
+#       "min_entries_to_merge_wait_minutes": 5 } }
 set -euo pipefail
 cd "$(dirname "$0")"
 
