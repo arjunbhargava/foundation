@@ -83,7 +83,9 @@ people, agents, and CI. The ones used most:
 
 In a project with no uncommitted changes, run
 `mise exec -- copier update --defaults --trust`, resolve any conflicts it
-marks, and run `mise run check`. [Pulling template updates](docs/template-updates.md)
+marks, and run `mise run check`. A project created before the template
+asked for `github_owner` and `copyright_holder` passes both once on its first
+update, as [Pulling template updates](docs/template-updates.md) says; that page
 has the details.
 
 ## Learn more

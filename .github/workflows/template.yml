@@ -48,7 +48,8 @@ jobs:
     # MISE_ENABLE_TOOLS, so install.sh installs every tool the project pins,
     # as people do. Each project takes names other than the root's, and a
     # package name that its project name doesn't give, so that a name put in
-    # the wrong place fails the check.
+    # the wrong place fails the check. The owner and copyright holder have no
+    # default, so each project answers them.
     strategy:
       fail-fast: false
       matrix:
@@ -72,7 +73,8 @@ jobs:
           MISE_ENABLE_TOOLS: uv,pipx:copier
         run: >-
           mise exec -- copier copy --quiet --trust --defaults --vcs-ref=HEAD ${{ matrix.data }}
-          --data project_name=my-project --data package_name=my_package . "$RUNNER_TEMP/project"
+          --data project_name=my-project --data package_name=my_package
+          --data github_owner=octocat --data "copyright_holder=Jane Doe" . "$RUNNER_TEMP/project"
       - working-directory: ${{ runner.temp }}/project
         run: |
           git init --quiet
