@@ -185,7 +185,7 @@ exit $((failures > 0))
 '''
 
 [tasks."test:template"]
-description = "Check that Copier refuses a project with no language and writes nothing, refuses a project that omits github_owner or copyright_holder and names the question, refuses a malformed project name, package name, GitHub owner or repository, copyright holder, or year, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes and its sidebar lists the operating guide as one entry; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that mutate succeeds in a project with only C and C++, and otherwise runs each mutate:<language> task with the arguments after --; that a project named my-project names foundation only in links to the template, and one with another owner and copyright holder names neither the root's nor a template-only file in CODEOWNERS and links its own repository's settings; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
+description = "Check that Copier refuses a project with no language and writes nothing, refuses a project that omits github_owner or copyright_holder and names the question, refuses a malformed project name, package name, GitHub owner or repository, copyright holder, or year, and renders each .jinja twin in place of its root copy; that template:sync writes each twin's render over its root copy; that a project with one language has only that language's files, names, and Dependabot entries; that no project has the template's own files or README text and the Python project's docs build passes and its sidebar lists the operating guide as one entry; that a Python project that is a uv workspace runs and documents every member, though two members' test files share a name, and its docs build fails on an undocumented function in a member; that mutate succeeds in a project with only C and C++, and otherwise runs every mutate:<language> task, giving each the arguments after --; that a project named my-project names foundation only in links to the template, and one with another owner and copyright holder names neither the root's nor a template-only file in CODEOWNERS and links its own repository's settings; and that template:check-update retries copier update once, and only on copier's temporary-directory error, and turns off automatic git maintenance"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -382,26 +382,31 @@ if ! grep -q "No language with a mutation tool is present" <<< "$mutate_output";
 fi
 echo "$name: passed."
 
-# A language with a mutation tool defines mutate:<language>; a fake one in the
-# C++ project stands in for it, so that no mutation tool has to run.
-name=mutate_runs_each_language_task_and_passes_it_the_arguments_after_the_separator
-cat > "$work/cpp/.config/mise/conf.d/fake_language.toml" <<'FAKE'
-[tasks."mutate:fake"]
-run = "echo fake mutation tool called with:"
+# A language with a mutation tool defines mutate:<language>; two fake ones in
+# the C++ project stand in for two languages, so that no mutation tool has to
+# run. Each prints its name and the arguments mise gives it.
+name=mutate_runs_every_language_task_and_passes_each_the_arguments_after_the_separator
+cat > "$work/cpp/.config/mise/conf.d/fake_languages.toml" <<'FAKE'
+[tasks."mutate:first"]
+run = "echo first fake mutation tool called with:"
+[tasks."mutate:second"]
+run = "echo second fake mutation tool called with:"
 FAKE
 for arguments in "" "origin/release"; do
   mutate_output=$(MISE_TRUSTED_CONFIG_PATHS=$work/cpp mise --cd "$work/cpp" run mutate -- $arguments 2>&1) || {
-    echo "FAIL: $name: mise run mutate -- $arguments failed in the C++ project with a fake mutate:fake task; its output is below." >&2
+    echo "FAIL: $name: mise run mutate -- $arguments failed in the C++ project with two fake mutate:<language> tasks; its output is below." >&2
     echo "$mutate_output" >&2
     exit 1
   }
-  if ! grep -qx "fake mutation tool called with:${arguments:+ $arguments}" <<< "$mutate_output"; then
-    echo "FAIL: $name: mise run mutate -- $arguments did not run mutate:fake with the arguments \"$arguments\"; its output is below." >&2
-    echo "$mutate_output" >&2
-    exit 1
-  fi
+  for fake in first second; do
+    if ! grep -qx "$fake fake mutation tool called with:${arguments:+ $arguments}" <<< "$mutate_output"; then
+      echo "FAIL: $name: mise run mutate -- $arguments did not run mutate:$fake with the arguments \"$arguments\"; its output is below." >&2
+      echo "$mutate_output" >&2
+      exit 1
+    fi
+  done
 done
-rm "$work/cpp/.config/mise/conf.d/fake_language.toml"
+rm "$work/cpp/.config/mise/conf.d/fake_languages.toml"
 echo "$name: passed."
 
 # The files that only describe or check the template, which _exclude in
