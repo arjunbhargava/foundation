@@ -19,8 +19,9 @@ generated code, and vendored files: aim for **300 changed lines**, with
   mechanical change first, then the behaviour change on top.
 - No drive-by edits (formatting, unrelated fixes, dependency bumps). List them
   under Follow-ups instead.
-- A change that decision D7 in `docs/template-plan.md` says needs an approved
-  plan gets one before coding. Read the `plan` skill.
+- A change that meets decision D7 in `docs/template-plan.md` gets a written
+  plan before coding. Read the `plan` skill, which says when a person must
+  approve it first.
 
 When a task looks likely to exceed 500 lines, read the `large-changes` skill
 before starting it. It covers splitting the work into stacked PRs, and the
@@ -33,15 +34,19 @@ that has nothing rather than writing `None`. Keep the body to about 150 words
 for a PR under 100 changed lines, and at most 300 otherwise.
 
 1. **What and why**: at most 3 sentences, plus one line per new dependency,
-   ending "(not in the plan)" if the approved plan doesn't name it
-   (`dependencies` rule). Link the issue or design doc, and for a Linear
+   ending "(not in the plan)" if the plan doesn't name it (`dependencies`
+   rule), and one line per design decision you made, which a person can
+   reverse later. Link the issue or design doc, and for a Linear
    issue include `Fixes <issue ID>` (for example `Fixes ENG-123`).
 2. **Verified**: commands and CI runs, one line each, with links, and one
    line, not a table, naming the test for each acceptance criterion (`testing`
    skill). A gap in verification or another difference from the plan gets
-   one line, only when it matters: here, or under Needs a person if a person
-   must accept it.
-3. **Needs a person**: decisions only.
+   one line, only when it matters: here, or under Needs a person if only the
+   owner can accept it.
+3. **Needs a person**: only decisions the owner alone can make: spend above
+   budget, a licence off the allow-list, a change to the safety boundary
+   (`docs/auto-mode.md`), or a Bugbot finding you dispute. Never a status
+   note or an FYI. A PR with nothing here needs nothing from the owner.
 4. **Follow-ups**: one line each; filing them in Linear is optional. A
    breaking change lists a `prune-review` of the affected area.
 

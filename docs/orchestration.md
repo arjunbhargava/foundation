@@ -171,6 +171,8 @@ handoff prompt, later Linear.
 | An entirely new feature, or an unrelated initiative | Asks the owner. |
 
 If the next task is obvious and needs no human input, the orchestrator does it.
+It doesn't ask the owner about queued work or cleanup: it makes the call and
+says what it decided in its next message.
 Every tier keeps the limits in [Cost](#cost): at most 5 open agent PRs, at most
 10 running workers, nothing new within $50 of the daily limit, and the
 [model routing](#which-model).
@@ -231,8 +233,10 @@ events read about 13.3 million cache-read tokens, about 350,000 per event. The r
   merge order, and conflicts with other open PRs. Say plainly what you did
   not check.
 - **Owner messages** are short, written for a phone, and number each manual
-  step with its URL, tap by tap. Workers open drafts, so each step list
-  starts with marking the PR "Ready for review".
+  step with its URL, tap by tap. Tell the owner once per batch of PRs that
+  need the owner's merge, in one numbered list, not one message per PR. A PR
+  whose body has nothing under "Needs a person" needs nothing from the owner
+  beyond that merge.
 - **In auto mode**, a worker resolves a Bugbot thread only after fixing it. A
   disputed thread stays open for the owner. The orchestrator never merges a
   PR or enables auto-merge itself.

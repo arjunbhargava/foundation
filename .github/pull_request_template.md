@@ -16,7 +16,7 @@ comment.
 
 ## Needs a person
 
-<!-- Decisions a person must make, nothing else. -->
+<!-- Only decisions the owner alone can make (reviewable-prs rule); omit otherwise. -->
 
 ## Follow-ups
 
