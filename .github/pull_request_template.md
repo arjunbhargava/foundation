@@ -16,8 +16,8 @@ comment.
 
 ## Needs a person
 
-<!-- Decisions a person must make, nothing else. -->
+<!-- Decisions a person must make, nothing else. Add each that outlasts this PR's review to docs/open-items.md. -->
 
 ## Follow-ups
 
-<!-- One line each. Filing them in Linear is optional. -->
+<!-- One line each. Add each to docs/open-items.md in this PR. -->
