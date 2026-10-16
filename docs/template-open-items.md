@@ -1,5 +1,5 @@
 <!-- The template's own open items, which docs/open-items.md includes; projects don't get this file. -->
-The next item's id is OI-25.
+The next item's id is OI-26.
 
 ## Needs a person
 
@@ -17,6 +17,7 @@ The next item's id is OI-25.
 - **OI-12** The figures in orchestration's [Why this design](https://github.com/arjunbhargava/foundation/blob/main/docs/orchestration.md#why-this-design) are unverified. **Why:** the page cites [arXiv 2512.08296](https://arxiv.org/abs/2512.08296), and its +80.8% may be 80.9%. **Action:** check each figure against the paper, or ask an agent to and confirm its quotes. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
 - **OI-13** The repositories are to move to the new GitHub organization, where the owner is a member, not an owner. **Why:** only an organization owner can accept the transfer and set the organization's Actions settings. **Action:** get the owner role in the organization, then transfer the repositories. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
 - **OI-14** After the organization move, the repositories need follow-up. **Why:** hard-coded arjunbhargava references and the docs-site address would point at the old owner, and it is unverified how a transferred repository's secrets, rulesets, Pages, and Dependabot behave. **Action:** after OI-13, have an agent fix the references and the site address, check those four settings, and switch to the merge queue. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
+- **OI-25** The weekly Open items workflow has not run yet. **Why:** its issue steps run only on GitHub, so a fault there stays hidden until the first Monday. **Action:** after #92 merges, run Open items once from the [Actions tab](https://github.com/arjunbhargava/foundation/actions/workflows/open-items.yml) and check that it opens no issue, or one that lists the right items. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
 
 ## Technical debt
 
