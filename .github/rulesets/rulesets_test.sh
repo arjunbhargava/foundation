@@ -59,6 +59,18 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   fi
   expect_check_error check_fails_on_invalid_json main-checks.json '{' \
     "main-checks.json is not valid JSON"
+  expect_check_error check_fails_when_a_ruleset_requires_up_to_date_branches main-review-auto.json \
+    "$(jq '(.rules[].parameters.strict_required_status_checks_policy | select(. != null)) = true' "$rulesets_dir/main-review-auto.json")" \
+    "main-review-auto.json sets strict_required_status_checks_policy to true"
+  expect_check_error check_fails_without_the_merge_queue main-checks.json \
+    "$(jq 'del(.rules[] | select(.type == "merge_queue"))' "$rulesets_dir/main-checks.json")" \
+    "main-checks.json must have a merge_queue rule"
+  expect_check_error check_fails_when_the_merge_queue_squashes main-checks.json \
+    "$(jq '(.rules[] | select(.type == "merge_queue") | .parameters.merge_method) = "SQUASH"' "$rulesets_dir/main-checks.json")" \
+    "main-checks.json must have a merge_queue rule"
+  expect_check_error check_fails_when_another_ruleset_has_a_merge_queue template-checks.json \
+    "$(jq '.name = "main: template checks"' "$rulesets_dir/main-checks.json")" \
+    "template-checks.json has a merge_queue rule"
   expect_check_error check_fails_when_the_review_rulesets_differ_elsewhere main-review-auto.json \
     "$(jq '.bypass_actors = []' "$rulesets_dir/main-review-auto.json")" \
     "differ in the lines above"
@@ -91,7 +103,7 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   if ((failures > 0)); then
     exit 1
   fi
-  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 10 broken ones."
+  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 14 broken ones."
 }
 
 # Puts first on PATH a gh that answers only apply.sh's requests: the existing

@@ -32,18 +32,14 @@
 # making it; it still reads the existing rulesets to decide between create
 # and update. --auto turns auto mode on; running without it turns it off.
 #
-# Switching to a merge queue, which GitHub offers only to repositories owned
-# by an organization:
-#   1. In main-checks.json, and in template-checks.json if it exists, set
-#      strict_required_status_checks_policy to false. Add this rule to
-#      main-checks.json. Apart from merge_method, the values are GitHub's
-#      defaults.
-#        { "type": "merge_queue", "parameters": {
-#            "merge_method": "MERGE", "grouping_strategy": "ALLGREEN",
-#            "check_response_timeout_minutes": 60, "max_entries_to_build": 5,
-#            "max_entries_to_merge": 5, "min_entries_to_merge": 1,
-#            "min_entries_to_merge_wait_minutes": 5 } }
-#   2. Rerun this script. CI already runs on merge_group.
+# main-checks.json requires a merge queue, which runs the required checks on
+# each PR merged with main and the PRs queued ahead of it, so no ruleset
+# requires a PR's branch to be up to date with main. Apart from merge_method,
+# the queue's values are GitHub's defaults. GitHub offers the queue to
+# repositories owned by an organization, and to a personal account's
+# repository only if it offers it to that account. Where it doesn't, creating
+# or updating "main: checks" fails with the GitHub API's error, and the
+# script stops there, before it changes any ruleset.
 set -euo pipefail
 cd "$(dirname "$0")"
 

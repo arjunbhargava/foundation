@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Checks the ruleset files in this directory: each is valid JSON, and the
+# Checks the ruleset files in this directory: each is valid JSON, none
+# requires a PR's branch to be up to date with main, main-checks.json alone
+# requires the merge queue that tests each PR with main instead, and the
 # auto-mode review ruleset (docs/auto-mode.md) differs from main-review.json
 # only in its name, whether review threads must be resolved, and its rule
 # requiring the owned-paths and needs-human-review checks, so an edit to one
@@ -16,14 +18,27 @@ cd "$(dirname "$0")"
 
 # Requires .github/workflows/owned-paths.yml and needs-human-review.yml to
 # pass, as reported by GitHub Actions, integration_id 15368.
-auto_mode_checks_rule='{"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": true, "required_status_checks": [{"context": "owned-paths", "integration_id": 15368}, {"context": "needs-human-review", "integration_id": 15368}]}}'
+auto_mode_checks_rule='{"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": false, "required_status_checks": [{"context": "owned-paths", "integration_id": 15368}, {"context": "needs-human-review", "integration_id": 15368}]}}'
 
 for file in *.json; do
   if ! jq empty "$file"; then
     echo "error: .github/rulesets/$file is not valid JSON; fix the parse error above." >&2
     exit 1
   fi
+  if jq -e 'any(.rules[]; .parameters.strict_required_status_checks_policy == true)' "$file" > /dev/null; then
+    echo "error: $file sets strict_required_status_checks_policy to true, so a PR behind main needs Update branch before it merges. Set it to false: the merge queue in main-checks.json tests each PR with main." >&2
+    exit 1
+  fi
+  if [[ $file != main-checks.json ]] && jq -e 'any(.rules[]; .type == "merge_queue")' "$file" > /dev/null; then
+    echo "error: $file has a merge_queue rule; only main-checks.json may, because a branch has one merge queue." >&2
+    exit 1
+  fi
 done
+
+if ! jq -e 'any(.rules[]; .type == "merge_queue" and .parameters.merge_method == "MERGE")' main-checks.json > /dev/null; then
+  echo "error: main-checks.json must have a merge_queue rule with merge_method MERGE: without it, no check tests a PR with the main it merges into, and merge commits are the only merge method apply.sh allows." >&2
+  exit 1
+fi
 
 # Arguments: a review ruleset file, a jq condition on its pull_request rule's
 # parameters, and the error to print, after the file name, if it is false.
@@ -54,4 +69,4 @@ if ! diff -u <(jq -S "$without_auto_mode_fields" main-review.json) \
   exit 1
 fi
 
-echo "The ruleset files are valid JSON, and the review rulesets differ only in name, thread resolution, and the rule requiring the owned-paths and needs-human-review checks, with the values docs/auto-mode.md gives."
+echo "The ruleset files are valid JSON, main-checks.json alone has the merge queue and none requires up-to-date branches, and the review rulesets differ only in name, thread resolution, and the rule requiring the owned-paths and needs-human-review checks, with the values docs/auto-mode.md gives."
