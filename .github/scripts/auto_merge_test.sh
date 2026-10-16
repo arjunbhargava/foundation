@@ -79,11 +79,15 @@ main() {
     . "[$reviewed]" true "$dequeue" succeeds "$owned_files" queued
   expect_merge_calls leaves_a_queued_pr_in_the_queue_once_bugbot_has_reviewed_it \
     '.auto_merge = {"merge_method": "merge"}' "[$reviewed]" true "" succeeds "" queued
+  expect_merge_calls turns_auto_merge_off_then_fails_when_the_merge_queue_state_is_unreadable \
+    '.draft = true | .auto_merge = {"merge_method": "merge"}' "[$reviewed]" true "$turn_off" fails "" queue-unreadable
+  expect_merge_calls turns_auto_merge_off_then_fails_when_github_refuses_to_dequeue \
+    '.draft = true | .auto_merge = {"merge_method": "merge"}' "[$reviewed]" true "$turn_off" fails "" dequeue-refused
 
   if ((failures > 0)); then
     exit 1
   fi
-  echo "auto_merge.sh made the expected gh pr merge and dequeue calls in all 23 cases."
+  echo "auto_merge.sh made the expected gh pr merge and dequeue calls in all 25 cases."
 }
 
 # Puts first on PATH a gh that answers auto_merge.sh's requests from the files
@@ -92,7 +96,9 @@ main() {
 # commit, "new", has Bugbot check runs. Without a check-runs file, it refuses
 # that request as GitHub does a token without checks: read in a private
 # repository, and without a files file, it refuses to list the PR's files.
-# PR 7 is in the merge queue only if the case has an in-merge-queue file.
+# PR 7 is in the merge queue only if the case has an in-merge-queue file. It
+# refuses to read the queue state with a queue-unreadable file, and to
+# dequeue with a dequeue-refused file.
 make_fake_gh() {
   mkdir "$work/bin"
   cat > "$work/bin/gh" << 'EOF'
@@ -107,8 +113,10 @@ case "$*" in
     cat "$FAKE_GH_CASE/files.json" 2> /dev/null ||
       { echo "gh: Resource not accessible by integration (HTTP 403)" >&2; exit 1; } ;;
   "pr view 7 --repo o/r --json isInMergeQueue --jq .isInMergeQueue")
+    if [ -f "$FAKE_GH_CASE/queue-unreadable" ]; then echo "gh: HTTP 502" >&2; exit 1; fi
     if [ -f "$FAKE_GH_CASE/in-merge-queue" ]; then echo true; else echo false; fi ;;
   "api graphql --silent -f id=PR_7 -f query=mutation"*"dequeuePullRequest(input: {id: \$id})"*)
+    if [ -f "$FAKE_GH_CASE/dequeue-refused" ]; then echo "gh: Resource not accessible by integration" >&2; exit 1; fi
     echo "dequeuePullRequest PR_7" >> "$FAKE_GH_CASE/merge-calls" ;;
   "pr merge "*) echo "gh $*" >> "$FAKE_GH_CASE/merge-calls" ;;
   *) echo "fake gh: unexpected call: gh $*" >&2; exit 1 ;;
@@ -123,16 +131,19 @@ EOF
 # "unreadable"; the repository's allow_auto_merge setting; the `gh pr merge`
 # calls expected, one per line; whether the script "succeeds", the default,
 # or "fails"; and the PR's files, as gh api --paginate --slurp prints them,
-# or "unreadable", by default docs/linear.md alone; and "queued" if the PR is
-# in the merge queue.
+# or "unreadable", by default docs/linear.md alone; and the merge queue:
+# "queued" if the PR is in it, "queue-unreadable" if GitHub refuses to say,
+# or "dequeue-refused" if the PR is in it and GitHub refuses to remove it.
 expect_merge_calls() {
   local name=$1 pr_filter=$2 check_runs=$3 allow_auto_merge=$4 expected=$5 expected_outcome=${6:-succeeds}
   local files=${7:-'[[{"filename": "docs/linear.md"}]]'}
   local case_dir=$work/$name
   mkdir "$case_dir"
-  if [[ ${8:-} == queued ]]; then
-    touch "$case_dir/in-merge-queue"
-  fi
+  case ${8:-} in
+    queued) touch "$case_dir/in-merge-queue" ;;
+    queue-unreadable) touch "$case_dir/queue-unreadable" ;;
+    dequeue-refused) touch "$case_dir/in-merge-queue" "$case_dir/dequeue-refused" ;;
+  esac
   echo "{\"default_branch\": \"main\", \"allow_auto_merge\": $allow_auto_merge}" > "$case_dir/repository.json"
   jq "$pr_filter" <<< "$agent_pr" > "$case_dir/pr.json"
   if [[ $check_runs != unreadable ]]; then

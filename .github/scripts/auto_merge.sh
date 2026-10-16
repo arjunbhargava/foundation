@@ -23,7 +23,9 @@
 # with checks: read, contents: write, and pull-requests: write. It fails if a
 # request fails; if GitHub refuses to list Bugbot's check runs, or
 # owned_paths.sh can't tell which paths the PR changes, it first turns
-# auto-merge off, as it does when Bugbot hasn't reviewed.
+# auto-merge off, as it does when Bugbot hasn't reviewed, and if GitHub
+# refuses to read or change the PR's place in the merge queue, it still turns
+# auto-merge off.
 set -euo pipefail
 
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set; set it to the repository as owner/name}"
@@ -84,12 +86,18 @@ update_auto_merge() {
     esac
   fi
   if [[ -n $reason ]]; then
-    local in_merge_queue
-    in_merge_queue=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json isInMergeQueue --jq .isInMergeQueue)
-    if [[ $in_merge_queue == true ]]; then
-      gh api graphql --silent -f id="$(jq -r .node_id <<< "$pr")" \
-        -f query='mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }'
-      echo "PR #$number: removed from the merge queue, because $reason."
+    # A refused queue request still lets auto-merge go off, and then the run
+    # fails, as for refused check runs.
+    local in_merge_queue="" queue_request_refused=false
+    if ! in_merge_queue=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json isInMergeQueue --jq .isInMergeQueue); then
+      queue_request_refused=true
+    elif [[ $in_merge_queue == true ]]; then
+      if gh api graphql --silent -f id="$(jq -r .node_id <<< "$pr")" \
+        -f query='mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }'; then
+        echo "PR #$number: removed from the merge queue, because $reason."
+      else
+        queue_request_refused=true
+      fi
     fi
     if [[ $auto_merge_on == true ]]; then
       gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --disable-auto
@@ -97,7 +105,10 @@ update_auto_merge() {
     elif [[ $in_merge_queue != true ]]; then
       echo "PR #$number: auto-merge stays off, because $reason."
     fi
-    if [[ $check_runs_refused == true || $owned_paths_unknown == true ]]; then
+    if [[ $queue_request_refused == true ]]; then
+      echo "error: GitHub refused to read PR #$number's merge-queue state or to remove it from the queue, as it says above, so the PR may still merge although $reason. Remove it from the queue on its page." >&2
+    fi
+    if [[ $check_runs_refused == true || $owned_paths_unknown == true || $queue_request_refused == true ]]; then
       return 1
     fi
     return
