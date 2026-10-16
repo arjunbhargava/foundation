@@ -62,7 +62,7 @@ benchmarks, so treat the numbers as direction rather than precise effects.
 | F5 | A second model reviewing finished code helped more than a model planning before the code was written. Good plans help, but a bad plan is worse than none. [6][7] | People approve plans only for larger changes. Every PR gets a review by a separate agent before a person sees it. |
 | F6 | Asking agents for a structured handoff made their work easier to review, not more correct. Sections such as "known limitations" appeared only when required. [8] | The PR template requires a short handoff, with one line for any limitation that matters (T24). |
 | F7 | In Cursor's experiments with hundreds of agents, agents coordinating through a shared file with locks collapsed to the speed of 1–3 agents. What worked was a planner that splits the work, workers that each own one task on their own copy of the code, and a handoff back to the planner. [9] | Plans and task lists live in Linear, not in a shared file. Each task becomes one agent, one branch, and one PR. |
-| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Test each PR combined with `main` before merging: up-to-date branches for now, a merge queue later (T4). |
+| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Test each PR combined with `main` before merging, with a merge queue (T4). |
 | F9 | At Meta, engineers accepted 73% of tests generated to catch specific deliberate bugs. [12] | Use mutation testing to measure whether agent-written tests catch real mistakes. |
 
 ## Decisions
@@ -163,24 +163,20 @@ can't change those settings, so they're marked **(person)**.
   `gh api` because GitHub doesn't copy settings from templates. Agent PRs are
   authored by the owner's account, and GitHub doesn't let authors approve
   their own PRs, so checks and review are separate rulesets:
-  - `main: checks`: `ci-ok` and the size check must pass on a branch that is
-    up to date with `main`, and force pushes are blocked. Nobody can bypass
+  - `main: checks`: `ci-ok` and the size check must pass, each PR merges
+    through a merge queue, and force pushes are blocked. Nobody can bypass
     it.
   - `main: review`: one approval, including a code owner's. Repository admins
     can bypass it, but only through a pull request.
 
   The script also allows only merge commits (D6) and turns on secret scanning
   with push protection.
-- No merge queue for now. GitHub offers merge queues only to repositories
-  owned by an organization, and this one is owned by a user. Requiring
-  up-to-date branches gives the same guarantee, that `main` only receives
-  tested combinations, at the cost of updating and retesting a PR whenever
-  `main` moves ahead of it. To switch after moving the repository to an
-  organization:
-  1. In `.github/rulesets/main-checks.json`, add a `merge_queue` rule with
-     `merge_method` `MERGE`, and set `strict_required_status_checks_policy`
-     to `false`. `apply.sh` lists the full rule.
-  2. Rerun `apply.sh`. CI already runs on `merge_group`.
+- The merge queue replaced required up-to-date branches, which gave the same
+  guarantee, that `main` only receives tested combinations, at the cost of
+  someone pressing Update branch whenever `main` moved ahead of a PR.
+  GitHub's documentation offers the queue only to repositories owned by an
+  organization; the owner's personal account shows the option, which
+  `apply.sh` confirms or refuses when it runs.
 - **(person)** Run `apply.sh`.
 - Done when: a test PR above 500 lines fails the size check, and a PR merges
   only after its required checks pass on a branch that is up to date with
@@ -585,9 +581,8 @@ merged.
   branch or run ID.
 - An agent that finds a problem outside its task lists it under Follow-ups
   instead of fixing it.
-- Each PR is tested combined with `main` before merging. For now that means
-  requiring up-to-date branches; a merge queue replaces it once the
-  repository moves to an organization (T4).
+- Each PR is tested combined with `main` before merging, by the merge queue
+  (T4).
 - For a hard task, run several agents on it separately and review only the
   best result. Parallel agents should not multiply review work.
 
@@ -596,9 +591,8 @@ merged.
 - A custom system for coordinating agents. Cursor already provides subagents,
   an API, automations, and Linear routing.
 - Agents talking to each other directly, or shared memory files.
-- A dedicated agent for merging other agents' work. Required up-to-date
-  branches, and later a merge queue, cover it, and Cursor found such a role
-  slowed things down [9].
+- A dedicated agent for merging other agents' work. The merge queue covers
+  it, and Cursor found such a role slowed things down [9].
 - Release automation, deployment, and choices of C/C++ package manager or
   experiment tracker. These belong to each project.
 - Go. It appears in the `source-docs` skill but isn't a team language; remove

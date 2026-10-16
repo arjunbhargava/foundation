@@ -9,14 +9,19 @@ repository; a PR without the `agent` label still needs a person's approval.
 
 Status: in progress (T23 in [the template plan](https://github.com/arjunbhargava/foundation/blob/main/docs/template-plan.md)). The
 review ruleset, the approval workflow, the auto-merge workflow, and the
-owned-paths and needs-human-review checks are in place. Until the branch-update workflow lands, a PR
-that falls behind `main` waits for someone to update it.
+owned-paths and needs-human-review checks are in place. The merge queue is
+in `.github/rulesets/main-checks.json`, and in force once `apply.sh` has
+run; until then, a PR behind `main` still needs Update branch.
 
 ## What changes
 
 Auto mode swaps the review ruleset. The `main: checks` ruleset is the same in
-both modes: `ci-ok` and `pr-size` must pass on a branch that is up to date
-with `main`.
+both modes: `ci-ok` and `pr-size` must pass, and every PR merges through a
+merge queue. The queue runs the required checks again on the PR merged with
+`main` and the PRs queued ahead of it, so no PR needs Update branch when
+`main` moves ahead of it. Each required check therefore also runs on
+`merge_group`; `owned-paths` and `needs-human-review` pass there without
+judging, as [below](#the-owned-paths-check) says.
 
 | Requirement | Review mode: `main: review` | Auto mode: `main: review (auto mode)` |
 |---|---|---|
@@ -31,8 +36,9 @@ In auto mode, the approval workflow's approval meets the count of 1, the
 `needs-human-review` check fails while the PR has that label, and each Bugbot
 finding blocks the merge until its thread is resolved. The auto-merge
 workflow turns on auto-merge once Bugbot has reviewed the latest commit, if
-the PR changes no owned path, and GitHub merges once every requirement
-holds, in any order. The count of 1 keeps auto mode to agent PRs: with 0, a
+the PR changes no owned path, and GitHub adds the PR to the merge queue once
+every requirement holds, in any order, and merges it once the queue's checks
+pass. The count of 1 keeps auto mode to agent PRs: with 0, a
 PR without the `agent` label, which the workflow doesn't approve, would merge
 too.
 
@@ -72,6 +78,16 @@ files or more, the most GitHub lists.
 - **The admin bypass skips it**, because the auto-mode ruleset, whose bypass
   list has the admin role, requires it, and `main: checks`, which no one can
   bypass, doesn't.
+- **On `merge_group` it passes without judging.** The queue requires it on
+  the merge-group commit too, but GitHub queues a PR only once it meets the
+  rulesets, so a PR that changes an owned path is in the queue only through
+  the owner's bypass, which a failing merge-group check would undo. A push
+  removes a PR from the queue, and its next PR-level run judges the new
+  commit. The merge-group run uses the PR's copy of the workflow, but a PR
+  that changes that file changes an owned path, so it too needs the bypass.
+  What this misses: a line added to CODEOWNERS on `main` after a PR's last
+  run, which the up-to-date requirement caught, because Update branch
+  pushes a commit and so reruns the check.
 - **It can count more paths as owned than GitHub does, never fewer.** It
   matches with git's gitignore rules, so `docs/*` also matches files in
   subdirectories, and it ignores a line with no owner rather than letting it
@@ -95,7 +111,9 @@ cases, as `AGENTS.md` tells it to:
 While a PR has the label, the approval workflow doesn't approve it, the
 auto-merge workflow keeps auto-merge off, and turns it off if it was on, and
 the `needs-human-review` check, which `.github/workflows/needs-human-review.yml`
-runs with `.github/scripts/needs_human_review.sh`, fails, so only the owner's bypass merges it. When the owner removes the
+runs with `.github/scripts/needs_human_review.sh`, fails, so only the owner's bypass merges it. If the PR is already in the merge
+queue, the auto-merge workflow removes it; the check's `merge_group` run
+passes, as `owned-paths` does. When the owner removes the
 label, the check runs again and passes, the approval workflow approves the PR
 if it never has, and the auto-merge workflow turns auto-merge on once Bugbot
 has reviewed the latest commit.
@@ -135,8 +153,8 @@ otherwise the approval fails and the PR waits for a person.
 
 `.github/workflows/auto-merge.yml` turns on GitHub's auto-merge, with a merge
 commit, for an agent PR once Bugbot has reviewed the PR's latest commit.
-GitHub then merges the PR when the rulesets allow it. If the PR already meets
-them, the workflow merges it at once. It waits for Bugbot because until
+GitHub then adds the PR to the merge queue when the rulesets allow it. If
+the PR already meets them, the workflow adds it to the queue at once. It waits for Bugbot because until
 Bugbot posts, there are no review threads to block the merge.
 
 It manages a PR that has the `agent` label, which `agent-label.yml` adds,
@@ -158,6 +176,10 @@ wasn't opened by Dependabot. For such a PR:
   ([github/docs#34568](https://github.com/github/docs/issues/34568)), so a PR
   that adds a workflow whose `owned-paths` job passes at once could merge
   before the real check fails.
+- **A PR in the merge queue is removed from it** whenever the workflow would
+  turn its auto-merge off, because `gh pr merge --disable-auto` does nothing
+  to a queued PR. This includes a PR the owner queued with the bypass, if
+  the workflow runs again before the queue merges it; queue it again.
 - **While "Allow auto-merge" is off**, in Settings > General > Pull
   Requests, the workflow neither turns auto-merge on nor merges. It still
   turns auto-merge off after a push, because GitHub doesn't say that turning
@@ -170,9 +192,6 @@ would merge the PR without a click, which that approval already allows.
 
 The workflow doesn't:
 
-- **Update a PR that is behind `main`.** `main: checks` requires an
-  up-to-date branch, so the PR waits until someone updates it, or until the
-  branch-update workflow, the last part of T23, does.
 - **Start workflows on `main`.** GitHub makes the merge as
   `github-actions[bot]` and starts no workflows for what `GITHUB_TOKEN` does,
   so CodeQL's analysis of `main` doesn't run after an auto-merged PR.
