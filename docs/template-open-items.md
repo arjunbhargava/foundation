@@ -1,5 +1,5 @@
 <!-- The template's own open items, which docs/open-items.md includes; projects don't get this file. -->
-The next item's id is OI-25.
+The next item's id is OI-28.
 
 ## Needs a person
 
@@ -30,3 +30,6 @@ The next item's id is OI-25.
 - **OI-21** Optional: zizmor's online audits don't run. **Why:** they find known-vulnerable action versions, which the offline audits can't. **Action:** decide whether to run them on a schedule. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
 - **OI-22** Optional: lint:language-listings doesn't check that CODEOWNERS lists each language's manifest. **Why:** a new language's manifest could merge in auto mode without the owner's review. **Action:** decide whether to add the check. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
 - **OI-23** Optional: `mise run spend` fails outright when the agent listing answers HTTP 429. **Why:** a rate limit loses the whole report instead of only its labels. **Action:** decide whether it should print the totals without labels. **Added in:** [#92](https://github.com/arjunbhargava/foundation/pull/92). **Last confirmed:** 2026-10-16.
+- **OI-25** The python filter's excludes also skip a `.py` file in `crates/*/src` and `crates/*/tests`, `packages/*/src` and `packages/*/tests`, and `cpp/src` and `cpp/tests`. **Why:** `*.py` matched such a file before the excludes, so a Python script kept there no longer starts the python job. **Action:** if a project keeps Python in those directories, narrow the excludes in the changes job in ci.yml. **Added in:** [#86](https://github.com/arjunbhargava/foundation/pull/86). **Last confirmed:** 2026-10-16.
+- **OI-26** The python filter doesn't match a Python workspace member under `packages/`. **Why:** the filter excludes `packages/*/src` and `packages/*/tests`, which hold TypeScript, so a change to data a member's tests read there skips the python job. **Action:** if a project puts a Python member under `packages/`, replace the excludes with that project's member paths. **Added in:** [#86](https://github.com/arjunbhargava/foundation/pull/86). **Last confirmed:** 2026-10-16.
+- **OI-27** No test covers the CI path filters. **Why:** they are inline in ci.yml, so a change that stops a filter matching a file passes `mise run check`, and a test needs the filter moved into a script. **Action:** move the filters into a script that `mise run` runs, with a test per language, as for the other `.github/scripts/`. **Added in:** [#86](https://github.com/arjunbhargava/foundation/pull/86). **Last confirmed:** 2026-10-16.
