@@ -9,10 +9,12 @@
 # default branch, or has no agent label. For the others, auto-merge is turned
 # off while the PR is a draft, has the needs-human-review label, Bugbot
 # hasn't finished reviewing its head commit, or the PR changes a path in .github/CODEOWNERS, which only the
-# owner merges (owned_paths.sh). Otherwise it is turned on, with a merge
+# owner merges (owned_paths.sh); a PR in the merge queue is first removed
+# from it, because gh pr merge --disable-auto does nothing to a queued PR.
+# Otherwise it is turned on, with a merge
 # commit (D6 in docs/template-plan.md), unless the repository's "Allow
 # auto-merge" setting is off. When the PR already meets every requirement,
-# gh merges it at once instead of turning on auto-merge.
+# gh adds it to the merge queue, or without a queue merges it, at once.
 #
 # Usage: .github/scripts/auto_merge.sh <PR number>...
 #
@@ -82,10 +84,17 @@ update_auto_merge() {
     esac
   fi
   if [[ -n $reason ]]; then
+    local in_merge_queue
+    in_merge_queue=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json isInMergeQueue --jq .isInMergeQueue)
+    if [[ $in_merge_queue == true ]]; then
+      gh api graphql --silent -f id="$(jq -r .node_id <<< "$pr")" \
+        -f query='mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }'
+      echo "PR #$number: removed from the merge queue, because $reason."
+    fi
     if [[ $auto_merge_on == true ]]; then
       gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --disable-auto
       echo "PR #$number: turned auto-merge off, because $reason."
-    else
+    elif [[ $in_merge_queue != true ]]; then
       echo "PR #$number: auto-merge stays off, because $reason."
     fi
     if [[ $check_runs_refused == true || $owned_paths_unknown == true ]]; then
@@ -103,7 +112,7 @@ update_auto_merge() {
     return
   fi
   gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --auto --merge --match-head-commit "$head_sha"
-  echo "PR #$number: Bugbot has reviewed $head_sha, so auto-merge is on, or the PR is merged if it already met every requirement."
+  echo "PR #$number: Bugbot has reviewed $head_sha, so auto-merge is on, or, if the PR already met every requirement, it is in the merge queue or merged."
 }
 
 # Prints why this script doesn't manage the PR, or nothing if it does.
