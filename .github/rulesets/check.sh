@@ -75,8 +75,13 @@ fi
 # check_response_timeout_minutes. A check is named after its job's id.
 required_checks=$(jq -r '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' ./*.json | sort -u)
 for check in $required_checks; do
-  mapfile -t workflows < <(grep -lE "^  $check:" ../workflows/*.yml || true)
-  if ((${#workflows[@]} == 0)) || ! grep -qE '^  merge_group:' "${workflows[@]}"; then
+  reported_on_merge_group=false
+  for workflow in ../workflows/*.yml; do
+    if grep -qE "^  $check:" "$workflow" && grep -qE '^  merge_group:' "$workflow"; then
+      reported_on_merge_group=true
+    fi
+  done
+  if [[ $reported_on_merge_group != true ]]; then
     echo "error: the rulesets require the $check check, but no workflow in .github/workflows/ has a job $check and runs on merge_group, so the merge queue would wait for it until it times out. Add merge_group: to the on: of the workflow that reports it." >&2
     exit 1
   fi
