@@ -17,9 +17,9 @@ old_item="- **OI-1** Turn on Pages. **Why:** the site doesn't publish. **Action:
 new_item="- **OI-2** Pin the tool. **Why:** a release can break CI. **Action:** pin it. **Added in:** $link. **Last confirmed:** 2026-10-01."
 
 main() {
-  expect_check passes_on_well_formed_items passes "is well formed" \
+  expect_check passes_on_well_formed_items passes "Every open item in $work/page.md is well formed." \
     "$old_item" "$new_item"
-  expect_check lists_only_the_items_confirmed_before_the_date passes "OI-1, last confirmed 2026-01-05" \
+  expect_check lists_only_the_items_confirmed_before_the_date passes "- OI-1, last confirmed 2026-01-05, in $work/page.md: Turn on Pages." \
     --confirmed-before 2026-02-01 "$old_item" "$new_item"
   expect_check names_the_missing_field_and_its_line fails "page.md:5: the item lacks its **Why:** field" \
     "${old_item/\*\*Why:\*\* /}"
@@ -44,9 +44,10 @@ main() {
   echo "open_items.sh passed or failed as expected in all $cases cases."
 }
 
-# Arguments: the case's name, whether the script "passes" or "fails", text
-# its output must contain, the script's options if any, and the page's items,
-# one per argument. Line 5 of the page is the first item.
+# Arguments: the case's name, whether the script "passes" or "fails", its
+# whole output if it passes or text its output must contain if it fails, its
+# options if any, and the page's items, one per argument. Line 5 of the page
+# is the first item.
 expect_check() {
   local name=$1 expected_outcome=$2 expected_text=$3
   shift 3
@@ -68,10 +69,11 @@ expect_check() {
   if ((status != 0)); then
     outcome=fails
   fi
-  if [[ $outcome != "$expected_outcome" || $output != *"$expected_text"* ]]; then
+  if [[ $outcome != "$expected_outcome" || ($outcome == passes && $output != "$expected_text") ||
+    $output != *"$expected_text"* ]]; then
     echo "FAIL: $name: open_items.sh exited with status $status (expected: it $expected_outcome), printed:
 $output
-(expected it to contain: $expected_text)" >&2
+(expected it to print, or if it fails to contain: $expected_text)" >&2
     failures=$((failures + 1))
   fi
 }

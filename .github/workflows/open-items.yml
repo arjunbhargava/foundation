@@ -6,7 +6,8 @@ name: Open items
 
 on:
   schedule:
-    - cron: "0 7 * * 1" # Mondays at 07:00 UTC
+    # Mondays at 07:23 UTC. GitHub delays or drops runs at the start of an hour.
+    - cron: "23 7 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -39,9 +40,7 @@ jobs:
 
           if [[ -z $unconfirmed_items ]]; then
             echo "Every open item was confirmed on or after $cutoff."
-            if [[ -n $issue ]]; then
-              gh issue close "$issue" --comment "Every open item was confirmed on or after $cutoff."
-            fi
+            [[ -z $issue ]] || gh issue close "$issue" --comment "Every open item was confirmed on or after $cutoff."
             exit 0
           fi
 

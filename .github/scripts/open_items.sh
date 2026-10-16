@@ -54,9 +54,7 @@ main() {
     echo "error: found the $failures problem(s) above in the open items. $format_hint" >&2
     exit 1
   fi
-  if [[ -z $confirmed_before ]]; then
-    echo "Every open item in ${files[*]} is well formed."
-  fi
+  [[ -n $confirmed_before ]] || echo "Every open item in ${files[*]} is well formed."
 }
 
 check_file() {
