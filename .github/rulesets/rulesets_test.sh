@@ -5,7 +5,7 @@
 # Each case runs apply.sh in a copy of this directory, as a project has it
 # (without template-checks.json) or as the template repository has it (with
 # one), so the test gives the same result in both. check.sh runs on copies of
-# the ruleset files, each broken in one way.
+# the ruleset and workflow files, each broken in one way.
 #
 # Usage: mise run test:rulesets
 set -euo pipefail
@@ -71,6 +71,9 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   expect_check_error check_fails_when_another_ruleset_has_a_merge_queue template-checks.json \
     "$(jq '.name = "main: template checks"' "$rulesets_dir/main-checks.json")" \
     "template-checks.json has a merge_queue rule"
+  expect_check_error check_fails_when_a_required_check_does_not_run_on_merge_group ../workflows/owned-paths.yml \
+    "$(grep -vx '  merge_group:' "$rulesets_dir/../workflows/owned-paths.yml")" \
+    "the rulesets require the owned-paths check, but no workflow"
   expect_check_error check_fails_when_the_review_rulesets_differ_elsewhere main-review-auto.json \
     "$(jq '.bypass_actors = []' "$rulesets_dir/main-review-auto.json")" \
     "differ in the lines above"
@@ -103,7 +106,7 @@ Would turn on secret scanning with push protection: PATCH repos/o/r'
   if ((failures > 0)); then
     exit 1
   fi
-  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 14 broken ones."
+  echo "apply.sh made the expected changes in all 4 cases, and check.sh passed the committed rulesets and failed all 15 broken ones."
 }
 
 # Puts first on PATH a gh that answers only apply.sh's requests: the existing
@@ -146,16 +149,18 @@ $expected"
   fi
 }
 
-# Arguments: the case's name, a ruleset file, the content that replaces it in a
-# copy of this directory, and text that check.sh's error must contain.
+# Arguments: the case's name, a file, as a path from this directory, the
+# content that replaces it in a copy of this directory and of
+# .github/workflows/, and text that check.sh's error must contain.
 expect_check_error() {
   local name=$1 file=$2 content=$3 expected_error=$4
   local copy=$work/$name
-  mkdir "$copy"
-  cp "$rulesets_dir/check.sh" "$rulesets_dir"/*.json "$copy/"
-  printf '%s\n' "$content" > "$copy/$file"
+  mkdir -p "$copy/rulesets"
+  cp "$rulesets_dir/check.sh" "$rulesets_dir"/*.json "$copy/rulesets/"
+  cp -R "$rulesets_dir/../workflows" "$copy/workflows"
+  printf '%s\n' "$content" > "$copy/rulesets/$file"
   local status=0 output
-  output=$("$copy/check.sh" 2>&1) || status=$?
+  output=$("$copy/rulesets/check.sh" 2>&1) || status=$?
   if ((status == 0)) || [[ $output != *"$expected_error"* ]]; then
     fail "$name: check.sh exited with status $status and printed '$output'; expected a non-zero status and an error containing '$expected_error'."
   fi
