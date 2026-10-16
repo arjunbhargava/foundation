@@ -88,10 +88,13 @@ cases, as `AGENTS.md` tells it to:
   chat. The agent that handles the request labels the PR it opens, and an
   orchestrator puts the request in the worker's prompt
   ([orchestration.md](orchestration.md#what-a-worker-prompt-contains)).
-- **The PR changes the safety boundary**: an owned path
-  ([below](#what-still-needs-the-owner)), a ruleset, a permission, how
-  secrets are read, or how spend is limited. The PR body says why under
-  "Needs a person".
+- **The PR needs a decision only the owner can make**, which the PR body
+  states under "Needs a person": a change to the safety boundary (an owned
+  path ([below](#what-still-needs-the-owner)), a ruleset, a permission, how
+  secrets are read, or how spend is limited), spend above budget, or a
+  dependency whose licence isn't on the allow-list. Auto mode doesn't read
+  the PR body, so without the label such a PR could merge first. Only Rust's
+  `cargo deny` checks licences in CI.
 
 An important feature or an architectural decision doesn't need the label on
 its own: the agent decides, records the decision under "What and why", and a

@@ -46,7 +46,8 @@ for a PR under 100 changed lines, and at most 300 otherwise.
 3. **Needs a person**: only decisions the owner alone can make: spend above
    budget, a licence off the allow-list, a change to the safety boundary
    (`docs/auto-mode.md`), or a Bugbot finding you dispute. Never a status
-   note or an FYI. A PR with nothing here needs nothing from the owner.
+   note or an FYI. A PR with anything here gets the `needs-human-review`
+   label (`AGENTS.md`); a PR with nothing here needs nothing from the owner.
 4. **Follow-ups**: one line each; filing them in Linear is optional. A
    breaking change lists a `prune-review` of the affected area.
 
