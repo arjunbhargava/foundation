@@ -9,14 +9,18 @@ repository; a PR without the `agent` label still needs a person's approval.
 
 Status: in progress (T23 in [the template plan](https://github.com/arjunbhargava/foundation/blob/main/docs/template-plan.md)). The
 review ruleset, the approval workflow, the auto-merge workflow, and the
-owned-paths and needs-human-review checks are in place. Until the branch-update workflow lands, a PR
-that falls behind `main` waits for someone to update it.
+owned-paths and needs-human-review checks are in place.
 
 ## What changes
 
 Auto mode swaps the review ruleset. The `main: checks` ruleset is the same in
-both modes: `ci-ok` and `pr-size` must pass on a branch that is up to date
-with `main`.
+both modes: `ci-ok` and `pr-size` must pass. A PR whose branch is behind
+`main` merges without Update branch, on checks that ran against the `main`
+it was last tested with. Two PRs that each pass, and don't conflict in text,
+can still break `main` together, and no CI runs on `main` after a merge to
+show it, so the next PR's CI does. A merge queue would test each PR with the
+latest `main`, but GitHub offers it only to repositories owned by an
+organization.
 
 | Requirement | Review mode: `main: review` | Auto mode: `main: review (auto mode)` |
 |---|---|---|
@@ -72,6 +76,9 @@ files or more, the most GitHub lists.
 - **The admin bypass skips it**, because the auto-mode ruleset, whose bypass
   list has the admin role, requires it, and `main: checks`, which no one can
   bypass, doesn't.
+- **A line added to CODEOWNERS on `main` doesn't rerun it on open PRs.** A
+  PR keeps its earlier pass until its next push or edit; Update branch,
+  which pushed a commit, did rerun it when it was required.
 - **It can count more paths as owned than GitHub does, never fewer.** It
   matches with git's gitignore rules, so `docs/*` also matches files in
   subdirectories, and it ignores a line with no owner rather than letting it
@@ -170,9 +177,10 @@ would merge the PR without a click, which that approval already allows.
 
 The workflow doesn't:
 
-- **Update a PR that is behind `main`.** `main: checks` requires an
-  up-to-date branch, so the PR waits until someone updates it, or until the
-  branch-update workflow, the last part of T23, does.
+- **Update a PR that is behind `main`.** No ruleset requires it, so a
+  behind PR merges once Bugbot has reviewed it and its checks pass. A
+  textual conflict with `main` still stops the merge until the PR's branch
+  resolves it.
 - **Start workflows on `main`.** GitHub makes the merge as
   `github-actions[bot]` and starts no workflows for what `GITHUB_TOKEN` does,
   so CodeQL's analysis of `main` doesn't run after an auto-merged PR.
