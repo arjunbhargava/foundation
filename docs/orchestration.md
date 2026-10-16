@@ -249,7 +249,8 @@ orchestrator, in this order:
    workers' bcIds), what is deferred and why.
 3. **Decisions already made**, so the new orchestrator doesn't ask again.
 4. **Queue**, in order, with the condition that frees each item.
-5. **Owner's open items**, to mention at natural pauses without nagging.
+5. **Owner's open items**: a link to [open items](open-items.md), the list
+   that every PR keeps current, to mention at natural pauses without nagging.
 6. **Standing rules that this page doesn't hold.**
 
 The outgoing orchestrator launches the successor through the API with `name`
@@ -263,7 +264,9 @@ and stop. Don't contact the previous orchestrator from the new one.
 
 The handoff lives in chat, not in the repository: it changes with every
 merge, and a committed copy would be out of date within an hour and add a PR
-for the owner to review. This page holds what doesn't change.
+for the owner to review. This page holds what doesn't change. The open
+items are the exception, because each PR that changes one updates the page
+in the same PR, so it stays current without a PR of its own.
 
 ## Failure modes seen so far
 

@@ -41,8 +41,10 @@ for a PR under 100 changed lines, and at most 300 otherwise.
    skill). A gap in verification or another difference from the plan gets
    one line, only when it matters: here, or under Needs a person if a person
    must accept it.
-3. **Needs a person**: decisions only.
-4. **Follow-ups**: one line each; filing them in Linear is optional. A
+3. **Needs a person**: decisions only; each one that outlasts the PR's
+   review is also an item on `docs/open-items.md` (`open-items` skill).
+4. **Follow-ups**: one line each, each also added to `docs/open-items.md` in
+   this PR (`open-items` skill). A
    breaking change lists a `prune-review` of the affected area.
 
 Link evidence instead of pasting it: showing that a check fails takes one
