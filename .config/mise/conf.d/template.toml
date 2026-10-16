@@ -23,7 +23,7 @@ rm "$work/project/.copier-answers.yml"
 mkdir "$work/root"
 git ls-files --cached --others --exclude-standard | sort -u | while read -r file; do
   case $file in
-    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | .github/README.md | docs/template-plan.md | *.jinja) ;;
+    copier.yml | .config/mise/conf.d/template.toml | .github/workflows/template.yml | .github/rulesets/template-checks.json | .github/README.md | docs/template-plan.md | docs/template-open-items.md | *.jinja) ;;
     *) if [[ -e $file ]]; then printf '%s\n' "$file"; fi ;;
   esac
 done | tar -cf - -T - | tar -xf - -C "$work/root"
@@ -377,7 +377,7 @@ echo "$name: passed."
 # a page that the project lacks.
 name=a_project_has_no_template_only_file_and_its_docs_build_passes
 for language in $languages; do
-  for path in .config/mise/conf.d/template.toml .github/workflows/template.yml .github/rulesets/template-checks.json .github/README.md docs/template-plan.md; do
+  for path in .config/mise/conf.d/template.toml .github/workflows/template.yml .github/rulesets/template-checks.json .github/README.md docs/template-plan.md docs/template-open-items.md; do
     if [[ -e $work/$language/$path ]]; then
       echo "FAIL: $name: the $language project has $path, a file that only describes or checks the template. Add it to _exclude in copier.yml." >&2
       exit 1

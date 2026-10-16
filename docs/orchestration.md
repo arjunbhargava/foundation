@@ -249,7 +249,8 @@ orchestrator, in this order:
    workers' bcIds), what is deferred and why.
 3. **Decisions already made**, so the new orchestrator doesn't ask again.
 4. **Queue**, in order, with the condition that frees each item.
-5. **Owner's open items**, to mention at natural pauses without nagging.
+5. **Owner's open items**: a link to [open items](open-items.md), the list
+   that every PR keeps current, to mention at natural pauses without nagging.
 6. **Standing rules that this page doesn't hold.**
 
 The outgoing orchestrator launches the successor through the API with `name`
