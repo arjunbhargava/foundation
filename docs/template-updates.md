@@ -31,27 +31,35 @@ snake_case, which defaults to `project_name` with `_` for `-`. It also asks
 for `github_owner`, which `.github/CODEOWNERS` names; `github_repository`,
 which the README's settings links name and which defaults to the owner's
 account and `project_name`; and `copyright_holder` and `copyright_year`,
-which `NOTICE` names. A project created before these questions has none of
-them in `.copier-answers.yml`, and `--defaults` then answers the template's
-own: `foundation`, `arjunbhargava`, `arjunbhargava/<project_name>`, `Arjun`,
-and `2026`. So its first update passes each answer that differs,
-such as:
+which `NOTICE` names. `github_owner` and `copyright_holder` have no default:
+a new project answers both, and Copier fails with `Question "github_owner" is
+required` or `Question "copyright_holder" is required` without them.
+
+A project created before these questions, such as foundation-compute, has
+none of them in `.copier-answers.yml`, so its first update must pass `github_owner` and
+`copyright_holder`, once:
 
 ```sh
-mise exec -- copier update --defaults --trust --data project_name=my-project \
-  --data github_owner=octocat --data "copyright_holder=Jane Doe" --data copyright_year=2027
+mise exec -- copier update --defaults --trust \
+  --data github_owner=<owner> --data "copyright_holder=<holder>"
 ```
 
-Copier records the answers, and later updates need no `--data`. To rename
-a project later, pass both `project_name` and `package_name`: an update keeps
-the recorded `package_name` rather than deriving it again. The update
-also removes the lines for `/AGENTS.md.jinja` and `/copier.yml`, files only
+Copier then records both in `.copier-answers.yml`, and later updates need no
+`--data`. The other answers default to `foundation` for `project_name`,
+`<owner>/<project_name>` for `github_repository`, and `2026` for
+`copyright_year`; pass `--data project_name=my-project`,
+`--data github_repository=<owner>/<name>`, or `--data copyright_year=2027` in
+the same command when the project's differ.
+
+To rename a project later, pass both `project_name` and `package_name`: an
+update keeps the recorded `package_name` rather than deriving it again. The
+update also removes the lines for `/AGENTS.md.jinja` and `/copier.yml`, files only
 the template has, from the project's `.github/CODEOWNERS`. If the
 project renamed `foundation` by hand, the update merges most of the rename
 cleanly, and conflicts or extra files remain only where the project also
 changed the template's files. Updating foundation-compute, which uses the
-default package name, owner, and copyright holder, with
-`--data project_name=foundation-compute`, left these:
+default package name, with `--data project_name=foundation-compute` and its
+owner and copyright holder, left these:
 
 - A conflict in each file the project edited where the template also
   changed, such as `AGENTS.md` and `src/foundation_compute/__init__.py`. Keep
