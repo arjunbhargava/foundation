@@ -7,6 +7,7 @@
 set -euo pipefail
 
 script=$(cd "$(dirname "$0")" && pwd)/owned_paths.sh
+repository_codeowners=$(cd "$(dirname "$0")/.." && pwd)/CODEOWNERS
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 failures=0
@@ -43,11 +44,17 @@ main() {
     unreadable 2 "HTTP 403"
   expect_result cannot_tell_when_git_cannot_match_a_path \
     '[[{"filename": "../outside"}]]' 2 "outside repository"
+  # The repository's own list: the commands CI runs are released to agents,
+  # the workflows that run them are not.
+  expect_result repository_does_not_own_mise_toml \
+    '[[{"filename": "mise.toml"}]]' 0 "PR #7 changes no path in .github/CODEOWNERS." "$repository_codeowners"
+  expect_result repository_owns_the_workflows \
+    '[[{"filename": ".github/workflows/ci.yml"}]]' 1 "${list_start}.github/workflows/ci.yml" "$repository_codeowners"
 
   if ((failures > 0)); then
     exit 1
   fi
-  echo "owned_paths.sh gave the expected exit status and output in all 9 cases."
+  echo "owned_paths.sh gave the expected exit status and output in all 11 cases."
 }
 
 # Puts first on PATH a gh that serves PR 7's files, as pages of JSON arrays,
@@ -68,14 +75,19 @@ EOF
 }
 
 # Arguments: the case's name; the PR's files, as gh api --paginate --slurp
-# prints them, or "unreadable"; the exit status expected; and text the output
-# must contain.
+# prints them, or "unreadable"; the exit status expected; text the output
+# must contain; and, optionally, a CODEOWNERS file to use instead of the one
+# above.
 expect_result() {
-  local name=$1 files=$2 expected_status=$3 expected_text=$4
+  local name=$1 files=$2 expected_status=$3 expected_text=$4 codeowners_file=${5:-}
   local case_dir=$work/$name
   mkdir -p "$case_dir/.github/scripts"
   cp "$script" "$case_dir/.github/scripts/"
-  printf '%s\n' "$codeowners" > "$case_dir/.github/CODEOWNERS"
+  if [[ -n $codeowners_file ]]; then
+    cp "$codeowners_file" "$case_dir/.github/CODEOWNERS"
+  else
+    printf '%s\n' "$codeowners" > "$case_dir/.github/CODEOWNERS"
+  fi
   if [[ $files != unreadable ]]; then
     printf '%s\n' "$files" > "$case_dir/files.json"
   fi

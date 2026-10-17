@@ -16,7 +16,7 @@ comment.
 
 ## Needs a person
 
-<!-- Decisions a person must make, nothing else. Add each that outlasts this PR's review to docs/open-items.md. -->
+<!-- Only decisions the owner alone can make (reviewable-prs rule); omit otherwise. Add each that outlasts this PR's review to docs/open-items.md. -->
 
 ## Follow-ups
 

@@ -1,26 +1,19 @@
 # Paths that need the owner's review, which the owned-paths check enforces in
-# auto mode. Add each public interface file here when it is created.
-/.cursor/                @arjunbhargava
-/.github/                @arjunbhargava
-/mise.toml               @arjunbhargava
-/.config/mise/           @arjunbhargava
-/AGENTS.md               @arjunbhargava
-/deny.toml               @arjunbhargava
-/docs/architecture.md    @arjunbhargava
-/.dependency-cruiser.cjs @arjunbhargava
-/pyproject.toml          @arjunbhargava
-/CMakeLists.txt          @arjunbhargava
-/biome.json              @arjunbhargava
-/tsconfig.json           @arjunbhargava
-/.clang-tidy             @arjunbhargava
-/.clang-format           @arjunbhargava
-/Doxyfile                @arjunbhargava
-/CMakePresets.json       @arjunbhargava
-/stryker.config.json     @arjunbhargava
-/docs/build.sh           @arjunbhargava
-/docs/conf.py            @arjunbhargava
-/Cargo.toml              @arjunbhargava
-/package.json            @arjunbhargava
+# auto mode: those where an agent's mistake or manipulation could weaken the
+# merge gates themselves and no check would notice. CI and Bugbot cover every
+# other path (docs/auto-mode.md#what-still-needs-the-owner).
+/.cursor/                                   @arjunbhargava
+/.github/CODEOWNERS                         @arjunbhargava
+/.github/rulesets/                          @arjunbhargava
+/.github/workflows/                         @arjunbhargava
+/.github/scripts/auto_merge.sh              @arjunbhargava
+/.github/scripts/auto_merge_test.sh         @arjunbhargava
+/.github/scripts/approve_agent_prs.sh       @arjunbhargava
+/.github/scripts/approve_agent_prs_test.sh  @arjunbhargava
+/.github/scripts/owned_paths.sh             @arjunbhargava
+/.github/scripts/owned_paths_test.sh        @arjunbhargava
+/.github/scripts/needs_human_review.sh      @arjunbhargava
+/.github/scripts/needs_human_review_test.sh @arjunbhargava
+/deny.toml                                  @arjunbhargava
 # Files only the template has, which copier.yml leaves out of projects.
-/AGENTS.md.jinja         @arjunbhargava
-/copier.yml              @arjunbhargava
+/.github/CODEOWNERS.jinja                   @arjunbhargava
