@@ -9,11 +9,27 @@ description: >
 
 # Linear queue
 
-`.github/scripts/linear_queue.sh` is the only way an agent reads or writes the
-queue; don't write GraphQL by hand. It needs `LINEAR_API_KEY`, and
+An operation goes through `.github/scripts/linear_queue.sh` if the queue's
+correctness depends on it; everything else goes through the Linear MCP server.
+Never write GraphQL by hand. The script needs `LINEAR_API_KEY`, and
 `LINEAR_TEAM_KEY` when the workspace has several teams. The top of the script
-lists every option, and `docs/linear.md` defines
-the queue.
+lists every option, and `docs/linear.md` defines the queue.
+
+| Operation | Path | Why |
+| -- | -- | -- |
+| List dispatchable issues (`list`, `list --parent`) | script | Encodes the dispatch rule: `agent-ready`, no `needs-person`, not started, no delegate, every blocker Done or Canceled. |
+| File an issue (`create`), with `--parent` | script | Deduplicates by title, adds `agent-filed`, the `repo` label, and the project. |
+| Add blocked-by relations when filing | script | Decides dispatch order. |
+| Delegate an issue to Cursor (`delegate`) | script | Starts an agent; looks up the Cursor app user. |
+| Read an issue, its comments, or search issues | MCP | Nothing depends on how it is done. |
+| Comment, change state, move an existing issue under a parent, edit a description | MCP | Same. |
+
+Find the MCP's tools at run time, because their names change when Linear
+updates the server. When the MCP is unavailable, meaning its tools are missing
+or report `needsAuth`, still do every queue operation through the script. Skip
+each MCP-only step, such as commenting on the issue, and list it under "Needs a
+person" or Follow-ups in your PR. `docs/linear.md` says which runs have the
+MCP.
 
 ## File
 
