@@ -7,6 +7,7 @@
 #   .github/scripts/linear_queue.sh list [--parent ISSUE_ID]
 #   .github/scripts/linear_queue.sh create --title TITLE --description-file FILE
 #       [--repo owner/name] [--label NAME]... [--parent ISSUE_ID]
+#       [--blocked-by ISSUE_ID]...
 #   .github/scripts/linear_queue.sh delegate ISSUE_ID
 #
 # list: prints a JSON array of the dispatchable issues, each with identifier,
@@ -24,6 +25,9 @@
 #   label, because Linear shows the owner's personal API key as the creator of
 #   every issue an agent files, so the label is the only record that an agent
 #   filed it; it fails before creating anything if that label does not exist.
+#   --blocked-by makes ISSUE_ID block the issue, so that list skips the issue
+#   until ISSUE_ID is Done or Canceled. A rerun adds the blocked-by relations
+#   the issue lacks, also when the issue already existed.
 # delegate: sets the issue's delegate to the Cursor app user, which starts a
 #   Cursor cloud agent in the repository its repo label names and moves the
 #   issue to In Progress.
@@ -143,7 +147,7 @@ list_dispatchable_issues() {
 }
 
 create_issue() {
-  local title="" description_file="" repo="" parent="" labels=()
+  local title="" description_file="" repo="" parent="" labels=() blockers=()
   while (($# > 0)); do
     case $1 in
       --title) title=${2:?--title needs a value}; shift 2 ;;
@@ -151,6 +155,7 @@ create_issue() {
       --repo) repo=${2:?--repo needs a value}; shift 2 ;;
       --label) labels+=("${2:?--label needs a value}"); shift 2 ;;
       --parent) parent=${2:?--parent needs a value}; shift 2 ;;
+      --blocked-by) blockers+=("${2:?--blocked-by needs a value}"); shift 2 ;;
       *) echo "error: unknown option '$1' for create (see the top of $0)" >&2; exit 1 ;;
     esac
   done
@@ -163,11 +168,21 @@ create_issue() {
     exit 1
   fi
 
-  local existing
+  # Resolved before anything is created, so that a mistyped blocker leaves no
+  # issue behind without its relation.
+  local blocker_ids='[]' blocker blocker_id
+  for blocker in ${blockers[@]+"${blockers[@]}"}; do
+    blocker_id=$(find_issue_id "$blocker") ||
+      { echo "error: cannot use '$blocker' as a blocking issue (see above)" >&2; exit 1; }
+    blocker_ids=$(jq -nc --argjson ids "$blocker_ids" --argjson id "$blocker_id" '$ids + [$id]')
+  done
+
+  local existing identifier
   existing=$(graphql FindIssue \
     'query FindIssue($title: String!) { issues(filter: { title: { eq: $title } }) { nodes { identifier } } }' \
     "$(jq -n --arg title "$title" '{title: $title}')" | jq -r '.issues.nodes[0].identifier // empty')
   if [[ -n $existing ]]; then
+    add_blocked_by_relations "$existing" "$blocker_ids"
     echo "$existing"
     return
   fi
@@ -196,9 +211,36 @@ create_issue() {
     '{teamId: $team, title: $title, description: $description, labelIds: $labels}
      + (if $project == null then {} else {projectId: $project} end)
      + (if $parent == null then {} else {parentId: $parent} end)')
-  graphql CreateIssue \
+  identifier=$(graphql CreateIssue \
     'mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { issue { identifier } } }' \
-    "$(jq -n --argjson input "$input" '{input: $input}')" | jq -r '.issueCreate.issue.identifier'
+    "$(jq -n --argjson input "$input" '{input: $input}')" | jq -r '.issueCreate.issue.identifier')
+  add_blocked_by_relations "$identifier" "$blocker_ids"
+  echo "$identifier"
+}
+
+# Arguments: an issue identifier, and a JSON array of the ids of the issues
+# that must block it. Adds each "blocks" relation the issue lacks.
+add_blocked_by_relations() {
+  local identifier=$1 blocker_ids=$2
+  if jq -e 'length == 0' <<< "$blocker_ids" > /dev/null; then
+    return
+  fi
+
+  local issue_state
+  issue_state=$(graphql FindBlockers \
+    'query FindBlockers($id: String!) { issue(id: $id) { id inverseRelations { nodes { type issue { id } } } } }' \
+    "$(jq -n --arg id "$identifier" '{id: $id}')")
+  local blocked_id missing_blocker_ids blocker_id
+  blocked_id=$(jq -r .issue.id <<< "$issue_state")
+  missing_blocker_ids=$(jq -r --argjson wanted "$blocker_ids" \
+    '[.issue.inverseRelations.nodes[] | select(.type == "blocks") | .issue.id] as $existing
+     | $wanted - $existing | .[]' <<< "$issue_state")
+  for blocker_id in $missing_blocker_ids; do
+    graphql BlockIssue \
+      'mutation BlockIssue($input: IssueRelationCreateInput!) { issueRelationCreate(input: $input) { success } }' \
+      "$(jq -n --arg blocker "$blocker_id" --arg blocked "$blocked_id" \
+        '{input: {issueId: $blocker, relatedIssueId: $blocked, type: "blocks"}}')" > /dev/null
+  done
 }
 
 # Argument: an issue identifier, such as ENG-12. Prints the issue's id as a
