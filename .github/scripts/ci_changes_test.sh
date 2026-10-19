@@ -63,8 +63,8 @@ main() {
   expect_jobs packages/pymember/src/pymember/py.typed python typescript
   expect_jobs packages/pymember/tests/data.json python typescript
   # A Python script in a directory that another language names.
-  expect_jobs crates/foundation/src/generate.py python rust
-  expect_jobs crates/foundation/tests/check.py python rust
+  expect_jobs crates/example/src/generate.py python rust
+  expect_jobs crates/example/tests/check.py python rust
   expect_jobs packages/statistics/src/generate.py python typescript
   expect_jobs packages/statistics/tests/check.py python typescript
   expect_jobs cpp/src/generate.py python cpp
