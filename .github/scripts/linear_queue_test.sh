@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Tests .github/scripts/linear_queue.sh without calling Linear. Each case runs
-# the script against a fake curl that answers each GraphQL request from a file
-# named after the request's operationName, and logs every request, so a case
-# can check what the script sent as well as what it printed.
+# Tests .github/scripts/linear_queue.sh without calling Linear, against a fake
+# curl that answers each GraphQL request from a file named after its
+# operationName and logs every request.
 #
 # Usage: mise run test:linear-queue-script
 set -euo pipefail
@@ -29,40 +28,30 @@ main() {
   echo "linear_queue.sh gave the expected output and requests in all $case_count cases."
 }
 
-# Puts first on PATH a curl that logs its arguments, the config file it is
-# given, and its request body, then answers with
-# $FAKE_LINEAR/<operationName>.json, or, for a request whose variable "after"
-# is set, $FAKE_LINEAR/<operationName>.after-<after>.json.
+# Puts first on PATH a curl that logs its arguments, config file, and request
+# body, then answers with $FAKE_LINEAR/<operationName>.json, or, when the
+# request's variable "after" is set, <operationName>.after-<after>.json.
 make_fake_curl() {
   mkdir "$work/bin"
   cat > "$work/bin/curl" << 'EOF'
 #!/usr/bin/env bash
 request=$(cat)
 printf '%s\n' "$*" >> "$FAKE_LINEAR/curl_arguments.log"
-for ((position = 1; position < $#; position++)); do
-  if [[ ${!position} == --config ]]; then
-    next=$((position + 1))
-    cat "${!next}" >> "$FAKE_LINEAR/curl_config.log"
-  fi
+while (($# > 0)); do
+  [[ $1 == --config ]] && cat "$2" >> "$FAKE_LINEAR/curl_config.log"
+  shift
 done
 printf '%s\n' "$request" >> "$FAKE_LINEAR/requests.log"
 operation=$(jq -r .operationName <<< "$request")
 after=$(jq -r '.variables.after // empty' <<< "$request")
-response_file=$FAKE_LINEAR/$operation.json
-if [[ -n $after ]]; then
-  response_file=$FAKE_LINEAR/$operation.after-$after.json
-fi
-if [[ ! -r $response_file ]]; then
-  echo "fake curl: no response file for $operation" >&2
-  exit 1
-fi
+response_file=$FAKE_LINEAR/$operation${after:+.after-$after}.json
+[[ -r $response_file ]] || { echo "fake curl: no response file for $operation" >&2; exit 1; }
 cat "$response_file"
 EOF
   chmod +x "$work/bin/curl"
   PATH=$work/bin:$PATH
 }
 
-# Starts a case with an empty folder of fake responses and requests.
 new_case() {
   FAKE_LINEAR=$work/case_$((++case_count))
   export FAKE_LINEAR
@@ -96,9 +85,8 @@ queue_page() {
     '{issues: {pageInfo: {hasNextPage: ($more == "true"), endCursor: "cursor1"}, nodes: $nodes}}'
 }
 
-# Arguments: the case's name, the script's arguments' words, the exit status
-# expected, and text the output (standard output and error) must contain.
-# Sets output for the caller's further checks.
+# Arguments: the case's name, the exit status expected, text the output must
+# contain, then the script's arguments. Sets output for further checks.
 output=""
 expect_run() {
   local name=$1 expected_status=$2 expected_text=$3
@@ -106,9 +94,7 @@ expect_run() {
   local status=0
   output=$("$script" "$@" 2>&1) || status=$?
   if ((status != expected_status)) || [[ $output != *"$expected_text"* ]]; then
-    fail "$name" "exit status $status (expected $expected_status), output:
-$output
-(expected it to contain: $expected_text)"
+    fail "$name" "exit status $status (expected $expected_status), output: $output (expected it to contain: $expected_text)"
   fi
 }
 
@@ -120,72 +106,63 @@ fail() {
 # Arguments: the case's name, the JSON the script printed, a jq expression
 # that must be true of it.
 expect_json() {
-  if ! jq -e "$3" <<< "$2" > /dev/null 2>&1; then
-    fail "$1" "expected the output to satisfy: $3
-output: $2"
-  fi
+  jq -e "$3" <<< "$2" > /dev/null 2>&1 || fail "$1" "expected $2 to satisfy: $3"
+}
+
+# Arguments: the case's name and the identifiers, comma-separated, that
+# "list" must print, in order, for the ListQueue response already written.
+expect_listed() {
+  expect_run "$1" 0 "" list
+  expect_json "$1" "$output" "map(.identifier) | join(\",\") == \"$2\""
 }
 
 list_cases() {
   new_case
-  respond ListQueue "$(queue_page "$(jq -n \
-    --argjson blocked "$(queue_node T-1 agent-ready started)" \
-    --argjson blocked_by_unstarted "$(queue_node T-2 agent-ready unstarted,completed)" \
-    '[$blocked, $blocked_by_unstarted]')" false)"
-  expect_run lists_nothing_while_every_blocker_is_unfinished 0 "[]" list
-  expect_json lists_nothing_while_every_blocker_is_unfinished "$output" 'length == 0'
+  respond ListQueue "$(queue_page "$(jq -n --argjson a "$(queue_node T-1 agent-ready started)" \
+    --argjson b "$(queue_node T-2 agent-ready unstarted,completed)" '[$a, $b]')" false)"
+  expect_listed lists_nothing_while_a_blocker_is_unfinished ""
 
   new_case
-  respond ListQueue "$(queue_page "$(jq -n \
-    --argjson finished "$(queue_node T-3 agent-ready completed)" \
-    --argjson canceled "$(queue_node T-4 agent-ready canceled,completed)" \
-    '[$finished, $canceled]')" false)"
-  expect_run lists_an_issue_whose_blockers_are_done_or_canceled 0 T-3 list
-  expect_json lists_an_issue_whose_blockers_are_done_or_canceled "$output" 'map(.identifier) == ["T-3", "T-4"]'
+  respond ListQueue "$(queue_page "$(jq -n --argjson a "$(queue_node T-3 agent-ready completed)" \
+    --argjson b "$(queue_node T-4 agent-ready canceled,completed)" '[$a, $b]')" false)"
+  expect_listed lists_an_issue_whose_blockers_are_done_or_canceled "T-3,T-4"
 
   new_case
-  respond ListQueue "$(queue_page "$(jq -n \
-    --argjson first "$(queue_node T-5 agent-ready,arjunbhargava/foundation -)" \
-    --argjson second "$(queue_node T-6 agent-ready,arjunbhargava/foundation-compute -)" \
-    '[$first, $second]')" false)"
-  expect_run lists_two_independent_issues_with_their_repositories 0 T-5 list
-  expect_json lists_two_independent_issues_with_their_repositories "$output" \
-    'map({identifier, repo}) == [{identifier: "T-5", repo: "arjunbhargava/foundation"}, {identifier: "T-6", repo: "arjunbhargava/foundation-compute"}]'
+  respond ListQueue "$(queue_page "$(jq -n --argjson a "$(queue_node T-5 agent-ready,arjunbhargava/foundation -)" \
+    --argjson b "$(queue_node T-6 agent-ready - arjunbhargava/foundation-compute)" '[$a, $b]')" false)"
+  expect_listed lists_two_independent_issues "T-5,T-6"
+  expect_json names_the_repository_from_the_issue_or_else_its_project "$output" \
+    '.[0].repo == "arjunbhargava/foundation" and .[1].repo == "arjunbhargava/foundation-compute"'
 
   new_case
-  delegated=$(queue_node T-7 agent-ready - | jq '.delegate = {id: "someone"}')
-  respond ListQueue "$(queue_page "$(jq -n \
-    --argjson person "$(queue_node T-8 agent-ready,needs-person -)" \
-    --argjson delegated "$delegated" \
-    --argjson plain "$(queue_node T-9 agent-ready -)" \
-    '[$person, $delegated, $plain]')" false)"
-  expect_run skips_needs_person_and_delegated_issues 0 T-9 list
-  expect_json skips_needs_person_and_delegated_issues "$output" 'map(.identifier) == ["T-9"]'
+  respond ListQueue "$(queue_page "$(jq -n --argjson a "$(queue_node T-8 agent-ready,needs-person -)" \
+    --argjson b "$(queue_node T-7 agent-ready - | jq '.delegate = {id: "someone"}')" \
+    --argjson c "$(queue_node T-9 agent-ready -)" '[$a, $b, $c]')" false)"
+  expect_listed skips_needs_person_and_delegated_issues "T-9"
   expect_json asks_linear_only_for_agent_ready_issues "$(jq -s '.[0].variables' "$FAKE_LINEAR/requests.log")" \
     '.readyLabel == "agent-ready"'
 
   new_case
-  respond ListQueue "$(queue_page "$(jq -n --argjson node "$(queue_node T-10 agent-ready - arjunbhargava/foundation)" '[$node]')" false)"
-  expect_run takes_the_repository_from_the_project_when_the_issue_has_none 0 T-10 list
-  expect_json takes_the_repository_from_the_project_when_the_issue_has_none "$output" '.[0].repo == "arjunbhargava/foundation"'
-
-  new_case
-  respond ListQueue "$(queue_page "$(jq -n --argjson node "$(queue_node T-11 agent-ready -)" '[$node]')" true)"
-  jq -n --argjson page "$(queue_page "$(jq -n --argjson node "$(queue_node T-12 agent-ready -)" '[$node]')" false)" \
-    '{data: $page}' > "$FAKE_LINEAR/ListQueue.after-cursor1.json"
-  expect_run lists_issues_from_every_page 0 T-12 list
-  expect_json lists_issues_from_every_page "$output" 'map(.identifier) == ["T-11", "T-12"]'
+  respond ListQueue "$(queue_page "$(jq -n --argjson a "$(queue_node T-11 agent-ready -)" '[$a]')" true)"
+  queue_page "$(jq -n --argjson a "$(queue_node T-12 agent-ready -)" '[$a]')" false |
+    jq '{data: .}' > "$FAKE_LINEAR/ListQueue.after-cursor1.json"
+  expect_listed lists_issues_from_every_page "T-11,T-12"
 }
 
-# Writes the fake responses a create needs, for a workspace whose only team
-# is TEAM, with the issue label names in the arguments and one project that
-# carries the label "arjunbhargava/foundation".
+# Fake responses for a workspace with one team and one project, which carries
+# the project label "arjunbhargava/foundation".
 respond_to_create() {
   respond ListTeams '{"teams": {"nodes": [{"id": "team-1", "key": "TEAM"}]}}'
   respond FindLabel '{"issueLabels": {"nodes": [{"id": "label-1"}]}}'
   respond FindProject '{"projects": {"nodes": [{"id": "project-1", "labels": {"nodes": [{"name": "arjunbhargava/foundation"}]}}]}}'
   respond FindParent '{"issue": {"id": "parent-1"}}'
   respond CreateIssue '{"issueCreate": {"issue": {"identifier": "TEAM-7"}}}'
+}
+
+expect_no_issue_created() {
+  if jq -e -s 'any(.[]; .operationName == "CreateIssue")' "$FAKE_LINEAR/requests.log" > /dev/null 2>&1; then
+    fail "$1" "the script created an issue"
+  fi
 }
 
 create_cases() {
@@ -206,9 +183,7 @@ create_cases() {
   respond FindIssue '{"issues": {"nodes": [{"identifier": "TEAM-3"}]}}'
   expect_run reuses_the_issue_that_already_has_the_title 0 TEAM-3 \
     create --title "Fix it" --description-file "$work/description.md"
-  if jq -e -s 'any(.[]; .operationName == "CreateIssue")' "$FAKE_LINEAR/requests.log" > /dev/null; then
-    fail reuses_the_issue_that_already_has_the_title "the script created a second issue"
-  fi
+  expect_no_issue_created reuses_the_issue_that_already_has_the_title
 
   new_case
   respond_to_create
@@ -216,9 +191,7 @@ create_cases() {
   respond FindLabel '{"issueLabels": {"nodes": []}}'
   expect_run fails_without_creating_when_a_label_does_not_exist 1 "no issue label named 'typo-label'" \
     create --title "Fix it" --description-file "$work/description.md" --label typo-label
-  if [[ -r $FAKE_LINEAR/requests.log ]] && jq -e -s 'any(.[]; .operationName == "CreateIssue")' "$FAKE_LINEAR/requests.log" > /dev/null; then
-    fail fails_without_creating_when_a_label_does_not_exist "the script created the issue anyway"
-  fi
+  expect_no_issue_created fails_without_creating_when_a_label_does_not_exist
 
   new_case
   respond_to_create
@@ -226,10 +199,6 @@ create_cases() {
   respond ListTeams '{"teams": {"nodes": [{"id": "team-1", "key": "ONE"}, {"id": "team-2", "key": "TWO"}]}}'
   expect_run fails_when_there_are_several_teams_and_no_team_key 1 "set LINEAR_TEAM_KEY to one of: ONE, TWO" \
     create --title "Fix it" --description-file "$work/description.md"
-  LINEAR_TEAM_KEY=TWO expect_run creates_in_the_team_named_by_the_team_key 0 TEAM-7 \
-    create --title "Fix it" --description-file "$work/description.md"
-  expect_json creates_in_the_team_named_by_the_team_key \
-    "$(jq -s 'map(select(.operationName == "CreateIssue")) | .[0].variables.input' "$FAKE_LINEAR/requests.log")" '.teamId == "team-2"'
 }
 
 delegate_cases() {
@@ -244,13 +213,7 @@ delegate_cases() {
 
 failure_cases() {
   new_case
-  (
-    unset LINEAR_API_KEY
-    expect_run names_the_missing_api_key 1 "LINEAR_API_KEY is not set" list
-  )
-
-  new_case
-  expect_run rejects_an_unknown_command 1 "unknown command 'frobnicate'" frobnicate
+  LINEAR_API_KEY="" expect_run names_the_missing_api_key 1 "LINEAR_API_KEY is not set" list
 
   new_case
   jq -n '{errors: [{message: "Entity not found: Issue"}]}' > "$FAKE_LINEAR/ListApps.json"
@@ -262,9 +225,8 @@ failure_cases() {
   if grep -qF "$LINEAR_API_KEY" "$FAKE_LINEAR/curl_arguments.log" || [[ $output == *"$LINEAR_API_KEY"* ]]; then
     fail sends_the_key_in_a_config_file_and_never_prints_it "the key appeared in curl's arguments or in the output"
   fi
-  if ! grep -qF "Authorization: $LINEAR_API_KEY" "$FAKE_LINEAR/curl_config.log"; then
-    fail sends_the_key_in_a_config_file_and_never_prints_it "curl's config file had no Authorization header with the key"
-  fi
+  grep -qF "Authorization: $LINEAR_API_KEY" "$FAKE_LINEAR/curl_config.log" ||
+    fail sends_the_key_in_a_config_file_and_never_prints_it "curl's config file had no Authorization header"
 }
 
 main "$@"

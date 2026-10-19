@@ -9,21 +9,19 @@
 #       [--repo owner/name] [--label NAME]... [--parent ISSUE_ID]
 #   .github/scripts/linear_queue.sh delegate ISSUE_ID
 #
-# list: prints a JSON array of the dispatchable issues. An issue is
-#   dispatchable when it has the "agent-ready" label and not "needs-person",
-#   its state is Backlog or Todo (not started), it has no delegate, and every
-#   issue that blocks it is Done or Canceled. Each element has identifier,
+# list: prints a JSON array of the dispatchable issues, each with identifier,
 #   title, url, and repo (the "owner/name" label from the "repo" label group,
-#   on the issue or else its project; null if neither has one).
-# create: prints the identifier of the issue whose title is exactly TITLE,
-#   creating the issue first if none exists, so that a rerun makes no
-#   duplicate. The issue is in the team's Backlog. Fails if the workspace has
-#   several teams and LINEAR_TEAM_KEY is not set. --repo adds the issue label
-#   and the project that carry that name. --parent makes it a sub-issue of
-#   ISSUE_ID, such as ENG-12. The description is the file's contents.
+#   on the issue or else its project, or null). An issue is dispatchable when
+#   it has "agent-ready" and not "needs-person", is not started, has no
+#   delegate, and every issue that blocks it is Done or Canceled.
+# create: prints the identifier of the issue titled exactly TITLE, creating it
+#   in the team's Backlog only if none exists, so a rerun makes no duplicate.
+#   Fails if there are several teams and LINEAR_TEAM_KEY is not set. --repo
+#   adds the issue label and project of that name; --parent makes it a
+#   sub-issue of ISSUE_ID, such as ENG-12.
 # delegate: sets the issue's delegate to the Cursor app user, which starts a
-#   Cursor cloud agent on the issue in the repository its repo label names,
-#   and moves the issue to In Progress.
+#   Cursor cloud agent in the repository its repo label names and moves the
+#   issue to In Progress.
 #
 # Reads LINEAR_API_KEY (a Linear personal API key) and, optionally,
 # LINEAR_TEAM_KEY. The key goes to curl through a config file on a pipe, so it
@@ -37,8 +35,7 @@ ready_label=agent-ready
 person_label=needs-person
 repo_label_group=repo
 delegate_app_name=Cursor
-# Linear rejects a query whose complexity exceeds 10,000; 50 issues with the
-# relations below is well under that.
+# Linear rejects a query above complexity 10,000; 50 issues here is well under.
 page_size=50
 
 main() {
