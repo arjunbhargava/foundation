@@ -5,10 +5,11 @@ most of the code and people review every change, so the template makes each
 change cheap and reliable to review. It provides instructions that agents
 follow, pinned tools and shared commands, example code and checks for
 Python, Rust, TypeScript, and C and C++, CI, and support for agent-launched
-compute jobs. Most of it is built; [the plan](../docs/template-plan.md) lists
-what remains: T16 (compute job support), T17 (Linear setup), T19 (measuring
-the instructions), T22 (collecting follow-ups, which waits for T17), and
-T23's PR 4 (the branch-update workflow).
+compute jobs. Most of it is built. What remains is in Linear: compute job support
+(INFRA-62), Linear setup (INFRA-63), measuring the instructions (INFRA-64),
+collecting follow-ups from merged PRs (INFRA-65), and the mutation testing
+decision (INFRA-66). [The plan](../docs/template-plan.md) records the findings
+and decisions behind the template.
 
 This file is the template's README, and GitHub shows it in place of the
 root `README.md`. `_exclude` in [`copier.yml`](../copier.yml) leaves it out of
