@@ -41,7 +41,7 @@ changed() {
 
 # The first argument is the language's manifest, which is also one of its
 # files. A language's members are the directories below the root that hold a
-# file with the manifest's name, such as crates/foundation for Cargo.toml, and
+# file with the manifest's name, such as crates/example for Cargo.toml, and
 # all their files count too, wherever the project keeps its members. docs/ is
 # not a member: it is Sphinx's own Python project, which the docs job covers.
 language_changed() {
