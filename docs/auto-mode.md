@@ -46,7 +46,7 @@ rulesets. `mise run lint:rulesets` fails if they differ in anything else.
 ### Why code-owner review isn't enough
 
 PR #54 changed only `AGENTS.md` and `AGENTS.md.jinja`, which
-`.github/CODEOWNERS` assigns to the owner, and merged in auto mode on
+`.github/CODEOWNERS` then assigned to the owner, and merged in auto mode on
 2026-10-12 with only the approval workflow's approval. GitHub requested no
 code owner's review and reported the review decision as `APPROVED`, and
 auto-merge, turned on by `github-actions[bot]`, which can't bypass, merged
@@ -95,9 +95,17 @@ cases, as `AGENTS.md` tells it to:
   chat. The agent that handles the request labels the PR it opens, and an
   orchestrator puts the request in the worker's prompt
   ([orchestration.md](orchestration.md#what-a-worker-prompt-contains)).
-- **The agent judges the PR to need it**, because it adds an important
-  feature or makes an architectural decision. The PR body says why under
-  "Needs a person".
+- **The PR needs a decision only the owner can make**, which the PR body
+  states under "Needs a person": a change to the safety boundary (an owned
+  path ([below](#what-still-needs-the-owner)), a ruleset, a permission, how
+  secrets are read, or how spend is limited), spend above budget, or a
+  dependency whose licence isn't on the allow-list. Auto mode doesn't read
+  the PR body, so without the label such a PR could merge first. Only Rust's
+  `cargo deny` checks licences in CI.
+
+An important feature or an architectural decision doesn't need the label on
+its own: the agent decides, records the decision under "What and why", and a
+person can reverse it later.
 
 While a PR has the label, the approval workflow doesn't approve it, the
 auto-merge workflow keeps auto-merge off, and turns it off if it was on, and
@@ -198,12 +206,37 @@ A PR that changes a path in `.github/CODEOWNERS` needs the owner in both
 modes. Agent PRs are authored by the owner's account, and GitHub doesn't let
 authors approve their own PRs, so the owner merges these with the admin
 bypass: in review mode because the PR needs a person's approval, and in auto
-mode because `owned-paths` fails. Those paths include CI and the rulesets
-(`.github/`), the commands CI runs (`mise.toml` and `.config/mise/`), the
-agent instructions (`.cursor/` and `AGENTS.md`), and the files that configure
-checks, dependencies, and module boundaries, such as `biome.json`,
-`docs/build.sh`, `Cargo.toml`, and `pyproject.toml`. A change to one of those can weaken a
-check or add a dependency, which D7 already requires the owner to approve.
+mode because `owned-paths` fails. The owned paths are those where an agent's
+mistake or manipulation could weaken the harness itself and no check would
+notice:
+
+- `.cursor/`: the rules and skills, which people write, Bugbot's
+  instructions, and the machine setup.
+- `.github/CODEOWNERS`, `.github/rulesets/`, and `.github/workflows/`: this
+  list, the rulesets, and the workflows, which define the required checks and
+  their permissions.
+- The scripts in `.github/scripts/` that implement the merge gates, and their
+  `_test` files: `auto_merge.sh`, `approve_agent_prs.sh`, `owned_paths.sh`,
+  and `needs_human_review.sh`.
+- `deny.toml`: the licence allow-list.
+- In the template repository, `.github/CODEOWNERS.jinja`, which renders into
+  each project's list.
+
+Every other path merges in auto mode on CI and Bugbot alone, including
+`mise.toml`, `.config/mise/`, `AGENTS.md`, `copier.yml`, the manifests and
+tool configs, `docs/build.sh`, `docs/conf.py`, `docs/architecture.md`, and
+the other scripts in `.github/scripts/`. These were owned until 2026-10-16,
+and about 20 of the 30 PRs merged from 2026-10-14 needed the bypass only for
+them; a mistake in them breaks CI or shows in Bugbot's review.
+
+The trade-off: a PR can change what the required checks run without the
+owner. `ci.yml` stays owned, but its jobs run `mise run` tasks, so a PR could
+make `check` or `lint` in `mise.toml` or `.config/mise/` skip a check, or
+relax a tool's settings in a file such as `pyproject.toml`, and still pass
+`ci-ok`. What stands in the way is Bugbot, whose findings block the merge
+until their threads are resolved, the required CI jobs, and the
+`needs-human-review` label, which an agent adds to a PR that changes the
+safety boundary ([above](#the-needs-human-review-label)).
 
 ## Switching auto mode on and off
 
@@ -251,11 +284,11 @@ switching auto mode on. Make each commit with
    passes. Once checks pass and any threads are resolved,
    `gh pr view --json reviewDecision` prints `APPROVED`, and the merge box
    allows merging without the bypass.
-4. Open PR B the same way, changing only `AGENTS.md`. It has the bot's
-   approval, and `owned-paths` fails, listing `AGENTS.md`. The merge box says
+4. Open PR B the same way, changing only `deny.toml`. It has the bot's
+   approval, and `owned-paths` fails, listing `deny.toml`. The merge box says
    the required check failed, and only the bypass merges it, even if
    `reviewDecision` prints `APPROVED`.
-5. Push a commit to A that changes `AGENTS.md`. The bot doesn't approve
+5. Push a commit to A that changes `deny.toml`. The bot doesn't approve
    again, `owned-paths` fails on the new commit, and only the bypass merges
    A.
 6. Run `mise exec -- .github/rulesets/apply.sh`, which dismisses the bot's

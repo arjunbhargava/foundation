@@ -78,7 +78,7 @@ a person has recorded a different choice here.
 | D4 | Where compute jobs run | SkyPilot | One job description runs on the major clouds, GPU providers, Kubernetes, or a Slurm cluster. Switch to Slurm with Apptainer if the team has a university or lab cluster, since those clusters usually don't allow Docker. |
 | D5 | Licence | **Decided:** Apache-2.0, copyright the repository owner | Permissive, requires attribution through `NOTICE`, and grants an explicit patent licence. Projects may pick their own. |
 | D6 | Merge method | Merge commits; no squash | The rules ask for commit history that reads as the review story. Squashing erases it. |
-| D7 | Which changes need a person to approve a plan before coding | New module; change to a public interface or data format; new dependency; compute spend above the cost limit | Planning has a cost and only pays off for larger changes. |
+| D7 | Which changes need a person to approve a plan before coding | New module; change to a public interface or data format; new dependency; compute spend above the cost limit. **Changed (2026-10-16):** these need a written plan, and the agent proceeds after posting it. A person approves first only when the change is hard to reverse: a data format with existing users, a published interface, a shipped dependency with a licence question, or compute spend. | Planning has a cost and only pays off for larger changes. Waiting for approval stopped most PRs on the owner. |
 | D8 | Cost limit for one agent-launched compute job before asking a person | **Decided:** no per-job limit for now; total agent compute spend at most $10,000 per day | Enforce the daily cap with the provider's budget controls (T16), not only the rule. Revisit the per-job limit when T16 lands. |
 | D9 | Open agent PRs allowed per reviewer | **Decided:** 5, raised from 3 on 2026-10-02 | People review everything, so review time, not agent count, limits throughput. The owner raised it to 5 after Stage 2, because 3 made progress too slow. Adjust from data. |
 | D10 | Cursor plan | Ask the owner | Team pools of the team's own GPU machines for agents need the Enterprise plan. |
@@ -512,7 +512,9 @@ far:
   runs, the agent instructions, or a check without the owner. The ruleset
   still sets code-owner review, but that alone let agent PR #54, which
   changed only `AGENTS.md`, merge (2026-10-12); the `owned-paths` check is
-  what stops owned paths in auto mode.
+  what stops owned paths in auto mode. **Changed (2026-10-16):** only the
+  paths that can weaken the merge gates unnoticed stay owned
+  ([auto mode](auto-mode.md#what-still-needs-the-owner)).
 - GitHub's native auto-merge, not a custom merge workflow: it already waits
   for every ruleset, and Actions has no trigger for a resolved review thread.
   A workflow turns on auto-merge for an `agent` PR once the `Cursor Bugbot`
