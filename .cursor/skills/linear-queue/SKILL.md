@@ -39,8 +39,9 @@ it:
 1. Write the issue from the template in `docs/linear.md` to a file.
 2. Run `.github/scripts/linear_queue.sh create --title TITLE
    --description-file FILE`, with `--repo owner/name` for another repository
-   and `--parent ISSUE_ID` for a sub-issue. Rerunning with the same title
-   makes no duplicate.
+   and `--parent ISSUE_ID` for a sub-issue, and `--blocked-by ISSUE_ID` for
+   each issue that must be Done first. Rerunning with the same title makes no
+   duplicate and adds any blocked-by relation the issue lacks.
 3. Never add `agent-ready` to an issue you file. Only a person does, after
    reading it.
 4. Add `--label needs-person` to anything only a person can do or decide.
