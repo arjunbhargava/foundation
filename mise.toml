@@ -72,10 +72,6 @@ run = ".github/scripts/lint_workflows.sh"
 description = "Check that each place that must list every language, such as the CI jobs and the Copier questions, lists each language in .config/mise/conf.d/, and name each place that lacks one"
 run = ".github/scripts/language_listings.sh"
 
-[tasks."lint:open-items"]
-description = "Check that each open item on docs/open-items.md has every field, an id that is unique and below the next id, and no date later than today, and name each that doesn't"
-run = ".github/scripts/open_items.sh"
-
 [tasks.test]
 description = "Run all tests"
 depends = ["test:*"]
@@ -109,10 +105,6 @@ run = ".github/scripts/lint_workflows_test.sh"
 [tasks."test:language-listings-script"]
 description = "Check that .github/scripts/language_listings.sh passes for the repository and names each place that lacks a language, on copies of the files it reads"
 run = ".github/scripts/language_listings_test.sh"
-
-[tasks."test:open-items-script"]
-description = "Check that .github/scripts/open_items.sh passes the repository's open items, fails each kind of malformed item naming its line, and lists the items last confirmed before a date"
-run = ".github/scripts/open_items_test.sh"
 
 [tasks."test:rulesets"]
 description = "Check the changes .github/rulesets/apply.sh makes with and without --auto, and that check.sh catches broken ruleset files, with a fake gh"

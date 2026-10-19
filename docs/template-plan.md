@@ -59,7 +59,7 @@ benchmarks, so treat the numbers as direction rather than precise effects.
 | F5 | A second model reviewing finished code helped more than a model planning before the code was written. Good plans help, but a bad plan is worse than none. [6][7] | People approve plans only for larger changes. Every PR gets a review by a separate agent before a person sees it. |
 | F6 | Asking agents for a structured handoff made their work easier to review, not more correct. Sections such as "known limitations" appeared only when required. [8] | The PR template requires a short handoff, with one line for any limitation that matters. |
 | F7 | In Cursor's experiments with hundreds of agents, agents coordinating through a shared file with locks collapsed to the speed of 1–3 agents. What worked was a planner that splits the work, workers that each own one task on their own copy of the code, and a handoff back to the planner. [9] | Plans and task lists live in Linear, not in a shared file. Each task becomes one agent, one branch, and one PR. |
-| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Test each PR combined with `main` before merging, with a merge queue after the organization move (OI-32 in `template-open-items.md`); until then PRs aren't retested against the latest `main`. |
+| F8 | Splitting closely connected code between agents created broken interfaces and rework. Isolated workspaces plus git merges and tests worked well. [10][11] | Agree the interface first and land it, then split the work. Test each PR combined with `main` before merging, with a merge queue after the organization move; until then PRs aren't retested against the latest `main`. |
 | F9 | At Meta, engineers accepted 73% of tests generated to catch specific deliberate bugs. [12] | Use mutation testing to measure whether agent-written tests catch real mistakes. |
 
 ## Decisions
@@ -97,8 +97,7 @@ a person has recorded a different choice here.
 - An agent that finds a problem outside its task lists it under Follow-ups
   instead of fixing it.
 - Each PR is tested combined with `main` before merging, by a merge queue
-  once the repository moves to an organization (OI-32 in
-  `template-open-items.md`). Until then a PR is tested against the `main` it
+  once the repository moves to an organization. Until then a PR is tested against the `main` it
   last ran on, not the latest one.
 - For a hard task, run several agents on it separately and review only the
   best result. Parallel agents should not multiply review work.
