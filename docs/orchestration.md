@@ -110,6 +110,17 @@ report.
 - **Length**: at most 100 characters in total, the API's limit for `name`.
 - **First orchestrator**: an orchestrator that the owner starts renames itself
   in its first step with the `cursor-cloud` `rename-chat` tool.
+- **Delegated workers**: Cursor names a run started by Linear delegation
+  with a few words of its own choosing, such as `Ci filter missing files`,
+  and has no setting or `[key=value]` option for the name. So the run
+  renames itself in its first step with `rename-chat`, to
+  `Worker <MM/DD HH:MMZ>: <issue ID> <issue title>`, for example
+  `Worker 10/19 21:04Z: INFRA-61 Narrow the CI Python filter`. The time is
+  the run's `createdAtMs` from `run-info`, and the issue ID and title come
+  from the issue in its prompt. Unlike an orchestrator's worker, the name
+  includes the issue ID, because no orchestrator message links the run to
+  its issue. A title that would take the name past 100 characters is cut
+  to fit.
 
 Agents launched before this scheme keep their old names.
 
