@@ -95,9 +95,9 @@ instead. This is where each version lives:
 ## CI and repository settings
 
 - [ ] Its CI job, added as the "To add a language" comment in
-      `.github/workflows/ci.yml` says. The language's output in the `changes`
-      job lists every file whose change can alter a check's result: its
-      directory, manifest, lockfile, and `.config/mise/conf.d/` file, each
+      `.github/workflows/ci.yml` says. The language's output in
+      `.github/scripts/ci_changes.sh` lists every file whose change can alter
+      a check's result: its directory, manifest, lockfile, and `.config/mise/conf.d/` file, each
       root config file its tools read (such as `tsconfig.json` or
       `.clang-tidy`), and each file that only another job reads. The `docs`
       job runs only when some output is true, so `Doxyfile`, which only the
@@ -142,10 +142,10 @@ instead. This is where each version lives:
 - [ ] `mise run lint:language-listings` passes. It takes the languages from
       the files in `.config/mise/conf.d/`, and fails naming each place in
       this checklist that must list every language but lacks one: the
-      language's tasks; its output, job, and `ci-ok` entry in `ci.yml`; its
-      line in `codeql.yml`; its block in `docs/build.sh`; its page in
-      `docs/api/`; its rows in the Commands table in `AGENTS.md`; and, in
-      the template repository, its places in `copier.yml`, `template.toml`,
+      language's tasks; its output in `ci_changes.sh` and in `ci.yml`, its
+      job, and its `ci-ok` entry; its line in `codeql.yml`; its block in
+      `docs/build.sh`; its page in `docs/api/`; its rows in the Commands
+      table in `AGENTS.md`; and, in the template repository, its places in `copier.yml`, `template.toml`,
       `template.yml`, and `README.md`'s lines about Copier's questions. It
       can't check a place that names the language by its display name, such
       as the two above, so check those by hand.

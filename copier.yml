@@ -259,8 +259,8 @@ _exclude:
   - /.github/README.md
   - /docs/template-plan.md
   - /docs/template-open-items.md
-  # Each language's files: its manifest and the files listed with it in the
-  # changes job of .github/workflows/ci.yml, its API page, and its workflows.
+  # Each language's files: its manifest and the files listed with it in
+  # .github/scripts/ci_changes.sh, its API page, and its workflows.
   # Keep each block equal to the language's list in test:template.
   # Each line of a block is one pattern. A leading / matches only at the
   # root, so that /tests leaves cpp/tests alone, and /uv.lock docs/uv.lock.

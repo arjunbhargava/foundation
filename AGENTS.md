@@ -34,6 +34,7 @@ the same thing:
 | `mise run test:needs-human-review-script` | Check that `.github/scripts/needs_human_review.sh` fails a PR with the `needs-human-review` label and passes one without. |
 | `mise run test:owned-paths-script` | Check which changed paths `.github/scripts/owned_paths.sh` finds in `.github/CODEOWNERS`, and when it can't tell, with a fake `gh`. |
 | `mise run test:linear-queue-script` | Check which Linear issues `.github/scripts/linear_queue.sh` lists as dispatchable, that its `create` makes one issue per title, and that it never prints the API key, with a fake `curl`. |
+| `mise run test:ci-changes-script` | Check which CI jobs `.github/scripts/ci_changes.sh` starts for the files of each language and each script, and that its outputs match the `changes` job in `ci.yml`, in a temporary git repository. |
 | `mise run test:mutate-script` | Check which files `.github/scripts/mutate.sh` mutates and what it reports, with fake mutation tools. |
 | `mise run mutate` | Mutation-test the code changed since the merge base with `origin/main`, and report each mutant no test caught, or pass with one line saying that no changed file holds mutable code. `mutate:<language>` runs one language, except C and C++, which have no mutation tool yet. Only the template repository, which alone has `copier.yml`, also mutates the changed `.github/scripts/*.py`, and no tool mutates the shell scripts there. `check` doesn't run it, because it's slow. |
 | `mise run docs` | Build the documentation site. |

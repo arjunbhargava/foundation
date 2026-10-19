@@ -14,6 +14,8 @@
 /.github/scripts/owned_paths_test.sh        @arjunbhargava
 /.github/scripts/needs_human_review.sh      @arjunbhargava
 /.github/scripts/needs_human_review_test.sh @arjunbhargava
+/.github/scripts/ci_changes.sh              @arjunbhargava
+/.github/scripts/ci_changes_test.sh         @arjunbhargava
 /deny.toml                                  @arjunbhargava
 # Files only the template has, which copier.yml leaves out of projects.
 /.github/CODEOWNERS.jinja                   @arjunbhargava

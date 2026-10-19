@@ -142,6 +142,10 @@ run = ".github/scripts/owned_paths_test.sh"
 description = "Check which Linear issues .github/scripts/linear_queue.sh lists as dispatchable, that create makes one issue per title, and that it never prints the API key, with a fake curl"
 run = ".github/scripts/linear_queue_test.sh"
 
+[tasks."test:ci-changes-script"]
+description = "Check which CI jobs .github/scripts/ci_changes.sh starts for the files of each language and each script, and that its outputs match the changes job in ci.yml, in a temporary git repository"
+run = ".github/scripts/ci_changes_test.sh"
+
 [tasks."test:block-unlisted-tools-script"]
 description = "Check that .github/scripts/block_unlisted_tools.sh blocks the tools a job's MISE_ENABLE_TOOLS leaves out"
 run = ".github/scripts/block_unlisted_tools_test.sh"

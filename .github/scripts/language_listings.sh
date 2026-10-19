@@ -5,8 +5,8 @@
 # and a language's key is its file's name without .toml, such as python.
 # The places name a language by its key, as its CI job, its Copier question,
 # and its mise tasks, such as lint:python, do. Its manifest, such as
-# pyproject.toml, is the first file that its line of the changes job in
-# .github/workflows/ci.yml passes to language_changed; codeql.yml and
+# pyproject.toml, is the first file that its line in
+# .github/scripts/ci_changes.sh passes to language_changed; codeql.yml and
 # docs/build.sh are checked for a test of whether that file exists.
 #
 # The places in copier.yml, in the template's own files, and in
@@ -53,6 +53,7 @@ check_places_in_every_project() {
   local language=$1
   local mise_file=.config/mise/conf.d/$language.toml
   local ci=.github/workflows/ci.yml
+  local ci_changes=.github/scripts/ci_changes.sh
 
   require_line_containing "$language" "$mise_file" "its tasks" "[tasks.\"fmt:$language\"]"
   require_line_containing "$language" "$mise_file" "its tasks" "[tasks.\"lint:$language\"]"
@@ -64,9 +65,9 @@ check_places_in_every_project() {
   require_line "$language" "$ci" "the needs of the ci-ok job" "      - $language"
 
   local manifest
-  manifest=$(sed -n "s/.*echo \"$language=\$(language_changed \([^ )]*\).*/\1/p" "$ci" | head -n 1)
+  manifest=$(sed -n "s/.*echo \"$language=\$(language_changed \([^ )]*\).*/\1/p" "$ci_changes" | head -n 1)
   if [[ -z $manifest ]]; then
-    report "$language" "$ci" "the diff step of the changes job" \
+    report "$language" "$ci_changes" "the main function" \
       "echo \"$language=\$(language_changed <manifest> <its other files>)\"; codeql.yml and docs/build.sh are checked for that manifest once it is there"
   else
     require_line_containing "$language" .github/workflows/codeql.yml "the languages job" "if [[ -f $manifest ]]"

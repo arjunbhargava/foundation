@@ -217,7 +217,8 @@ notice:
   their permissions.
 - The scripts in `.github/scripts/` that implement the merge gates, and their
   `_test` files: `auto_merge.sh`, `approve_agent_prs.sh`, `owned_paths.sh`,
-  and `needs_human_review.sh`.
+  and `needs_human_review.sh`, plus `ci_changes.sh`, which chooses the CI jobs
+  a PR runs, so that a filter it stops matching can't skip a job unseen.
 - `deny.toml`: the licence allow-list.
 - In the template repository, `.github/CODEOWNERS.jinja`, which renders into
   each project's list.

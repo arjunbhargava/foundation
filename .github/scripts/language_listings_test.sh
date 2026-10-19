@@ -45,7 +45,7 @@ main() {
 # creates and deletes files in docs/api/python/ while the tests run.
 copy_repository() {
   local file
-  for file in .github/scripts/language_listings.sh .config/mise/conf.d/*.toml .github/workflows/*.yml \
+  for file in .github/scripts/language_listings.sh .github/scripts/ci_changes.sh .config/mise/conf.d/*.toml .github/workflows/*.yml \
     docs/build.sh docs/api/*.md AGENTS.md .github/README.md copier.yml; do
     if [[ -f $file ]]; then
       mkdir -p "$work/$1/$(dirname "$file")"

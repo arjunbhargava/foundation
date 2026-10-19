@@ -17,6 +17,8 @@ file, then run `mise run template:sync`. -#}
 /.github/scripts/owned_paths_test.sh        @{{ github_owner }}
 /.github/scripts/needs_human_review.sh      @{{ github_owner }}
 /.github/scripts/needs_human_review_test.sh @{{ github_owner }}
+/.github/scripts/ci_changes.sh              @{{ github_owner }}
+/.github/scripts/ci_changes_test.sh         @{{ github_owner }}
 /deny.toml                                  @{{ github_owner }}
 {% if template_repository %}
 # Files only the template has, which copier.yml leaves out of projects.
