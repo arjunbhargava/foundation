@@ -90,11 +90,34 @@ jobs:
               echo false
             fi
           }
+          # The directories of the uv workspace members, one per line, each
+          # ending in "/". The python output below excludes packages/*/src and
+          # packages/*/tests, which hold TypeScript, and git applies an
+          # exclude to every other pathspec. A member under packages/ is
+          # therefore checked in a second call, with no excludes.
+          member_dirs() {
+            [[ -f pyproject.toml ]] || return 0
+            python3 - <<'PY'
+          import glob
+          import tomllib
+
+          with open("pyproject.toml", "rb") as pyproject:
+              workspace = tomllib.load(pyproject).get("tool", {}).get("uv", {}).get("workspace", {})
+          for pattern in workspace.get("members", []):
+              for member in sorted(glob.glob(pattern)):
+                  print(member + "/")
+          PY
+          }
+          python_changed=$(language_changed pyproject.toml '*.py' '*/pyproject.toml' ':(exclude)docs/pyproject.toml' src/ tests/ '*/src/*' '*/tests/*' ':(exclude)crates/*/src/*' ':(exclude)crates/*/tests/*' ':(exclude)packages/*/src/*' ':(exclude)packages/*/tests/*' ':(exclude)cpp/src/*' ':(exclude)cpp/tests/*' uv.lock .python-version .config/mise/conf.d/python.toml)
+          mapfile -t members < <(member_dirs)
+          if [[ $python_changed == false && ${#members[@]} -gt 0 ]]; then
+            python_changed=$(language_changed pyproject.toml "${members[@]}")
+          fi
           {
             echo "install-script=$(changed .cursor/install.sh .cursor/environment.json .config/mise/conf.d/)"
             # The site includes README.md and AGENTS.md as pages.
             echo "docs=$(changed docs/ README.md AGENTS.md)"
-            echo "python=$(language_changed pyproject.toml '*.py' '*/pyproject.toml' ':(exclude)docs/pyproject.toml' src/ tests/ '*/src/*' '*/tests/*' ':(exclude)crates/*/src/*' ':(exclude)crates/*/tests/*' ':(exclude)packages/*/src/*' ':(exclude)packages/*/tests/*' ':(exclude)cpp/src/*' ':(exclude)cpp/tests/*' uv.lock .python-version .config/mise/conf.d/python.toml)"
+            echo "python=$python_changed"
             echo "rust=$(language_changed Cargo.toml crates/ Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
             echo "typescript=$(language_changed package.json packages/ pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
             echo "cpp=$(language_changed CMakeLists.txt cpp/ CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
