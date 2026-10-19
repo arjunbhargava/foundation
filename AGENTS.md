@@ -19,7 +19,6 @@ the same thing:
 | `mise run lint:rulesets` | Check that the ruleset files in `.github/rulesets/` are valid JSON, that none requires up-to-date branches, and that the two review rulesets differ only in name, thread resolution, and auto mode's owned-paths and needs-human-review checks. |
 | `mise run lint:workflows` | Run only the GitHub Actions workflow checks: actionlint, and zizmor's offline security audits. A finding in a workflow is suppressed with a `# zizmor: ignore[<audit>]` comment. |
 | `mise run lint:language-listings` | Check that each place that must list every language, such as the CI jobs and this table, lists each language in `.config/mise/conf.d/`, and name each place that lacks one. |
-| `mise run lint:open-items` | Check that each item on `docs/open-items.md` has every field, a unique id below the next id, and no date later than today, and name each item that doesn't. |
 | `mise run test` | Run all tests. |
 | `mise run test:python` | Run only the Python tests and docstring examples. Arguments after `--` go to pytest: `mise run test:python -- -k trapezoid`. |
 | `mise run test:rust` | Run only the Rust tests and doc-comment examples. Arguments after `--` go to `cargo test`: `mise run test:rust -- energy`. |
@@ -27,7 +26,6 @@ the same thing:
 | `mise run test:cpp` | Build the C and C++ tests with AddressSanitizer and UndefinedBehaviorSanitizer, and run them. Arguments after `--` go to ctest: `mise run test:cpp -- -R chord`. |
 | `mise run test:lint-workflows-script` | Check that `.github/scripts/lint_workflows.sh` fails on a finding from either actionlint or zizmor, and runs both. |
 | `mise run test:language-listings-script` | Check that `lint:language-listings` passes for the repository, and names each place that lacks a new language, on copies of the files it reads. |
-| `mise run test:open-items-script` | Check that `lint:open-items` passes the repository's items, fails each kind of malformed item naming its line, and lists the items last confirmed before a date. |
 | `mise run test:rulesets` | Check the changes `.github/rulesets/apply.sh` makes with and without `--auto`, and that `lint:rulesets` catches broken ruleset files, with a fake `gh`. |
 | `mise run test:auto-merge-script` | Check when `.github/scripts/auto_merge.sh` turns auto-merge on and off, and which PRs it leaves alone, with a fake `gh`. |
 | `mise run test:approve-agent-prs-script` | Check which PRs `.github/scripts/approve_agent_prs.sh` approves, in auto mode and review mode, with a fake `gh`. |
@@ -151,9 +149,6 @@ Each language task adds its directory and lists it here.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
   them. People write those files (finding F2 in the plan).
 - The PR body follows the `reviewable-prs` rule.
-- Each PR adds its follow-ups and the decisions it leaves to a person to
-  `docs/open-items.md`, and deletes the items it resolves, as the
-  `open-items` skill says.
 - File a problem outside your issue with `.github/scripts/linear_queue.sh
   create`, as the `linear-queue` skill says, instead of fixing it.
 - Before asking a person to review a PR, fix each finding in Bugbot's review
