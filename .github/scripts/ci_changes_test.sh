@@ -11,6 +11,9 @@ set -euo pipefail
 script_source=$(cd "$(dirname "$0")" && pwd)/ci_changes.sh
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
+# Ignore the machine's git configuration, such as hooks, ignore rules, and
+# signing, which would change the scratch repository.
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 repo=$work/repo
 failures=0
 cases=0
