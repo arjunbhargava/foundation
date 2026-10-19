@@ -224,6 +224,33 @@ create_cases() {
   new_case
   respond_to_create
   respond FindIssue '{"issues": {"nodes": []}}'
+  respond FindBlockers '{"issue": {"id": "issue-7", "inverseRelations": {"nodes": []}}}'
+  respond BlockIssue '{"issueRelationCreate": {"success": true}}'
+  expect_run adds_a_blocked_by_relation_to_a_new_issue 0 TEAM-7 \
+    create --title "Fix it" --description-file "$work/description.md" --blocked-by TEAM-1
+  expect_json makes_the_blocker_block_the_new_issue "$(jq -s 'map(select(.operationName == "BlockIssue") | .variables.input)' "$FAKE_LINEAR/requests.log")" \
+    '. == [{issueId: "parent-1", relatedIssueId: "issue-7", type: "blocks"}]'
+
+  new_case
+  respond_to_create
+  respond FindIssue '{"issues": {"nodes": [{"identifier": "TEAM-3"}]}}'
+  respond FindBlockers '{"issue": {"id": "issue-3", "inverseRelations": {"nodes": [{"type": "blocks", "issue": {"id": "parent-1"}}]}}}'
+  expect_run adds_no_relation_that_an_existing_issue_already_has 0 TEAM-3 \
+    create --title "Fix it" --description-file "$work/description.md" --blocked-by TEAM-1
+  expect_json adds_no_relation_that_an_existing_issue_already_has "$(jq -s 'map(.operationName)' "$FAKE_LINEAR/requests.log")" \
+    '(index("BlockIssue") == null) and (index("CreateIssue") == null)'
+
+  new_case
+  respond_to_create
+  respond FindIssue '{"issues": {"nodes": []}}'
+  respond FindIssueId '{"issue": null}'
+  expect_run fails_without_creating_when_a_blocker_does_not_exist 1 "Linear has no issue TEAM-404" \
+    create --title "Fix it" --description-file "$work/description.md" --blocked-by TEAM-404
+  expect_no_issue_created fails_without_creating_when_a_blocker_does_not_exist
+
+  new_case
+  respond_to_create
+  respond FindIssue '{"issues": {"nodes": []}}'
   respond ListTeams '{"teams": {"nodes": [{"id": "team-1", "key": "ONE"}, {"id": "team-2", "key": "TWO"}]}}'
   expect_run fails_when_there_are_several_teams_and_no_team_key 1 "set LINEAR_TEAM_KEY to one of: ONE, TWO" \
     create --title "Fix it" --description-file "$work/description.md"

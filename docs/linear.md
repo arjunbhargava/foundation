@@ -3,7 +3,7 @@
 Work is planned as Linear issues, and Cursor cloud agents turn each issue into
 one pull request (PR). This page is for people and agents who file or pick up
 issues. The repository owner sets up the Linear and Cursor settings
-these conventions rely on (task T17 in [the template plan](https://github.com/arjunbhargava/foundation/blob/main/docs/template-plan.md)).
+these conventions rely on.
 
 ## Filing an issue
 
@@ -113,7 +113,9 @@ adds one for the Linear server.
 - **Not yet done:** a person must add the header in the Cursor dashboard,
   because an agent can't change team settings. Until it is added and a
   delegated run's events hold no `mcp_auth_error`, agents still skip
-  MCP-only steps, as the skill says. [OI-36](open-items.md) tracks it.
+  MCP-only steps, as the skill says.
+  [INFRA-58](https://linear.app/tri-replicator/issue/INFRA-58) stays open
+  until then.
 
 ## Issue template
 
