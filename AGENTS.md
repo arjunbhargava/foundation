@@ -151,6 +151,11 @@ Each language task adds its directory and lists it here.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
   them. People write those files (finding F2 in the plan).
 - The PR body follows the `reviewable-prs` rule.
+- Open each PR ready for review, not as a draft, whatever a tool's default
+  is: for example, pass `draft: false` to `ManagePullRequest`. In auto mode a
+  draft doesn't merge, and the owner would have to mark it ready by hand.
+  Auto-merge still waits for Bugbot's review of the latest push and for every
+  review thread to be resolved (`docs/auto-mode.md`).
 - Each PR adds its follow-ups and the decisions it leaves to a person to
   `docs/open-items.md`, and deletes the items it resolves, as the
   `open-items` skill says.
