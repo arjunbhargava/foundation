@@ -55,14 +55,28 @@ main() {
   expect_jobs tests/data.json python
   expect_jobs tools/check.py python
   expect_jobs .github/scripts/agent_spend.py python
-  expect_jobs members/member/pyproject.toml python
-  expect_jobs members/member/src/member/py.typed python
-  expect_jobs members/member/tests/data.json python
+  expect_jobs members/pymember/pyproject.toml python
+  expect_jobs members/pymember/src/pymember/py.typed python
+  expect_jobs members/pymember/tests/data.json python
+  expect_jobs_after_deleting members/pymember/pyproject.toml python
+  # A Python member under packages/ is also in the typescript job's directory.
+  expect_jobs packages/pymember/src/pymember/py.typed python typescript
+  expect_jobs packages/pymember/tests/data.json python typescript
+  # A Python script in a directory that another language names.
+  expect_jobs crates/foundation/src/generate.py python rust
+  expect_jobs crates/foundation/tests/check.py python rust
+  expect_jobs packages/statistics/src/generate.py python typescript
+  expect_jobs packages/statistics/tests/check.py python typescript
+  expect_jobs cpp/src/generate.py python cpp
+  expect_jobs cpp/tests/check.py python cpp
+  # A src or tests directory that is not a Python member's.
+  expect_jobs tools/src/data.json
+  expect_jobs tools/tests/data.json
 
   # rust
   expect_jobs Cargo.toml rust
   expect_jobs members/rustmember/Cargo.toml rust
-  expect_jobs members/rustmember/lib/lib.rs rust
+  expect_jobs members/rustmember/src/lib.rs rust
   expect_jobs members/rustmember/data/input.txt rust
   expect_jobs "members/rust member/data/input.txt" rust
   expect_jobs_after_deleting members/rustmember/Cargo.toml rust
@@ -79,7 +93,7 @@ main() {
   expect_jobs stryker.config.json typescript
   expect_jobs tsconfig.build.json typescript
   expect_jobs members/tsmember/package.json typescript
-  expect_jobs members/tsmember/lib/index.ts typescript
+  expect_jobs members/tsmember/src/index.ts typescript
   expect_jobs_after_deleting members/tsmember/package.json typescript
   expect_jobs pnpm-lock.yaml typescript
   expect_jobs pnpm-workspace.yaml typescript
@@ -152,11 +166,13 @@ create_repository() {
   cp "$script_source" "$repo/.github/scripts/ci_changes.sh"
   git -C "$repo" init -q
   # The root manifests, and one member of each language outside the
-  # directories the filters name, with a space in one path.
+  # directories the filters name, with a space in one path. The Python members
+  # are one outside and one inside packages/.
   local manifest
   for manifest in pyproject.toml Cargo.toml package.json CMakeLists.txt LICENSE \
     docs/pyproject.toml members/rustmember/Cargo.toml "members/rust member/Cargo.toml" \
-    members/cppmember/CMakeLists.txt members/tsmember/package.json; do
+    members/cppmember/CMakeLists.txt members/tsmember/package.json \
+    members/pymember/pyproject.toml packages/pymember/pyproject.toml; do
     mkdir -p "$repo/$(dirname "$manifest")"
     echo "base" > "$repo/$manifest"
   done
