@@ -3,7 +3,7 @@
 # the script on PR 7 against a fake gh that serves a canned repository, PR,
 # Bugbot check runs, and PR files, and compares the `gh pr merge` calls the
 # script makes with the expected ones. owned_paths.sh, which the script runs,
-# reads this repository's .github/CODEOWNERS, which owns AGENTS.md and not
+# reads this repository's .github/CODEOWNERS, which owns deny.toml and not
 # docs/linear.md.
 #
 # Usage: mise run test:auto-merge-script
@@ -27,7 +27,7 @@ in_progress='{"id": 3, "status": "in_progress", "conclusion": null,
   "output": {"summary": "Bugbot Analysis Progress (1m 2s elapsed)"}}'
 turn_on='gh pr merge 7 --repo o/r --auto --merge --match-head-commit new'
 turn_off='gh pr merge 7 --repo o/r --disable-auto'
-owned_files='[[{"filename": "docs/linear.md"}, {"filename": "AGENTS.md"}]]'
+owned_files='[[{"filename": "docs/linear.md"}, {"filename": "deny.toml"}]]'
 
 main() {
   make_fake_gh
