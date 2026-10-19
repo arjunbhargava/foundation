@@ -94,7 +94,11 @@ jobs:
             echo "install-script=$(changed .cursor/install.sh .cursor/environment.json .config/mise/conf.d/)"
             # The site includes README.md and AGENTS.md as pages.
             echo "docs=$(changed docs/ README.md AGENTS.md)"
-            echo "python=$(language_changed pyproject.toml '*.py' '*/pyproject.toml' ':(exclude)docs/pyproject.toml' src/ tests/ '*/src/*' '*/tests/*' ':(exclude)crates/*/src/*' ':(exclude)crates/*/tests/*' ':(exclude)packages/*/src/*' ':(exclude)packages/*/tests/*' ':(exclude)cpp/src/*' ':(exclude)cpp/tests/*' uv.lock .python-version .config/mise/conf.d/python.toml)"
+            # '*/src/*' and '*/tests/*' match Python workspace members, so the
+            # excludes name only the extensions of the other languages' files in
+            # crates/, packages/, and cpp/. A .py file or a data file there
+            # still starts the python job.
+            echo "python=$(language_changed pyproject.toml '*.py' '*/pyproject.toml' ':(exclude)docs/pyproject.toml' src/ tests/ '*/src/*' '*/tests/*' ':(exclude)crates/*/src/*.rs' ':(exclude)crates/*/tests/*.rs' ':(exclude)packages/*/src/*.ts' ':(exclude)packages/*/tests/*.ts' ':(exclude)cpp/src/*.cpp' ':(exclude)cpp/tests/*.cpp' uv.lock .python-version .config/mise/conf.d/python.toml)"
             echo "rust=$(language_changed Cargo.toml crates/ Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
             echo "typescript=$(language_changed package.json packages/ pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
             echo "cpp=$(language_changed CMakeLists.txt cpp/ CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
