@@ -82,13 +82,20 @@ which a delegated run lacks ([Linear conventions](linear.md#how-agents-reach-lin
    [Watching workers](#watching-workers-and-reporting-to-the-owner). After a
    merge, run `list --parent` again and delegate the sub-issues it unblocked.
 
-The orchestrator can't merge a PR for the owner, so it stops dispatching when
-every dispatchable sub-issue is in review. It then sends the owner one
-message, in Cursor, listing each open PR in merge order with what it needs.
-It keeps its subscriptions and ends the turn, and the next merge wakes it to
-dispatch what that merge unblocked. It finishes when every sub-issue is Done,
-or when each one left is blocked, lacks `agent-ready`, or has `needs-person`;
-its last message names each such issue and what it waits for.
+The orchestrator never merges a PR or enables auto-merge. In
+[auto mode](auto-mode.md), a PR that changes no owned path merges itself once
+CI passes and its review threads are resolved, and the merge unblocks the
+next sub-issues. Auto mode holds a PR for the owner when it changes an owned
+path, has the `needs-human-review` label, or has an unresolved review
+thread; without auto mode, every PR waits for the owner.
+
+The orchestrator stops dispatching when every dispatchable sub-issue is in
+review. It then sends the owner one message, in Cursor, listing only the PRs
+held for the owner, in merge order, with what each needs. It keeps its
+subscriptions and ends the turn, and the next merge wakes it to dispatch what
+that merge unblocked. It finishes when every sub-issue is Done, or when each
+one left is blocked, lacks `agent-ready`, or has `needs-person`; its last
+message names each such issue and what it waits for.
 
 Linear marks each sub-issue Done when its PR merges, and the parent stays open
 until its sub-issues are done.

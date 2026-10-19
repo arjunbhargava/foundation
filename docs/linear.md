@@ -66,7 +66,8 @@ Labels that decide whether an agent may take an issue:
   sub-issues instead of a worker. It dispatches the sub-issues that are
   `agent-ready` and unblocked, and
   [orchestration](orchestration.md#start-an-orchestrator-from-linear) says
-  what it does next. It can't merge, so merging stays with the owner.
+  what it does next. It never merges: in auto mode a PR that changes no owned
+  path merges itself, and the owner merges the rest.
 - An agent files a problem outside its issue with `linear_queue.sh create`
   instead of fixing it, and lists it under Follow-ups in its PR. The issue
   uses the template, without `agent-ready`.

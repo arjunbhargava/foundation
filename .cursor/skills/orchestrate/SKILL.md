@@ -25,9 +25,11 @@ not forget.
 - Wait for events with `subscribe_linear_issue` and `subscribe_github_pr`
   instead of polling, and end the turn while waiting. After a merge, list the
   parent's sub-issues again and dispatch what the merge unblocked.
-- You can't merge for the owner. When every dispatchable sub-issue is in
-  review, send the owner one message listing the open PRs in merge order, and
-  end the turn.
+- Never merge for the owner. In auto mode, a PR that changes no owned path
+  merges itself, and the merge unblocks the next sub-issues. When every
+  dispatchable sub-issue is in review, send the owner one message listing only
+  the PRs auto mode holds (an owned path, `needs-human-review`, or an open
+  review thread), in merge order, and end the turn.
 - Hand off to a fresh orchestrator after about 5 merges or when your context
   is large, because each step re-reads the whole context and costs more as it
   grows. The handoff names the parent issue; Linear and GitHub hold the state.
