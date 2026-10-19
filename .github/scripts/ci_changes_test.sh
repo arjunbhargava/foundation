@@ -49,8 +49,8 @@ main() {
   expect_jobs uv.lock python
   expect_jobs .python-version python
   expect_jobs .config/mise/conf.d/python.toml python install-script language-listings
-  expect_jobs src/foundation/__init__.py python
-  expect_jobs src/foundation/py.typed python
+  expect_jobs src/example/__init__.py python
+  expect_jobs src/example/py.typed python
   expect_jobs tests/test_quadrature.py python
   expect_jobs tests/data.json python
   expect_jobs tools/check.py python
@@ -84,9 +84,9 @@ main() {
   expect_jobs rust-toolchain.toml rust
   expect_jobs deny.toml rust
   expect_jobs .config/mise/conf.d/rust.toml rust install-script language-listings
-  expect_jobs crates/foundation/Cargo.toml rust
-  expect_jobs crates/foundation/src/lib.rs rust
-  expect_jobs crates/foundation/tests/verlet.rs rust
+  expect_jobs crates/example/Cargo.toml rust
+  expect_jobs crates/example/src/lib.rs rust
+  expect_jobs crates/example/tests/verlet.rs rust
 
   # typescript
   expect_jobs package.json typescript
@@ -116,7 +116,7 @@ main() {
   expect_jobs .clang-tidy cpp
   expect_jobs Doxyfile cpp
   expect_jobs .config/mise/conf.d/cpp.toml cpp install-script language-listings
-  expect_jobs cpp/include/foundation/interpolation.hpp cpp
+  expect_jobs cpp/include/example/interpolation.hpp cpp
   expect_jobs cpp/src/interpolation.cpp cpp
   expect_jobs cpp/tests/interpolation_test.cpp cpp
 
@@ -146,8 +146,8 @@ main() {
   expect_jobs .github/scripts/linear_queue_test.sh linear-queue-script
 
   # A language's job doesn't run without its manifest, whatever changes.
-  expect_jobs_without_manifest pyproject.toml src/foundation/__init__.py
-  expect_jobs_without_manifest Cargo.toml crates/foundation/src/lib.rs
+  expect_jobs_without_manifest pyproject.toml src/example/__init__.py
+  expect_jobs_without_manifest Cargo.toml crates/example/src/lib.rs
   expect_jobs_without_manifest package.json packages/statistics/src/variance.ts
   expect_jobs_without_manifest CMakeLists.txt cpp/src/interpolation.cpp
 
