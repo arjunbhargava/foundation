@@ -101,17 +101,14 @@ list_dispatchable_issues() {
         }
       }
     }'
-  local after=null all_issues='[]' page has_next_page
+  local after=null all_issues='[]' page
 
   while true; do
     page=$(graphql ListQueue "$document" \
       "$(jq -n --argjson after "$after" --argjson first "$page_size" --arg ready "$ready_label" \
         '{after: $after, first: $first, readyLabel: $ready}')")
     all_issues=$(jq -n --argjson all "$all_issues" --argjson page "$page" '$all + $page.issues.nodes')
-    has_next_page=$(jq -r '.issues.pageInfo.hasNextPage' <<< "$page")
-    if [[ $has_next_page != true ]]; then
-      break
-    fi
+    jq -e '.issues.pageInfo.hasNextPage' <<< "$page" > /dev/null || break
     after=$(jq '.issues.pageInfo.endCursor' <<< "$page")
   done
 
@@ -156,9 +153,8 @@ create_issue() {
     return
   fi
 
-  # Each lookup is a plain assignment, not inside another command's
-  # arguments, so that a failed lookup stops the script before it files an
-  # issue without the label or project that routes it.
+  # Each lookup is a plain assignment, so a failure stops the script before it
+  # files an issue without the label or project that routes it.
   local label_ids='[]' project_id=null parent_id=null label_name label_id team_id
   if [[ -n $repo ]]; then
     labels+=("$repo")
@@ -171,7 +167,9 @@ create_issue() {
   team_id=$(find_team_id)
   if [[ -n $parent ]]; then
     parent_id=$(graphql FindParent 'query FindParent($id: String!) { issue(id: $id) { id } }' \
-      "$(jq -n --arg id "$parent" '{id: $id}')" | jq '.issue.id')
+      "$(jq -n --arg id "$parent" '{id: $id}')" |
+      jq --arg parent "$parent" '.issue.id // error("Linear has no issue \($parent) to use as the parent")') ||
+      { echo "error: cannot use '$parent' as the parent issue (see above)" >&2; exit 1; }
   fi
 
   local input
@@ -198,8 +196,7 @@ find_team_id() {
 }
 
 # Argument: a label's name. Prints the id of the workspace issue label with
-# that name; fails if there is none, because a typo would otherwise file the
-# issue without the label that routes it.
+# that name; fails if there is none, since a typo would drop the routing label.
 find_issue_label_id() {
   local label_id
   label_id=$(graphql FindLabel \
@@ -223,8 +220,9 @@ find_project_id_for_repo() {
 delegate_issue() {
   local issue_id=${1:?delegate needs an issue id, such as ENG-12}
   local app_user_id
-  app_user_id=$(graphql ListApps 'query ListApps { users { nodes { id name app } } }' |
-    jq -r --arg name "$delegate_app_name" '[.users.nodes[] | select(.app and .name == $name) | .id] | first // empty')
+  app_user_id=$(graphql ListApps \
+    'query ListApps($name: String!) { users(filter: { app: { eq: true }, name: { eq: $name } }) { nodes { id } } }' \
+    "$(jq -n --arg name "$delegate_app_name" '{name: $name}')" | jq -r '.users.nodes[0].id // empty')
   if [[ -z $app_user_id ]]; then
     echo "error: Linear has no app user named '$delegate_app_name'; connect Cursor in Settings > Integrations" >&2
     exit 1

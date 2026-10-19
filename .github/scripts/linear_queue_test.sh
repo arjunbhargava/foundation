@@ -58,16 +58,14 @@ new_case() {
   mkdir "$FAKE_LINEAR"
 }
 
-# Arguments: the name of a response file, without ".json", such as an
-# operationName, and the response's "data" object.
+# Arguments: an operationName, and the "data" object of its response.
 respond() {
   jq -n --argjson data "$2" '{data: $data}' > "$FAKE_LINEAR/$1.json"
 }
 
-# Arguments: the issue's identifier; its label names, comma-separated; the
-# states of its blocking issues, comma-separated, or "-" for none; and
-# optionally the owner/name label on its project, or "-". Prints one node as
-# the ListQueue response lists it.
+# Arguments: an issue's identifier; its label names and the states of its
+# blockers, each comma-separated or "-" for none; optionally its project's
+# owner/name label. Prints the node as ListQueue lists it.
 queue_node() {
   local identifier=$1 labels=$2 blocker_states=$3 project_repo=${4:--}
   jq -n --arg id "$identifier" --arg labels "$labels" --arg blockers "$blocker_states" --arg project "$project_repo" '
@@ -78,8 +76,7 @@ queue_node() {
       inverseRelations: {nodes: (if $blockers == "-" then [] else ($blockers | split(",") | map({type: "blocks", issue: {state: {type: .}}})) end)} }'
 }
 
-# Arguments: the nodes of one ListQueue page, as a JSON array, and whether
-# another page follows ("true" or "false").
+# Arguments: a ListQueue page's nodes as a JSON array, and "true" if more follow.
 queue_page() {
   jq -n --argjson nodes "$1" --arg more "$2" \
     '{issues: {pageInfo: {hasNextPage: ($more == "true"), endCursor: "cursor1"}, nodes: $nodes}}'
@@ -109,8 +106,7 @@ expect_json() {
   jq -e "$3" <<< "$2" > /dev/null 2>&1 || fail "$1" "expected $2 to satisfy: $3"
 }
 
-# Arguments: the case's name and the identifiers, comma-separated, that
-# "list" must print, in order, for the ListQueue response already written.
+# Arguments: a case's name, and the identifiers "list" must print, in order.
 expect_listed() {
   expect_run "$1" 0 "" list
   expect_json "$1" "$output" "map(.identifier) | join(\",\") == \"$2\""
@@ -149,8 +145,7 @@ list_cases() {
   expect_listed lists_issues_from_every_page "T-11,T-12"
 }
 
-# Fake responses for a workspace with one team and one project, which carries
-# the project label "arjunbhargava/foundation".
+# Fake responses for one team and one project labelled "arjunbhargava/foundation".
 respond_to_create() {
   respond ListTeams '{"teams": {"nodes": [{"id": "team-1", "key": "TEAM"}]}}'
   respond FindLabel '{"issueLabels": {"nodes": [{"id": "label-1"}]}}'
@@ -196,6 +191,14 @@ create_cases() {
   new_case
   respond_to_create
   respond FindIssue '{"issues": {"nodes": []}}'
+  respond FindParent '{"issue": null}'
+  expect_run fails_without_creating_when_the_parent_does_not_exist 1 "Linear has no issue TEAM-404" \
+    create --title "Fix it" --description-file "$work/description.md" --parent TEAM-404
+  expect_no_issue_created fails_without_creating_when_the_parent_does_not_exist
+
+  new_case
+  respond_to_create
+  respond FindIssue '{"issues": {"nodes": []}}'
   respond ListTeams '{"teams": {"nodes": [{"id": "team-1", "key": "ONE"}, {"id": "team-2", "key": "TWO"}]}}'
   expect_run fails_when_there_are_several_teams_and_no_team_key 1 "set LINEAR_TEAM_KEY to one of: ONE, TWO" \
     create --title "Fix it" --description-file "$work/description.md"
@@ -203,12 +206,11 @@ create_cases() {
 
 delegate_cases() {
   new_case
-  respond ListApps '{"users": {"nodes": [{"id": "person-1", "name": "Cursor", "app": false}, {"id": "app-1", "name": "Cursor", "app": true}]}}'
+  respond ListApps '{"users": {"nodes": [{"id": "app-1"}]}}'
   respond DelegateIssue '{"issueUpdate": {"issue": {"identifier": "TEAM-9"}}}'
-  expect_run delegates_to_the_cursor_app_user_not_a_person_of_that_name 0 "Delegated TEAM-9 to Cursor." delegate TEAM-9
-  expect_json delegates_to_the_cursor_app_user_not_a_person_of_that_name \
-    "$(jq -s 'map(select(.operationName == "DelegateIssue")) | .[0].variables' "$FAKE_LINEAR/requests.log")" \
-    '.id == "TEAM-9" and .delegate == "app-1"'
+  expect_run delegates_to_the_cursor_app_user 0 "Delegated TEAM-9 to Cursor." delegate TEAM-9
+  expect_json asks_for_the_app_user_named_cursor_and_delegates_to_it "$(jq -s 'map(.variables)' "$FAKE_LINEAR/requests.log")" \
+    '.[0].name == "Cursor" and .[1] == {id: "TEAM-9", delegate: "app-1"}'
 }
 
 failure_cases() {
