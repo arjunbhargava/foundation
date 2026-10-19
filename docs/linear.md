@@ -89,33 +89,31 @@ Findings from 2026-10-19:
   does not appear to inherit the owner's authorization. The run did have
   `LINEAR_API_KEY`. INFRA-57 is not a trivial issue, and the check was one run, so
   repeat it on a trivial issue before relying on it.
-- Delegated workers skip MCP-only steps until the header below is added.
+- Delegated workers therefore skip MCP-only steps.
 
-### Decision: unattended runs get the MCP through a static header
+### Decision: no static header for the Linear MCP
 
 Decided on 2026-10-19 by the owner in
-[INFRA-58](https://linear.app/tri-replicator/issue/INFRA-58): unattended
-runs, such as those started by Linear delegation, should be authorized for
-the Linear MCP server. The only way to do that without a person's OAuth is a
-static `Authorization` header in Cursor's team MCP settings, so the team
-adds one for the Linear server.
+[INFRA-58](https://linear.app/tri-replicator/issue/INFRA-58): the team does
+not add a static `Authorization` header for the Linear MCP, so unattended
+runs, such as those started by Linear delegation, keep skipping MCP-only
+steps. A delegated run can still reach Linear through `LINEAR_API_KEY`,
+which it always has. Linear still marks an issue done when its PR merges,
+because the PR description holds `Fixes <issue ID>`.
 
-- **Header:** `Authorization: Bearer <value of LINEAR_API_KEY>`.
-- **Works:** on 2026-10-19, `https://mcp.linear.app/mcp` accepted
-  `LINEAR_API_KEY` as the bearer token: `initialize` returned HTTP 200 and
+- **Why not:** the header would be a second copy of `LINEAR_API_KEY`, stored
+  in Cursor's team MCP settings, and the MCP only adds ready-made tools for
+  operations the key already allows. It is also unconfirmed that a managed
+  MCP server accepts a custom header, or that a Linear-delegated run uses
+  team-level MCP servers.
+- **If needed later:** on 2026-10-19, `https://mcp.linear.app/mcp` accepted
+  `LINEAR_API_KEY` as a bearer token: `initialize` returned HTTP 200 and
   `tools/list` returned the issue and comment tools, including `save_issue`
   and `save_comment`. A made-up token got HTTP 401 `invalid_token`. No write
-  tool was called.
-- **Cost:** the header is a second copy of `LINEAR_API_KEY`, stored in
-  Cursor's team MCP settings instead of the Cursor secrets. Rotating the key
-  means changing both. Comments and state changes made through the MCP are
-  attributed to the key's owner.
-- **Not yet done:** a person must add the header in the Cursor dashboard,
-  because an agent can't change team settings. Until it is added and a
-  delegated run's events hold no `mcp_auth_error`, agents still skip
-  MCP-only steps, as the skill says.
-  [INFRA-58](https://linear.app/tri-replicator/issue/INFRA-58) stays open
-  until then.
+  tool was called. So a custom team MCP server with
+  `Authorization: Bearer <LINEAR_API_KEY>` should work, and a delegated
+  run's events must then hold no `mcp_auth_error`. Rotating the key would
+  mean changing both copies.
 
 ## Issue template
 
