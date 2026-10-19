@@ -301,8 +301,8 @@ Add these lines to the prompt of each agent that works in auto mode:
 
 > Resolve a Bugbot review thread only after you fix its finding. If you
 > dispute a finding, reply saying why and leave the thread open, so the PR
-> waits for the owner. Mark the PR ready for review when your work is done,
-> because a draft doesn't merge.
+> waits for the owner. Open the PR ready for review, not as a draft, because
+> a draft doesn't merge.
 
 An unresolved thread blocks merging. In auto mode, threads are the only gate
 against merging a flawed PR that passes CI, so only the owner closes a
