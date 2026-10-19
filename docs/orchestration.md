@@ -1,22 +1,28 @@
 # Orchestrating long-running agent work
 
-An orchestrator is a Cursor cloud agent that splits a plan into tasks, launches
-one worker agent per task, watches the workers' pull requests (PRs), and
-reports to the owner. This page is the standing instruction set for every
-orchestrator, and for the owner who starts one. It covers how to launch
-workers so the owner can see them, how to keep spend from growing without
-bound, and how to hand an orchestration to a fresh agent. It doesn't depend
-on any one project: the project's own plan or issue tracker holds the task
-list, and [auto mode](auto-mode.md) decides how PRs merge.
+An orchestrator is a Cursor cloud agent that dispatches the sub-issues of one
+Linear parent issue to worker agents, watches the workers' pull requests
+(PRs), and reports to the owner. This page is the standing instruction set for
+every orchestrator, and for the owner who starts one. It covers where the
+queue is, how an orchestrator starts and dispatches, how to keep spend from
+growing without bound, and how to hand an orchestration to a fresh agent. It
+doesn't depend on any one project: [Linear](linear.md) holds the task list,
+and [auto mode](auto-mode.md) decides how PRs merge.
 
 ## Terms
 
 - **Owner**: the person who merges PRs and sets the limits. Usually on a phone.
+- **Queue**: the Linear issues that agents work from. It is the only task
+  list; see [The queue is Linear](#the-queue-is-linear).
+- **Parent issue**: a Linear issue with sub-issues, one per PR
+  ([Linear conventions](linear.md#filing-an-issue)).
+- **Delegate**: the Linear field that names the agent working an issue.
+  Setting it to Cursor starts a cloud agent on that issue.
 - **Orchestrator**: the cloud agent described above. It writes no feature
   code.
-- **Worker**: a cloud agent that does one task on one branch and opens one PR.
-- **Handoff**: the orchestrator's state written as a prompt, which starts a
-  fresh orchestrator so the old one's context stops costing money.
+- **Worker**: a cloud agent that does one issue on one branch and opens one PR.
+- **Handoff**: the orchestrator's instructions written as a prompt, which
+  starts a fresh orchestrator so the old one's context stops costing money.
 - **bcId**: a cloud agent's id, such as `bc-489632bd-...`. Its page is
   `https://cursor.com/agents/<bcId>`.
 
@@ -26,8 +32,8 @@ list, and [auto mode](auto-mode.md) decides how PRs merge.
   workers "don't coordinate with other workers or worry about the big picture".
 - The orchestrator writes no feature code, so its context stays small (see
   [Cost](#cost)). That is this page's choice, not a finding of the sources.
-- The orchestrator checks each PR against its "Done when" before the owner
-  sees it. [arXiv 2512.08296][paper] reports error amplification of 4.4 under
+- The orchestrator checks each PR against its issue's acceptance criteria
+  before the owner sees it. [arXiv 2512.08296][paper] reports error amplification of 4.4 under
   centralized coordination and 17.2 for independent agents.
 - The orchestrator launches independent tasks in parallel and sequences
   dependent ones. The paper measured +80.8% on decomposable financial
@@ -38,10 +44,104 @@ list, and [auto mode](auto-mode.md) decides how PRs merge.
 [paper]: https://arxiv.org/abs/2512.08296
 [anthropic]: https://www.anthropic.com/engineering/multi-agent-research-system
 
-## Launch workers through the API
+## The queue is Linear
 
-Launch each worker as a top-level cloud agent, with the Cursor API. Do not use
-a subagent for a task that produces a PR.
+The queue is Linear, the only list of work for agents.
+[Linear conventions](linear.md) defines it, and
+`.github/scripts/linear_queue.sh` reads and writes it, as the
+[`linear-queue` skill](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/linear-queue/SKILL.md)
+says. An issue is dispatchable when it has `agent-ready` and not
+`needs-person`, is not started, has no delegate, and every issue that blocks
+it is Done or Canceled.
+
+An orchestrator's state is therefore in Linear (each issue's state, blocked-by
+relations, and delegate) and in GitHub (the open PRs), and a fresh
+orchestrator rebuilds it from them. See [Handoff](#handoff).
+
+## Start an orchestrator from Linear
+
+Cursor acts as the orchestrator for a parent issue when either happens:
+
+- The owner delegates to Cursor an issue that has sub-issues.
+- Someone comments `@Cursor orchestrate this` on a parent issue.
+
+Delegating an issue that has no sub-issues starts a worker, not an
+orchestrator. The orchestrator then does these steps. None of them needs the Linear MCP server,
+which a delegated run lacks ([Linear conventions](linear.md#how-agents-reach-linear)):
+
+1. Read this page and the `linear-queue` skill.
+2. Run `.github/scripts/linear_queue.sh list --parent PARENT_ID` to get the
+   parent's dispatchable sub-issues.
+3. [Delegate](#dispatch-by-delegate) each one within the limits.
+4. Subscribe to each delegated issue with `subscribe_linear_issue`. When its
+   state changes, find its PR with
+   `gh pr list --state all --search "ISSUE_ID in:body"`, and subscribe to the
+   PR with `subscribe_github_pr`. Then end the turn: events arrive as
+   follow-ups, and waiting costs no model tokens.
+5. On each event, handle it as in
+   [Watching workers](#watching-workers-and-reporting-to-the-owner). After a
+   merge, run `list --parent` again and delegate the sub-issues it unblocked.
+
+The orchestrator never merges a PR or enables auto-merge. In
+[auto mode](auto-mode.md), a PR that changes no owned path merges itself once
+CI passes and its review threads are resolved, and the merge unblocks the
+next sub-issues. Auto mode holds a PR for the owner when it changes an owned
+path, has the `needs-human-review` label, or has an unresolved review
+thread; without auto mode, every PR waits for the owner.
+
+The orchestrator stops dispatching when every dispatchable sub-issue is in
+review. It then sends the owner one message, in Cursor, listing only the PRs
+held for the owner, in merge order, with what each needs. It keeps its
+subscriptions and ends the turn, and the next merge wakes it to dispatch what
+that merge unblocked. It finishes when every sub-issue is Done, or when each
+one left is blocked, lacks `agent-ready`, or has `needs-person`; its last
+message names each such issue and what it waits for.
+
+Linear marks each sub-issue Done when its PR merges, and the parent stays open
+until its sub-issues are done.
+
+## Dispatch by delegate
+
+`.github/scripts/linear_queue.sh delegate ISSUE_ID` sets the issue's delegate
+to Cursor. That starts one cloud agent in the repository the issue's `repo`
+label names and moves the issue to In Progress (checked in INFRA-6). The
+worker's prompt is the issue, so a worker needs no launch message, and it
+reports through its PR and its Linear issue, not to the orchestrator.
+
+Before each `delegate`, check the limits in [Cost](#cost): at most 5 open agent
+PRs and at most 10 running workers. Count the PRs with
+`gh pr list --state open --label agent --json number --jq length`, and the
+workers with the `cursor-cloud` `list-cloud-agents` tool, filtered to running
+agents. Delegate nothing while either limit is reached; a merge or a finished
+worker frees a slot.
+
+## Launch tiers
+
+The owner decided on 2026-10-14 when an orchestrator dispatches a worker
+without asking. The queue is Linear. An agent never adds `agent-ready`, so
+only work a person has marked ready is dispatched.
+
+| Work | The orchestrator |
+|---|---|
+| A dispatchable issue in the queue | Delegates it without asking. |
+| Essential or useful work whose need is obvious, and cleanup | Files it with `linear_queue.sh create`, without `agent-ready`, for a person to ready. |
+| An entirely new feature, or an unrelated initiative | Asks the owner. |
+| Work only a person can do or decide | Files it with `needs-person`. |
+
+If the next task is obvious and needs no human input, the orchestrator does it.
+It doesn't ask the owner about queued work: it makes the call and says what it
+decided in its next message.
+Every tier keeps the limits in [Cost](#cost): at most 5 open agent PRs, at most
+10 running workers, nothing new within $50 of the daily limit, and, for API
+launches, the [model routing](#which-model).
+
+## Launching through the API instead
+
+[Dispatch by delegate](#dispatch-by-delegate) is the default. Launch a worker
+or orchestrator through the Cursor API only for work that has no Linear issue,
+for a relaunch from a branch, and for a successor orchestrator in a
+[handoff](#handoff). Launch it as a top-level cloud agent. Do not use a
+subagent for a task that produces a PR.
 
 - A top-level agent has its own bcId, page, transcript, branch, and PR. The
   owner can open it, read it, and stop it. A subagent runs inside the
@@ -115,8 +215,10 @@ Agents launched before this scheme keep their old names.
 
 ### Which model
 
-These are the defaults. A project may route other models by the scope of the
-work; record each addition in this table.
+These are the defaults for API launches; `linear_queue.sh delegate` takes no
+model, so the Cursor dashboard's default applies to a delegated worker. A
+project may route other models by the scope of the work; record each addition
+in this table.
 
 | Task | Model id | Parameters |
 |---|---|---|
@@ -139,10 +241,13 @@ $16, and a Sonnet orchestrator cost $11.54 over 38 events.
 
 ### What a worker prompt contains
 
-A worker prompt is short, because the worker reads the repository itself.
+This section applies to API launches. A delegated worker's prompt is its Linear
+issue, so the issue holds the same things (a person's request to review goes in
+the issue text). A worker prompt is short, because the worker reads the
+repository itself.
 
-1. The task, as a pointer to its ID in the plan or issue, plus any fact a
-   reader of the plan wouldn't have (decisions made in chat).
+1. The task, as a pointer to its issue ID, plus any fact a
+   reader of the issue wouldn't have (decisions made in chat).
 2. "Done when": the checkable acceptance criteria.
 3. For auto mode, the review-thread instruction in
    [auto-mode.md](auto-mode.md).
@@ -156,26 +261,6 @@ A worker prompt is short, because the worker reads the repository itself.
    every 60 seconds on `409 agent_busy` for up to 30 minutes.
 
 The orchestrator finds its own bcId with the `cursor-cloud` `run-info` tool.
-
-### Launch tiers
-
-The owner decided on 2026-10-14 when an orchestrator launches a worker without
-asking. The queue is wherever the project keeps its task list: today the
-handoff prompt, later Linear.
-
-| Work | The orchestrator |
-|---|---|
-| A task already in the queue | Launches it without asking. |
-| Essential or useful work whose need is obvious | Adds it to the queue, and may launch it. |
-| Cleanup | Launches it. |
-| An entirely new feature, or an unrelated initiative | Asks the owner. |
-
-If the next task is obvious and needs no human input, the orchestrator does it.
-It doesn't ask the owner about queued work or cleanup: it makes the call and
-says what it decided in its next message.
-Every tier keeps the limits in [Cost](#cost): at most 5 open agent PRs, at most
-10 running workers, nothing new within $50 of the daily limit, and the
-[model routing](#which-model).
 
 ## Cost
 
@@ -218,16 +303,18 @@ events read about 13.3 million cache-read tokens, about 350,000 per event. The r
 
 ## Watching workers and reporting to the owner
 
-- **One PR per worker, one subscription per PR.** Subscribe when the worker
-  reports its PR. The subscription closes itself when the PR merges.
-- **After each merge**, tell every other open worker to merge `origin/main`
-  with a merge commit. Then launch the next stacked worker from the new
-  `main`.
+- **One PR per worker, one subscription per PR.** Subscribe when the PR
+  appears, as in [Start an orchestrator from Linear](#start-an-orchestrator-from-linear).
+  The subscription closes itself when the PR merges.
+- **After each merge**, run `list --parent` again and delegate what the merge
+  unblocked, which starts from the new `main`. If another open PR now
+  conflicts with `main`, ask its worker to merge `origin/main` with a merge
+  commit, by mentioning `@Cursor` in a comment on its Linear issue.
 - **Before launching two workers whose PRs may touch the same files**, test
   them with `git merge-tree --write-tree --name-only <branchA> <branchB>`.
-- **A worker that doesn't report.** If a worker's PR is open but no report
-  arrived within 30 minutes after its last push, read the worker's page and
-  the PR. A report is a convenience; the PR is the record.
+- **A worker with no PR.** If an issue has been In Progress for 30 minutes
+  without a PR, look up its agent with `list-cloud-agents` and read its page.
+  The PR and the issue are the record, not a report from the worker.
 - **Before telling the owner a PR is ready**, check it against its "Done
   when". Say: head SHA, CI result, size, what changed, decisions needed,
   merge order, and conflicts with other open PRs. Say plainly what you did
@@ -244,27 +331,26 @@ events read about 13.3 million cache-read tokens, about 350,000 per event. The r
 ## Handoff
 
 Hand off when the [cost rules](#cost) say so, or when the orchestrator has
-finished the work it was given. The handoff is a prompt for a fresh Sonnet
-orchestrator, in this order:
+finished the work it was given. Linear and GitHub hold the queue and the
+state, so the handoff prompt carries neither. It is a prompt for a fresh
+Sonnet orchestrator, in this order:
 
-1. **Role and read-first list**: this page, `AGENTS.md`, and the parts
-   of the project's plan the work needs. Nothing else up front.
-2. **State, with the date**: what has merged, what is open (PR numbers and
-   workers' bcIds), what is deferred and why.
-3. **Decisions already made**, so the new orchestrator doesn't ask again.
-4. **Queue**, in order, with the condition that frees each item.
-5. **Owner's open items**: a link to [open items](open-items.md), the list
-   that every PR keeps current, to mention at natural pauses without nagging.
-6. **Standing rules that this page doesn't hold.**
+1. **Role and read-first list**: this page, `AGENTS.md`, and the `linear-queue`
+   skill. Nothing else up front.
+2. **The parent issue**, as its ID, such as `INFRA-38`. The successor rebuilds
+   the state from `list --parent`, the sub-issues' states in Linear, and
+   `gh pr list --state open --label agent`, then subscribes to each open PR,
+   because a subscription belongs to the agent that made it.
+3. **Decisions already made in chat** that no issue records, so the new
+   orchestrator doesn't ask again. Put a decision in a comment on the issue it
+   concerns where you can.
+4. **Standing rules that this page doesn't hold.**
 
 The outgoing orchestrator launches the successor through the API with `name`
 set to the successor's own launch time and a descriptor, as in
-[Naming agents](#naming-agents), so no model step is needed. The handoff
-prompt says that the successor names each worker with the worker's own launch
-time.
-
-Then send each in-flight worker a follow-up with the new orchestrator's bcId,
-and stop. Don't contact the previous orchestrator from the new one.
+[Naming agents](#naming-agents), so no model step is needed. Workers need no
+message, because they report through their PRs and issues. Then stop. Don't
+contact the previous orchestrator from the new one.
 
 The handoff lives in chat, not in the repository: it changes with every
 merge, and a committed copy would be out of date within an hour and add a PR
@@ -279,7 +365,8 @@ for the owner to review. This page holds what doesn't change.
 - **A merge by auto-merge starts no workflows on `main`**, so CodeQL on `main`
   goes stale until a GitHub App token exists for the repository.
 - **A Sonnet worker stuck on one finding** costs more each retry; relaunch on
-  Opus at `effort=medium` after the second failure.
+  Opus at `effort=medium` after the second failure, through the API, since a
+  delegate carries no model.
 - **A stale branch.** GitHub has shown a PR as "clean" while behind `main`.
   The owner's checklist includes confirming the Merge button on such a
   branch.
@@ -288,4 +375,4 @@ for the owner to review. This page holds what doesn't change.
 
 | # | Question | Proposed default |
 |---|---|---|
-| O1 | Where the owner sees a list of workers that survives deselecting them | Links in each orchestrator message now; a Slack message or a pinned issue per launch once the owner picks one |
+| O1 | Where the owner sees a list of API-launched workers that survives deselecting them (a delegated worker shows on its Linear issue) | Links in each orchestrator message now; a Slack message or a pinned issue per launch once the owner picks one |

@@ -16,8 +16,8 @@ comment.
 
 ## Needs a person
 
-<!-- Only decisions the owner alone can make (reviewable-prs rule); omit otherwise. Add each that outlasts this PR's review to docs/open-items.md. -->
+<!-- Only decisions the owner alone can make (reviewable-prs rule); omit otherwise. File each that outlasts this PR's review as a Linear issue with the needs-person label. -->
 
 ## Follow-ups
 
-<!-- One line each. Add each to docs/open-items.md in this PR. -->
+<!-- One line each. File each as a Linear issue with .github/scripts/linear_queue.sh create, and name its ID. -->

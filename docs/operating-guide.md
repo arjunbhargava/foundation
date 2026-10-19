@@ -14,7 +14,8 @@ reference, not here.
 - [Auto mode](auto-mode.md): when an agent's pull request merges without a
   person's review.
 - [Orchestrating long-running agent work](orchestration.md): how an
-  orchestrator agent launches workers, limits their cost, and hands off.
+  orchestrator agent dispatches Linear issues to workers, limits their cost,
+  and hands off.
 - [Linear conventions](linear.md): how to file issues so that agents can turn
   each into one pull request.
 - [The setup script](install-script.md): what `.cursor/install.sh` installs and
