@@ -14,7 +14,9 @@ these conventions rely on (task T17 in [the template plan](https://github.com/ar
   per PR, each sub-issue from the template. Linear marks an issue done when
   every PR linked to it has merged, and the next PR in a stack is usually not
   open when the first merges, so one shared issue would close after the first
-  PR. The parent stays open until its sub-issues are done.
+  PR. The parent stays open until its sub-issues are done. Make each
+  "blocked by" relation with `linear_queue.sh create --blocked-by`, so that
+  the queue holds a sub-issue until its blockers are Done.
 - Each Linear project carries a label from the `repo` label group, named
   after its repository as `owner/name`, for example
   `arjunbhargava/foundation`. Cursor takes an issue's repository from the
@@ -30,20 +32,44 @@ these conventions rely on (task T17 in [the template plan](https://github.com/ar
 
 ## Handing an issue to an agent
 
-- A person adds the `agent-ready` label when the template is filled in,
-  everything the issue needs has merged, and any plan the change needs
-  (decision D7 in the plan) is approved, if the `plan` skill says it needs
-  approval. Sub-issues don't inherit labels, so
-  add it to each sub-issue.
+Labels that decide whether an agent may take an issue:
+
+| Label | Meaning | Who adds it |
+| -- | -- | -- |
+| `agent-ready` | The issue is fully specified, so an agent may work on it. | A person, after reading the issue. An agent never adds it. |
+| `needs-person` | Only a person can do or decide this. The queue never dispatches it. | The agent that files the issue, with `create --label needs-person`, or a person. |
+| `agent-filed` | An agent filed the issue. Linear shows the owner as creator of everything an agent makes through the owner's API key, so this label is the only record. | `linear_queue.sh create`, always. |
+
+- A person adds `agent-ready` when the template is filled in and any plan the
+  change needs (decision D7 in the plan) is approved, if the `plan` skill says
+  it needs approval. The issue need not wait for the issues it depends on to
+  merge: a "blocked by" relation holds it out of the queue until they are
+  Done or Canceled. Sub-issues don't inherit labels, so add `agent-ready` to
+  each sub-issue.
+- The queue is the issues `linear_queue.sh list` prints: `agent-ready`, not
+  `needs-person`, not started, no delegate, and every blocker Done or
+  Canceled. `list --parent ISSUE_ID` restricts it to one parent's
+  sub-issues.
 - Delegate only `agent-ready` issues to Cursor: pick Cursor in the assignee
   field, or mention `@Cursor` in a comment. Linear keeps the person as the
-  assignee and records Cursor as the delegate.
+  assignee and records Cursor as the delegate. An orchestrator delegates
+  through `linear_queue.sh delegate`, which sets the same field through the
+  API. Setting the delegate through the API starts a Cursor agent, moves the
+  issue to In Progress, and gives the agent the issue and `LINEAR_API_KEY`
+  (checked in [INFRA-6](https://linear.app/tri-replicator/issue/INFRA-6)).
 - Each delegated issue becomes one agent, one branch, and one PR. The PR
   description includes `Fixes <issue ID>`, for example `Fixes ENG-123`, as
   `.github/pull_request_template.md` asks. Linear links the PR to that issue,
   or sub-issue, and marks it done when the PR merges.
-- An agent lists a problem outside its issue under Follow-ups instead of
-  fixing it; any issue it files uses the template, without `agent-ready`.
+- Delegating a parent issue that has sub-issues, or commenting
+  `@Cursor orchestrate this` on one, starts an orchestrator for its
+  sub-issues instead of a worker. It dispatches the sub-issues that are
+  `agent-ready` and unblocked, and
+  [orchestration](orchestration.md#start-an-orchestrator-from-linear) says
+  what it does next. It can't merge, so merging stays with the owner.
+- An agent files a problem outside its issue with `linear_queue.sh create`
+  instead of fixing it, and lists it under Follow-ups in its PR. The issue
+  uses the template, without `agent-ready`.
 
 ## How agents reach Linear
 
@@ -89,6 +115,10 @@ Findings from 2026-10-19:
   does not appear to inherit the owner's authorization. The run did have
   `LINEAR_API_KEY`. INFRA-57 is not a trivial issue, and the check was one run, so
   repeat it on a trivial issue before relying on it.
+- A run started by delegating INFRA-40 had the `subscribe_github_pr`,
+  `subscribe_linear_issue`, and `subscribe_linear_comment` tools, so an
+  orchestrator started from Linear can wait for PR and issue events, as
+  [orchestration](orchestration.md#start-an-orchestrator-from-linear) says.
 - Delegated workers therefore skip MCP-only steps. Whether the team could
   give unattended runs the MCP through a static `Authorization` header in
   Cursor's team MCP settings is untested, and is the owner's decision, because
