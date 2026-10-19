@@ -3,6 +3,6 @@
 # (idiomatic_version_file_enable_tools in .config/mise/conf.d/rust.toml), and
 # Dependabot updates it.
 [toolchain]
-channel = "1.99.0"
+channel = "1.99.1"
 components = ["clippy", "rustfmt"]
 profile = "minimal"
