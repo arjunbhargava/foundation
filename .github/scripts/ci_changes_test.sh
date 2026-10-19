@@ -41,6 +41,7 @@ main() {
   expect_jobs docs/api/python.md docs language-listings
   expect_jobs docs/build.sh docs language-listings
   expect_jobs docs/pyproject.toml docs
+  expect_jobs docs/data.json docs
   expect_jobs docs/conf.py docs python
 
   # python
@@ -60,6 +61,11 @@ main() {
 
   # rust
   expect_jobs Cargo.toml rust
+  expect_jobs members/rustmember/Cargo.toml rust
+  expect_jobs members/rustmember/lib/lib.rs rust
+  expect_jobs members/rustmember/data/input.txt rust
+  expect_jobs "members/rust member/data/input.txt" rust
+  expect_jobs_after_deleting members/rustmember/Cargo.toml rust
   expect_jobs Cargo.lock rust
   expect_jobs rust-toolchain.toml rust
   expect_jobs deny.toml rust
@@ -70,6 +76,11 @@ main() {
 
   # typescript
   expect_jobs package.json typescript
+  expect_jobs stryker.config.json typescript
+  expect_jobs tsconfig.build.json typescript
+  expect_jobs members/tsmember/package.json typescript
+  expect_jobs members/tsmember/lib/index.ts typescript
+  expect_jobs_after_deleting members/tsmember/package.json typescript
   expect_jobs pnpm-lock.yaml typescript
   expect_jobs pnpm-workspace.yaml typescript
   expect_jobs tsconfig.json typescript
@@ -82,6 +93,10 @@ main() {
 
   # cpp
   expect_jobs CMakeLists.txt cpp
+  expect_jobs members/cppmember/CMakeLists.txt cpp
+  expect_jobs members/cppmember/include/shape.hpp cpp
+  expect_jobs members/cppmember/data/input.txt cpp
+  expect_jobs_after_deleting members/cppmember/CMakeLists.txt cpp
   expect_jobs CMakePresets.json cpp
   expect_jobs .clang-format cpp
   expect_jobs .clang-tidy cpp
@@ -136,8 +151,13 @@ create_repository() {
   mkdir -p "$repo/.github/scripts"
   cp "$script_source" "$repo/.github/scripts/ci_changes.sh"
   git -C "$repo" init -q
+  # The root manifests, and one member of each language outside the
+  # directories the filters name, with a space in one path.
   local manifest
-  for manifest in pyproject.toml Cargo.toml package.json CMakeLists.txt LICENSE; do
+  for manifest in pyproject.toml Cargo.toml package.json CMakeLists.txt LICENSE \
+    docs/pyproject.toml members/rustmember/Cargo.toml "members/rust member/Cargo.toml" \
+    members/cppmember/CMakeLists.txt members/tsmember/package.json; do
+    mkdir -p "$repo/$(dirname "$manifest")"
     echo "base" > "$repo/$manifest"
   done
   commit "base"
@@ -168,6 +188,17 @@ expect_jobs() {
   echo "changed" >> "$repo/$file"
   commit "change $file"
   check_jobs "changing $file" "$*" "$("$repo/.github/scripts/ci_changes.sh" base)"
+}
+
+# Deletes <file> in a commit on top of the base and checks the jobs, as
+# expect_jobs does. Arguments: the file, then the jobs expected to be 'true'.
+expect_jobs_after_deleting() {
+  local file=$1
+  shift
+  reset_repository
+  rm "$repo/$file"
+  commit "delete $file"
+  check_jobs "deleting $file" "$*" "$("$repo/.github/scripts/ci_changes.sh" base)"
 }
 
 # Removes <manifest> and adds <file> in a commit on top of the base, and
