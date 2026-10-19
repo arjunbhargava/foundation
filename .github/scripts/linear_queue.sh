@@ -4,7 +4,7 @@
 # writes a GraphQL request by hand. docs/linear.md defines the queue.
 #
 # Usage:
-#   .github/scripts/linear_queue.sh list
+#   .github/scripts/linear_queue.sh list [--parent ISSUE_ID]
 #   .github/scripts/linear_queue.sh create --title TITLE --description-file FILE
 #       [--repo owner/name] [--label NAME]... [--parent ISSUE_ID]
 #   .github/scripts/linear_queue.sh delegate ISSUE_ID
@@ -13,12 +13,17 @@
 #   title, url, and repo (the "owner/name" label from the "repo" label group,
 #   on the issue or else its project, or null). An issue is dispatchable when
 #   it has "agent-ready" and not "needs-person", is not started, has no
-#   delegate, and every issue that blocks it is Done or Canceled.
+#   delegate, and every issue that blocks it is Done or Canceled. --parent
+#   lists only the sub-issues of ISSUE_ID, such as ENG-12, and fails, naming
+#   it, if Linear has no such issue.
 # create: prints the identifier of the issue titled exactly TITLE, creating it
 #   in the team's Backlog only if none exists, so a rerun makes no duplicate.
 #   Fails if there are several teams and LINEAR_TEAM_KEY is not set. --repo
 #   adds the issue label and project of that name; --parent makes it a
-#   sub-issue of ISSUE_ID, such as ENG-12.
+#   sub-issue of ISSUE_ID, such as ENG-12. It always adds the "agent-filed"
+#   label, because Linear shows the owner's personal API key as the creator of
+#   every issue an agent files, so the label is the only record that an agent
+#   filed it; it fails before creating anything if that label does not exist.
 # delegate: sets the issue's delegate to the Cursor app user, which starts a
 #   Cursor cloud agent in the repository its repo label names and moves the
 #   issue to In Progress.
@@ -33,6 +38,7 @@ set -euo pipefail
 linear_endpoint=https://api.linear.app/graphql
 ready_label=agent-ready
 person_label=needs-person
+agent_filed_label=agent-filed
 repo_label_group=repo
 delegate_app_name=Cursor
 # Linear rejects a query above complexity 10,000; 50 issues here is well under.
@@ -47,7 +53,7 @@ main() {
   local command=${1:-}
   shift || true
   case $command in
-    list) list_dispatchable_issues ;;
+    list) list_dispatchable_issues "$@" ;;
     create) create_issue "$@" ;;
     delegate) delegate_issue "$@" ;;
     *)
@@ -79,16 +85,29 @@ graphql() {
 }
 
 list_dispatchable_issues() {
+  local parent=""
+  while (($# > 0)); do
+    case $1 in
+      --parent) parent=${2:?--parent needs a value}; shift 2 ;;
+      *) echo "error: unknown option '$1' for list (see the top of $0)" >&2; exit 1 ;;
+    esac
+  done
+
+  # Linear's own filter does the label, state, and parent selection; the jq
+  # filter below applies the rules Linear's filter can't express.
+  local parent_id=null
+  if [[ -n $parent ]]; then
+    parent_id=$(find_issue_id "$parent") ||
+      { echo "error: cannot list the sub-issues of '$parent' (see above)" >&2; exit 1; }
+  fi
+  local issue_filter
+  issue_filter=$(jq -n --arg ready "$ready_label" --argjson parent "$parent_id" '
+    { labels: {some: {name: {eq: $ready}}}, state: {type: {in: ["backlog", "unstarted"]}} }
+    + (if $parent == null then {} else {parent: {id: {eq: $parent}}} end)')
+
   local document='
-    query ListQueue($after: String, $first: Int!, $readyLabel: String!) {
-      issues(
-        first: $first
-        after: $after
-        filter: {
-          labels: { some: { name: { eq: $readyLabel } } }
-          state: { type: { in: ["backlog", "unstarted"] } }
-        }
-      ) {
+    query ListQueue($after: String, $first: Int!, $filter: IssueFilter!) {
+      issues(first: $first, after: $after, filter: $filter) {
         pageInfo { hasNextPage endCursor }
         nodes {
           identifier
@@ -105,8 +124,8 @@ list_dispatchable_issues() {
 
   while true; do
     page=$(graphql ListQueue "$document" \
-      "$(jq -n --argjson after "$after" --argjson first "$page_size" --arg ready "$ready_label" \
-        '{after: $after, first: $first, readyLabel: $ready}')")
+      "$(jq -n --argjson after "$after" --argjson first "$page_size" --argjson filter "$issue_filter" \
+        '{after: $after, first: $first, filter: $filter}')")
     all_issues=$(jq -n --argjson all "$all_issues" --argjson page "$page" '$all + $page.issues.nodes')
     jq -e '.issues.pageInfo.hasNextPage' <<< "$page" > /dev/null || break
     after=$(jq '.issues.pageInfo.endCursor' <<< "$page")
@@ -160,15 +179,14 @@ create_issue() {
     labels+=("$repo")
     project_id=$(find_project_id_for_repo "$repo")
   fi
-  for label_name in "${labels[@]+"${labels[@]}"}"; do
+  labels+=("$agent_filed_label")
+  for label_name in "${labels[@]}"; do
     label_id=$(find_issue_label_id "$label_name")
-    label_ids=$(jq -n --argjson ids "$label_ids" --arg id "$label_id" '$ids + [$id]')
+    label_ids=$(jq -n --argjson ids "$label_ids" --arg id "$label_id" '$ids + [$id] | unique')
   done
   team_id=$(find_team_id)
   if [[ -n $parent ]]; then
-    parent_id=$(graphql FindParent 'query FindParent($id: String!) { issue(id: $id) { id } }' \
-      "$(jq -n --arg id "$parent" '{id: $id}')" |
-      jq --arg parent "$parent" '.issue.id // error("Linear has no issue \($parent) to use as the parent")') ||
+    parent_id=$(find_issue_id "$parent") ||
       { echo "error: cannot use '$parent' as the parent issue (see above)" >&2; exit 1; }
   fi
 
@@ -181,6 +199,14 @@ create_issue() {
   graphql CreateIssue \
     'mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { issue { identifier } } }' \
     "$(jq -n --argjson input "$input" '{input: $input}')" | jq -r '.issueCreate.issue.identifier'
+}
+
+# Argument: an issue identifier, such as ENG-12. Prints the issue's id as a
+# JSON string; fails, naming the identifier, if Linear has no such issue.
+find_issue_id() {
+  graphql FindIssueId 'query FindIssueId($id: String!) { issue(id: $id) { id } }' \
+    "$(jq -n --arg id "$1" '{id: $id}')" |
+    jq --arg id "$1" '.issue.id // error("Linear has no issue \($id)")'
 }
 
 # Prints the id of the only team, or of the team named by LINEAR_TEAM_KEY.

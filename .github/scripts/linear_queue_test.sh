@@ -136,13 +136,26 @@ list_cases() {
     --argjson c "$(queue_node T-9 agent-ready -)" '[$a, $b, $c]')" false)"
   expect_listed skips_needs_person_and_delegated_issues "T-9"
   expect_json asks_linear_only_for_agent_ready_issues "$(jq -s '.[0].variables' "$FAKE_LINEAR/requests.log")" \
-    '.readyLabel == "agent-ready"'
+    '.filter.labels.some.name.eq == "agent-ready" and (.filter | has("parent") | not)'
 
   new_case
   respond ListQueue "$(queue_page "$(jq -n --argjson a "$(queue_node T-11 agent-ready -)" '[$a]')" true)"
   queue_page "$(jq -n --argjson a "$(queue_node T-12 agent-ready -)" '[$a]')" false |
     jq '{data: .}' > "$FAKE_LINEAR/ListQueue.after-cursor1.json"
   expect_listed lists_issues_from_every_page "T-11,T-12"
+
+  new_case
+  respond FindIssueId '{"issue": {"id": "parent-1"}}'
+  respond ListQueue "$(queue_page "$(jq -n --argjson a "$(queue_node T-13 agent-ready -)" \
+    --argjson b "$(queue_node T-14 agent-ready,needs-person -)" '[$a, $b]')" false)"
+  expect_run lists_only_dispatchable_sub_issues_of_the_parent 0 "" list --parent TEAM-1
+  expect_json lists_only_dispatchable_sub_issues_of_the_parent "$output" 'map(.identifier) == ["T-13"]'
+  expect_json asks_linear_for_the_children_of_the_parent_id "$(jq -s 'map(select(.operationName == "ListQueue")) | .[0].variables' "$FAKE_LINEAR/requests.log")" \
+    '.filter.parent.id.eq == "parent-1" and .filter.labels.some.name.eq == "agent-ready"'
+
+  new_case
+  respond FindIssueId '{"issue": null}'
+  expect_run fails_listing_when_the_parent_does_not_exist 1 "Linear has no issue TEAM-404" list --parent TEAM-404
 }
 
 # Fake responses for one team and one project labelled "arjunbhargava/foundation".
@@ -150,7 +163,7 @@ respond_to_create() {
   respond ListTeams '{"teams": {"nodes": [{"id": "team-1", "key": "TEAM"}]}}'
   respond FindLabel '{"issueLabels": {"nodes": [{"id": "label-1"}]}}'
   respond FindProject '{"projects": {"nodes": [{"id": "project-1", "labels": {"nodes": [{"name": "arjunbhargava/foundation"}]}}]}}'
-  respond FindParent '{"issue": {"id": "parent-1"}}'
+  respond FindIssueId '{"issue": {"id": "parent-1"}}'
   respond CreateIssue '{"issueCreate": {"issue": {"identifier": "TEAM-7"}}}'
 }
 
@@ -172,6 +185,8 @@ create_cases() {
   expect_json creates_an_issue_that_does_not_exist "$create_request" \
     '.title == "Fix it" and .teamId == "team-1" and .projectId == "project-1" and .parentId == "parent-1"
      and .labelIds == ["label-1"] and .description == "The description.\n"'
+  expect_json adds_the_agent_filed_label_to_the_labels_given "$(jq -s 'map(select(.operationName == "FindLabel") | .variables.name)' "$FAKE_LINEAR/requests.log")" \
+    '. == ["arjunbhargava/foundation", "agent-filed"]'
 
   new_case
   respond_to_create
@@ -179,6 +194,16 @@ create_cases() {
   expect_run reuses_the_issue_that_already_has_the_title 0 TEAM-3 \
     create --title "Fix it" --description-file "$work/description.md"
   expect_no_issue_created reuses_the_issue_that_already_has_the_title
+  expect_json leaves_the_labels_of_an_existing_issue_alone "$(jq -s 'map(.operationName)' "$FAKE_LINEAR/requests.log")" \
+    '. == ["FindIssue"]'
+
+  new_case
+  respond_to_create
+  respond FindIssue '{"issues": {"nodes": []}}'
+  respond FindLabel '{"issueLabels": {"nodes": []}}'
+  expect_run fails_without_creating_when_agent_filed_does_not_exist 1 "no issue label named 'agent-filed'" \
+    create --title "Fix it" --description-file "$work/description.md"
+  expect_no_issue_created fails_without_creating_when_agent_filed_does_not_exist
 
   new_case
   respond_to_create
@@ -191,7 +216,7 @@ create_cases() {
   new_case
   respond_to_create
   respond FindIssue '{"issues": {"nodes": []}}'
-  respond FindParent '{"issue": null}'
+  respond FindIssueId '{"issue": null}'
   expect_run fails_without_creating_when_the_parent_does_not_exist 1 "Linear has no issue TEAM-404" \
     create --title "Fix it" --description-file "$work/description.md" --parent TEAM-404
   expect_no_issue_created fails_without_creating_when_the_parent_does_not_exist
