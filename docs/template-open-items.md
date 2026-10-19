@@ -1,5 +1,5 @@
 <!-- The template's own open items, which docs/open-items.md includes; projects don't get this file. -->
-The next item's id is OI-36.
+The next item's id is OI-37.
 
 ## Needs a person
 
@@ -22,6 +22,7 @@ The next item's id is OI-36.
 - **OI-32** Switch to a merge queue after the organization move. **Why:** until then a PR merges on checks run against an older `main`, so two PRs that pass separately can break `main` together. **Action:** after OI-12, follow the note at the top of `.github/rulesets/apply.sh`. **Added in:** [#94](https://github.com/arjunbhargava/foundation/pull/94). **Last confirmed:** 2026-10-16.
 - **OI-34** Undecided: whether CI should run on `main` after each merge. **Why:** `ci.yml` runs only on pull requests and merge groups, so a break that two PRs make together shows only on the next PR's CI; a `push` trigger wouldn't see auto-mode merges, because GitHub starts no workflows for what `GITHUB_TOKEN` does. **Action:** decide whether to add a scheduled or `push` run of CI on `main`, or accept the gap until OI-32. **Added in:** [#94](https://github.com/arjunbhargava/foundation/pull/94). **Last confirmed:** 2026-10-16.
 - **OI-35** Undecided: whether runs started by Linear delegation get the Linear MCP through a static `Authorization` header in Cursor's team MCP settings. **Why:** on 2026-10-19 such a run had no Linear MCP tools, so it can't comment on or change the state of issues, and the header would be a second copy of `LINEAR_API_KEY`. **Action:** decide in [INFRA-58](https://linear.app/arjunbhargava/issue/INFRA-58). **Added in:** [#103](https://github.com/arjunbhargava/foundation/pull/103). **Last confirmed:** 2026-10-19.
+- **OI-36** Unconfirmed: a run started by Linear delegation renames itself as [Naming agents](https://github.com/arjunbhargava/foundation/blob/main/docs/orchestration.md#naming-agents) says. **Why:** if it doesn't, delegated runs keep Cursor's names, which don't name their issue. **Action:** after [#117](https://github.com/arjunbhargava/foundation/pull/117) merges, delegate a trivial issue and check its name in Cursor's agent list. **Added in:** [#117](https://github.com/arjunbhargava/foundation/pull/117). **Last confirmed:** 2026-10-19.
 
 ## Technical debt
 
