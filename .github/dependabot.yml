@@ -10,6 +10,11 @@ updates:
     # release is more likely to be caught first. Security updates don't wait.
     cooldown:
       default-days: 7
+    # CodeQL's init and analyze must be the same version, so bump them in one PR.
+    groups:
+      codeql-action:
+        patterns:
+          - github/codeql-action/*
   # The docs build's tools in docs/, and the Python package's tools.
   - package-ecosystem: uv
     directories: [/, /docs]
