@@ -231,8 +231,8 @@ Each language task adds its directory and lists it here.
   `mise` or a tool is missing, rerun
   `MISE_INSTALL_PATH=/usr/local/bin/mise bash .cursor/install.sh`.
 - A run started by Linear delegation, which the `cursor-cloud` `run-info`
-  tool reports as `source` `linear`, renames itself in its first step with
-  the `cursor-cloud` `rename-chat` tool, as `docs/agent-naming.md` says. When a person asks it for another name, it
+  tool reports as `source` `linear`, starts with the `linear-delegated-run`
+  skill. The skill says whether the run is a worker or an orchestrator, then
+  renames it with the `cursor-cloud` `rename-chat` tool, as
+  `docs/agent-naming.md` says. When a person asks it for another name, it
   renames itself to that name.
-  Its next step is the `linear-delegated-run` skill, which says whether it is
-  a worker or an orchestrator.
