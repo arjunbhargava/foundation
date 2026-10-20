@@ -12,14 +12,48 @@ file an issue and holds its template.
 
 ## What a delegated run does
 
-A delegated run is a worker. It does its one issue on one branch, opens one
-pull request (PR), and launches no other agent. No rule yet tells a delegated
-run to act as an orchestrator, so delegate each sub-issue, not its parent:
-a parent issue's run has no instructions for dispatching its sub-issues. [INFRA-70](https://linear.app/tri-replicator/issue/INFRA-70)
-adds a role check for parent issues.
-
 In its first step, a delegated run renames itself from its issue's ID and
-title, as [Naming agents](agent-naming.md) says.
+title, as [Naming agents](agent-naming.md) says. Then it checks whether its
+issue has sub-issues, and that decides its role. The commands are in the
+[`linear-delegated-run` skill](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/linear-delegated-run/SKILL.md).
+
+- **Worker**: the issue has no sub-issues. The run does its one issue on one
+  branch, opens one pull request (PR) that says `Fixes <issue ID>`, and
+  launches no other agent. Before it writes any code, it runs the
+  [pre-flight](#worker-pre-flight).
+- **Orchestrator**: the issue has sub-issues, so it is a parent. The run
+  writes no feature code and never does a sub-issue's work, however small.
+  Each sub-issue gets its own worker and its own PR. The run delegates the
+  `agent-ready` sub-issues that `linear_queue.sh list --parent` returns,
+  within the open-PR and running-worker limits in
+  [Cost](orchestration.md#cost). If it opens a PR at all, the PR says
+  `Part of <parent ID>`, never `Fixes`, because Linear would mark the parent
+  done when that PR merged. A parent with no dispatchable sub-issues, for
+  example because none has `agent-ready`, makes the run report that and stop,
+  without a PR.
+
+To hand over a batch of work, delegate one parent issue. It starts one
+orchestrator, as starting one from Cursor does, instead of one run per
+sub-issue chosen by hand.
+
+### Worker pre-flight
+
+A delegated worker has no orchestrator checking its context, so it checks
+four things before it writes code:
+
+1. The open agent PR and running worker limits in
+   [Cost](orchestration.md#cost) leave room, not counting the run itself.
+2. No open PR changes a file it expects to change.
+3. Every issue blocking its issue is Done or Canceled.
+4. Its issue still has `agent-ready` and does not have `needs-person`.
+
+When a check fails, the run comments on its issue saying which check failed
+and why, or lists that under "Needs a person" in its report when the Linear
+MCP is unavailable, and stops without opening a PR. A worker that finds the
+open-PR limit reached stops this way. Checks 3 and 4 read the issue through
+the Linear MCP, which a delegated run usually lacks (see
+[How agents reach Linear](#how-agents-reach-linear)); without it, the run
+reports them as not checked and continues.
 
 ## Handing an issue to an agent
 
@@ -34,10 +68,12 @@ title, as [Naming agents](agent-naming.md) says.
    you write is the agent's name in Cursor's agent list and in
    `mise run spend`. To name a running agent differently, mention `@Cursor`
    in a comment asking for the new name.
-4. The agent opens one PR whose description includes `Fixes <issue ID>`, for
-   example `Fixes ENG-123`, as `.github/pull_request_template.md` asks. Linear
-   links the PR to that issue, or sub-issue, and marks it done when the PR
-   merges.
+4. The agent opens one PR whose description includes `Fixes <issue ID>` for
+   the issue the PR completes, for example `Fixes ENG-123`, as
+   `.github/pull_request_template.md` asks. Linear links the PR to that
+   issue, or sub-issue, and marks it done when the PR merges. A PR that
+   completes only part of a parent issue says `Part of <parent ID>` instead,
+   which links the PR without closing the parent.
 
 An agent lists a problem outside its issue under Follow-ups instead of fixing
 it; any issue it files uses the template, without `agent-ready`.

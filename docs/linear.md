@@ -16,7 +16,12 @@ runs have the Linear MCP.
   per PR, each sub-issue from the template. Linear marks an issue done when
   every PR linked to it has merged, and the next PR in a stack is usually not
   open when the first merges, so one shared issue would close after the first
-  PR. The parent stays open until its sub-issues are done.
+  PR. The parent stays open until its sub-issues are done. A PR says
+  `Fixes <ID>` for the issue it completes, which for a sub-issue's PR is the
+  sub-issue, and `Part of <parent ID>` for a parent it does not complete,
+  which Linear links without closing. Delegating the parent hands the batch
+  to one orchestrator
+  ([what a delegated run does](linear-delegation.md#what-a-delegated-run-does)).
 - Each Linear project carries a label from the `repo` label group, named
   after its repository as `owner/name`, for example
   `arjunbhargava/foundation`. Cursor takes an issue's repository from the
