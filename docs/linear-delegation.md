@@ -12,9 +12,12 @@ file an issue and holds its template.
 
 ## What a delegated run does
 
-In its first step, a delegated run renames itself from its issue's ID and
-title, as [Naming agents](agent-naming.md) says. Then it checks whether its
-issue has sub-issues, and that decides its role. The commands are in the
+In its first step, a delegated run checks whether its issue has sub-issues,
+which decides its role, and then renames itself with `rename-chat` to
+`Worker` or `Orchestrator`, followed by its launch time from `run-info` and
+its issue's ID and title. [Naming agents](agent-naming.md) defines the name
+forms and what the run does when `rename-chat` is unavailable. The commands
+are in the
 [`linear-delegated-run` skill](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/linear-delegated-run/SKILL.md).
 
 - **Worker**: the issue has no sub-issues. The run does its one issue on one

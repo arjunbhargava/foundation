@@ -33,13 +33,16 @@ of its own choosing, such as `Ci filter missing files`, and has no setting or
   include its orchestrator's. A relaunched worker, or a worker launched for a
   follow-up, gets a new launch time.
 - **Run started by Linear delegation**:
-  `Worker <MM/DD HH:MMZ>: <issue ID> <issue title>`, for example
-  `Worker 10/19 21:04Z: INFRA-61 Narrow the CI Python filter`. The time is
-  the run's `createdAtMs` from `run-info`, and the issue ID and title come
-  from the issue in its prompt. Unlike an orchestrator's worker, the name
-  includes the issue ID, because no orchestrator message links the run to
-  its issue. A title that would take the name past 100 characters is cut to
-  fit.
+  `<Worker or Orchestrator> <MM/DD HH:MMZ>: <issue ID> <issue title>`, for
+  example `Worker 10/19 21:04Z: INFRA-61 Narrow the CI Python filter`. The
+  first word is the role that the
+  [role check](linear-delegation.md#what-a-delegated-run-does) finds:
+  `Orchestrator` for a parent issue, `Worker` otherwise. The time is the
+  run's `createdAtMs` from the `cursor-cloud` `run-info` tool, converted to
+  UTC, not the time of the rename. The issue ID and title come from the issue
+  in the run's prompt. Unlike an orchestrator's worker, the name includes the
+  issue ID, because no orchestrator message links the run to its issue. A
+  title that would take the name past 100 characters is cut to fit.
 
 In every form:
 
@@ -48,5 +51,10 @@ In every form:
   than a counter means nothing has to be remembered through a
   [handoff](orchestration.md#handoff).
 - **Length**: at most 100 characters in total, the API's limit for `name`.
+
+When the `rename-chat` tool is unavailable to a run, which happens when the
+`cursor-cloud` tools are not offered to it, the run keeps the name Cursor gave
+it, skips the rename, and lists "not renamed: `rename-chat` unavailable" under
+Follow-ups in its report.
 
 Agents launched before this scheme keep their old names.

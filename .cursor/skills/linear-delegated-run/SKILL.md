@@ -12,8 +12,8 @@ description: >
 
 `docs/linear-delegation.md` explains why a delegated run has a role. This
 file holds the commands. `ISSUE_ID` below is the ID of the delegated issue, as
-the run's prompt gives it, such as `ENG-12`. The run's other first step,
-renaming itself, is in `docs/agent-naming.md`.
+the run's prompt gives it, such as `ENG-12`. The first step is the
+[role check](#role-check) followed by the [rename](#rename).
 
 The Linear MCP is usually unavailable to a delegated run (see
 `docs/linear-delegation.md`). Each step below that needs it says what to do
@@ -28,6 +28,29 @@ instead.
 - `[]`: the issue has no sub-issues. The run is a [worker](#worker).
 - A non-empty array: the issue is a parent. The run is an
   [orchestrator](#orchestrator).
+
+## Rename
+
+Rename the run with the `cursor-cloud` `rename-chat` tool, to:
+
+```text
+<Role> <MM/DD HH:MMZ>: <ISSUE_ID> <issue title>
+```
+
+- `<Role>` is `Orchestrator` when the role check found a parent, and `Worker`
+  otherwise.
+- `<MM/DD HH:MMZ>` is the run's own launch time, taken from `createdAtMs` in
+  the `cursor-cloud` `run-info` tool's result, in UTC, not the current time.
+  For example, `createdAtMs` 1792443840000 is `10/19 21:04Z`.
+- The title is the issue's, from the run's prompt. Cut it so that the whole
+  name is at most 100 characters.
+
+Examples: `Worker 10/19 21:04Z: INFRA-61 Narrow the CI Python filter`, and
+`Orchestrator 10/19 21:04Z: INFRA-70 Linear delegation`.
+
+If `rename-chat` is not among the tools you have, skip the rename and end
+your final message with "not renamed: `rename-chat` unavailable" under
+Follow-ups. `docs/agent-naming.md` defines the name forms.
 
 ## Worker
 
@@ -52,10 +75,10 @@ its own `bcId`, from the `run-info` tool, is excluded from the worker count.
 
    - Running workers, at most 10. Call the `cursor-cloud` `list-cloud-agents`
      tool with `statuses: ["RUNNING"]` and `limit: 200`, and count the
-     agents whose name starts with `Worker`, except this run. A parent
-     issue's orchestrator has that name too, as `docs/agent-naming.md`
-     gives every Linear-delegated run the same form, so a worker counts the
-     orchestrator that dispatched it.
+     agents whose name starts with `Worker` or `Orchestrator`, except this
+     run. This counts the orchestrator that dispatched the worker, and any
+     orchestrator the owner started, so the count may be too high but not too
+     low.
 2. **Open PRs on the same files.** List the files you expect to change from
    the issue's acceptance criteria. Then list each open PR's files:
 
