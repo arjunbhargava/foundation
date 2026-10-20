@@ -38,7 +38,9 @@ for a PR under 100 changed lines, and at most 300 otherwise.
    ending "(not in the plan)" if the plan doesn't name it (`dependencies`
    rule), and one line per design decision you made, which a person can
    reverse later. Link the issue or design doc, and for a Linear
-   issue include `Fixes <issue ID>` (for example `Fixes ENG-123`).
+   issue include `Fixes <issue ID>` (for example `Fixes ENG-123`) for the
+   issue the PR completes, or `Part of <parent ID>` for a parent issue it
+   does not complete.
 2. **Verified**: commands and CI runs, one line each, with links, and one
    line, not a table, naming the test for each acceptance criterion (`testing`
    skill). A gap in verification or another difference from the plan gets

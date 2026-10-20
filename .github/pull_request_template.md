@@ -8,7 +8,9 @@ comment.
 
 ## What and why
 
-<!-- At most 3 sentences. Link the issue; for a Linear issue, add "Fixes ENG-123". -->
+<!-- At most 3 sentences. Link the issue. For a Linear issue, add "Fixes ENG-123"
+for the issue this PR completes, or "Part of ENG-100" for a parent issue it
+does not complete. -->
 
 ## Verified
 
