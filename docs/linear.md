@@ -68,41 +68,55 @@ The two paths use different credentials:
   A run whose MCP is not authorized gets the event `mcp_auth_error`, skips
   the MCP's tools, and keeps running.
 
-So the script must work with only the API key, and an agent without the MCP
-skips its MCP-only steps, as the skill says.
+So the script must work with only the API key, and an agent uses the MCP when
+its tools are present and skips its MCP-only steps when they are not, as the
+skill says.
 
 | Run started by | `LINEAR_API_KEY` | Linear MCP | Checked |
 | -- | -- | -- | -- |
 | Cursor | Injected (verified) | Not available in a run that was already running when the owner authorized it; unverified for a run started afterwards | 2026-10-19 |
-| Linear delegation | Injected (verified) | Not available: `needsAuth` and an `mcp_auth_error` event | 2026-10-19 |
+| Linear delegation | Injected (verified) | Available in two runs started after the owner authorized it: `get_issue` and `list_issues` returned data, with no `needsAuth` and no `mcp_auth_error` event ([INFRA-53 run](https://cursor.com/agents/bc-c188ed5c-8e9e-4d08-843e-393a410d6498) and [INFRA-72 run](https://cursor.com/agents/bc-2353985e-19db-49bf-930b-7f64fd88f15d)). Not available in the 2026-10-19 run for INFRA-57: `needsAuth` and an `mcp_auth_error` event | 2026-10-20 (2026-10-19 for INFRA-57) |
 | Automation | Unverified | Unverified | |
 | API | Unverified | Unverified | |
 | Slack | Unverified | Unverified | |
 
-Findings from 2026-10-19:
+Findings:
 
-- In a run started from Cursor, the owner authorized the MCP mid-run, and the
-  run still reported it as `needsAuth` twice afterwards. A running agent does
-  not pick up a new authorization.
-- The run that wrote this section was started by delegating INFRA-57 in
-  Linear
+- 2026-10-19, run started from Cursor: the owner authorized the MCP mid-run,
+  and the run still reported it as `needsAuth` twice afterwards. A running
+  agent does not pick up a new authorization.
+- 2026-10-19, run started by delegating INFRA-57 in Linear
   ([run](https://cursor.com/agents/bc-baf5f1e6-5af3-404c-97b8-f75434a94d6b),
-  source `linear`). Its events held one `mcp_auth_error` for "Linear", and
-  its Linear MCP namespace reported `needsAuth` with no tools. The run's
-  owner had authorized the MCP earlier the same day, so a delegated run
-  does not appear to inherit the owner's authorization. The run did have
-  `LINEAR_API_KEY`. INFRA-57 is not a trivial issue, and the check was one run, so
-  repeat it on a trivial issue before relying on it.
-- Delegated workers therefore skip MCP-only steps.
+  source `linear`): its events held one `mcp_auth_error` for "Linear", and
+  its Linear MCP namespace reported `needsAuth` with no tools. The run had
+  `LINEAR_API_KEY`. The owner had authorized the MCP earlier the same day,
+  but it is not known whether the authorization was in place when this run
+  started.
+- 2026-10-20, two runs started by delegation from Linear (source `linear`):
+  the run for INFRA-53
+  ([run](https://cursor.com/agents/bc-c188ed5c-8e9e-4d08-843e-393a410d6498))
+  and the run for INFRA-72, which made this correction
+  ([run](https://cursor.com/agents/bc-2353985e-19db-49bf-930b-7f64fd88f15d)).
+  In both, `get_issue` and `list_issues` returned data and `needsAuth` did
+  not appear. The INFRA-72 run's events were empty, so it had no
+  `mcp_auth_error`.
+- Both observations hold, and one explanation fits both: a delegated run has
+  the MCP when the owner's authorization was in place before the run started,
+  as in a run started from Cursor. This is not confirmed. If a later
+  delegated run reports `needsAuth` although the owner had authorized the MCP
+  before it started, the rule is wrong, and this table needs a new row.
+- A delegated run therefore uses the MCP when its tools are present, and
+  skips MCP-only steps when they are not. Queue operations always go through
+  the script.
 
 ### Decision: no static header for the Linear MCP
 
 Decided on 2026-10-19 by the owner in
 [INFRA-58](https://linear.app/tri-replicator/issue/INFRA-58): the team does
-not add a static `Authorization` header for the Linear MCP, so unattended
-runs, such as those started by Linear delegation, keep skipping MCP-only
-steps. A delegated run can still reach Linear through `LINEAR_API_KEY`,
-which it always has. Linear still marks an issue done when its PR merges,
+not add a static `Authorization` header for the Linear MCP, so an unattended
+run, such as one started by Linear delegation, has the MCP only through the
+owner's authorization, and skips MCP-only steps when it lacks it. A delegated
+run can always reach Linear through `LINEAR_API_KEY`. Linear still marks an issue done when its PR merges,
 because the PR description holds `Fixes <issue ID>`.
 
 - **Why not:** the header would be a second copy of `LINEAR_API_KEY`, stored

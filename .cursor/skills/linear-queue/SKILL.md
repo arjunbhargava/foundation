@@ -25,9 +25,10 @@ lists every option, and `docs/linear.md` defines the queue.
 | Comment, change state, move an existing issue under a parent, edit a description | MCP | Same. |
 
 Find the MCP's tools at run time, because their names change when Linear
-updates the server. When the MCP is unavailable, meaning its tools are missing
-or report `needsAuth`, still do every queue operation through the script. Skip
-each MCP-only step, such as commenting on the issue, and list it under "Needs a
+updates the server, and use the MCP when its tools are present. Do every queue
+operation through the script, with or without the MCP. When the MCP is
+unavailable, meaning its tools are missing or report `needsAuth`, skip each
+MCP-only step, such as commenting on the issue, and list it under "Needs a
 person" or Follow-ups in your PR. `docs/linear.md` says which runs have the
 MCP.
 
