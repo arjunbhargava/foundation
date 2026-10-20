@@ -5,6 +5,7 @@
 #
 # Usage:
 #   .github/scripts/linear_queue.sh list [--parent ISSUE_ID]
+#   .github/scripts/linear_queue.sh children ISSUE_ID
 #   .github/scripts/linear_queue.sh create --title TITLE --description-file FILE
 #       [--repo owner/name] [--label NAME]... [--parent ISSUE_ID]
 #       [--blocked-by ISSUE_ID]...
@@ -17,6 +18,11 @@
 #   delegate, and every issue that blocks it is Done or Canceled. --parent
 #   lists only the sub-issues of ISSUE_ID, such as ENG-12, and fails, naming
 #   it, if Linear has no such issue.
+# children: prints a JSON array of every sub-issue of ISSUE_ID, such as
+#   ENG-12, in any state, each with identifier, title, url, state (its name and
+#   type), delegate (its name, or null), and labels (their names). Prints []
+#   when there are none, and fails, naming ISSUE_ID, if Linear has no such
+#   issue. Unlike list, it applies no dispatch rule.
 # create: prints the identifier of the issue titled exactly TITLE, creating it
 #   in the team's Backlog only if none exists, so a rerun makes no duplicate.
 #   Fails if there are several teams and LINEAR_TEAM_KEY is not set. --repo
@@ -58,10 +64,11 @@ main() {
   shift || true
   case $command in
     list) list_dispatchable_issues "$@" ;;
+    children) list_children "$@" ;;
     create) create_issue "$@" ;;
     delegate) delegate_issue "$@" ;;
     *)
-      echo "error: unknown command '$command'; use list, create, or delegate (see the top of $0)" >&2
+      echo "error: unknown command '$command'; use list, children, create, or delegate (see the top of $0)" >&2
       exit 1
       ;;
   esac
@@ -144,6 +151,43 @@ list_dispatchable_issues() {
       | select(all(.inverseRelations.nodes[] | select(.type == "blocks"); is_resolved))
       | { identifier, title, url,
           repo: (repo_of(.labels.nodes) // repo_of(.project.labels.nodes // [])) } ]' <<< "$all_issues"
+}
+
+list_children() {
+  local issue_id=${1:?children needs an issue id, such as ENG-12}
+
+  local document='
+    query ListChildren($id: String!, $after: String, $first: Int!) {
+      issue(id: $id) {
+        children(first: $first, after: $after) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            identifier
+            title
+            url
+            state { name type }
+            delegate { name }
+            labels { nodes { name } }
+          }
+        }
+      }
+    }'
+  local after=null all_children='[]' page
+
+  while true; do
+    page=$(graphql ListChildren "$document" \
+      "$(jq -n --arg id "$issue_id" --argjson after "$after" --argjson first "$page_size" \
+        '{id: $id, after: $after, first: $first}')" |
+      jq --arg id "$issue_id" '.issue // error("Linear has no issue \($id)")') ||
+      { echo "error: cannot read the sub-issues of '$issue_id' (see above)" >&2; exit 1; }
+    all_children=$(jq -n --argjson all "$all_children" --argjson page "$page" '$all + $page.children.nodes')
+    jq -e '.children.pageInfo.hasNextPage' <<< "$page" > /dev/null || break
+    after=$(jq '.children.pageInfo.endCursor' <<< "$page")
+  done
+
+  jq '[ .[] | { identifier, title, url, state,
+                delegate: (.delegate.name // null),
+                labels: [.labels.nodes[].name] } ]' <<< "$all_children"
 }
 
 create_issue() {

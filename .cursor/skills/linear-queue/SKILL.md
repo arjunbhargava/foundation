@@ -18,6 +18,7 @@ lists every option, and `docs/linear.md` defines the queue.
 | Operation | Path | Why |
 | -- | -- | -- |
 | List dispatchable issues (`list`, `list --parent`) | script | Encodes the dispatch rule: `agent-ready`, no `needs-person`, not started, no delegate, every blocker Done or Canceled. |
+| Read an issue's sub-issues in any state (`children`) | script | Works with only `LINEAR_API_KEY`, when the MCP is unavailable; `list --parent` hides sub-issues that are started or Done. |
 | File an issue (`create`), with `--parent` | script | Deduplicates by title, adds `agent-filed`, the `repo` label, and the project. |
 | Add blocked-by relations when filing | script | Decides dispatch order. |
 | Delegate an issue to Cursor (`delegate`) | script | Starts an agent; looks up the Cursor app user. |
@@ -56,6 +57,13 @@ Run `.github/scripts/linear_queue.sh list` to get the issues an orchestrator
 can dispatch now, as JSON. An issue is listed when it has `agent-ready` and
 not `needs-person`, is not started, has no delegate, and every issue blocking
 it is Done or Canceled.
+
+## Children
+
+Run `.github/scripts/linear_queue.sh children ISSUE_ID` to get every sub-issue
+of an issue, in any state, as JSON with each one's identifier, title, url,
+state, delegate, and labels. It prints `[]` when there are none. Use it, not
+`list --parent`, to tell whether an issue has sub-issues at all.
 
 ## Delegate
 
