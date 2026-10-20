@@ -2,8 +2,12 @@
 
 An orchestrator is a Cursor cloud agent that splits a plan into tasks, launches
 one worker agent per task, watches the workers' pull requests (PRs), and
-reports to the owner. This page is the standing instruction set for every
-orchestrator, and for the owner who starts one. It covers how to launch
+reports to the owner. The owner starts the orchestrator by hand in Cursor, and
+the orchestrator launches the workers. When the owner instead delegates issues
+in Linear, Cursor launches each worker and no orchestrator is involved: see
+[Delegating Linear issues to agents](linear-delegation.md), which shares this
+page's naming scheme, limits, and handoff. This page is the standing
+instruction set for every orchestrator, and for the owner who starts one. It covers how to launch
 workers so the owner can see them, how to keep spend from growing without
 bound, and how to hand an orchestration to a fresh agent. It doesn't depend
 on any one project: the project's own plan or issue tracker holds the task

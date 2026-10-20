@@ -17,6 +17,8 @@ reference, not here.
   orchestrator agent launches workers, limits their cost, and hands off.
 - [Linear conventions](linear.md): how to file issues so that agents can turn
   each into one pull request.
+- [Delegating Linear issues to agents](linear-delegation.md): how the owner
+  hands an issue to an agent in Linear, and how agents reach Linear.
 - [The setup script](install-script.md): what `.cursor/install.sh` installs and
   when it downloads nothing.
 - [Pull template updates](template-updates.md): how a project takes the
@@ -31,6 +33,7 @@ agent-rules-and-skills
 auto-mode
 orchestration
 linear
+linear-delegation
 install-script
 template-updates
 ```

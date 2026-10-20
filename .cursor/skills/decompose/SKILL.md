@@ -48,6 +48,6 @@ sections, so that it states:
   as a Linear "blocked by" relation, so Linear shows the sub-issue as blocked.
 
 The Designs section links the approved plan. Don't add `agent-ready`; a person adds it
-once everything a sub-issue waits for has merged (`docs/linear.md`). If you
-can't create Linear issues, write them out in this form for a person to
+once everything a sub-issue waits for has merged
+(`docs/linear-delegation.md`). If you can't create Linear issues, write them out in this form for a person to
 create.

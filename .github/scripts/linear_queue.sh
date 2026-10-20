@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Reads and writes the Linear queue of work for agents, so that an
 # orchestrator, or any agent that finds work outside its own issue, never
-# writes a GraphQL request by hand. docs/linear.md defines the queue.
+# writes a GraphQL request by hand. docs/linear-delegation.md defines the queue.
 #
 # Usage:
 #   .github/scripts/linear_queue.sh list [--parent ISSUE_ID]
