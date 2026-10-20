@@ -310,8 +310,8 @@ disputed one.
 
 ## Auditing and reverting
 
-Every PR merges as a merge commit (D6), so each auto-merged PR is one commit
-on `main`, and one revert undoes it. To list the PRs merged since auto mode
+Every PR merges as a merge commit, not a squash, so each auto-merged PR is one
+commit on `main`, and one revert undoes it. To list the PRs merged since auto mode
 was switched on, here from 2026-10-10:
 
 ```sh

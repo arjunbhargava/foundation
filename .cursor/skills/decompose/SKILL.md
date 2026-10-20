@@ -12,9 +12,10 @@ description: >
 
 When many agents work at once, what works is a planner that splits the work
 and workers that each own one task on their own branch, without coordinating
-with each other (finding F7 in `docs/template-plan.md`). Splitting closely
-connected code between agents breaks interfaces and causes rework (F8). So
-agree the interface first, land it, and then split the rest.
+with each other. Agents that coordinate through a shared file slow down to the
+speed of one to three agents. Splitting closely connected code between agents
+breaks interfaces and causes rework. So agree the interface first, land it,
+and then split the rest.
 
 Start only from a plan a person has approved (`plan` skill). Follow
 `docs/linear.md`: the plan's issue becomes the parent, with one sub-issue per

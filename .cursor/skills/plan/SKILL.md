@@ -3,20 +3,21 @@ name: plan
 description: >
   Write a short plan covering the problem, the interface, the files touched,
   and the acceptance criteria, then proceed, stopping for a person's approval
-  only when the change is hard to reverse. Use when a change meets decision
-  D7 in `docs/template-plan.md`, before writing its code: a new module, a
-  change to a public interface or data format, or a new dependency.
+  only when the change is hard to reverse. Use before writing the code for a
+  change that adds a new module, changes a public interface or data format,
+  or adds a new dependency.
 ---
 
 # Plan
 
-Some changes need a written plan before any code: those that meet decision
-D7 in `docs/template-plan.md`. Check a task against D7 before starting, and
-again if the work grows, for example when it turns out to need a new module.
-Below the threshold, write no plan. Planning pays off only for larger
-changes, and a bad plan is worse than none (finding F5).
+Some changes need a written plan before any code: a new module, a change to
+a public interface or data format, a new dependency, or compute spend above
+the cost limit. Check a task against this list before starting, and again if
+the work grows, for example when it turns out to need a new module. Below the
+threshold, write no plan. Planning pays off only for larger changes, and a
+bad plan is worse than none.
 
-D7's last trigger, compute spend above the cost limit, is handled when a job
+The last trigger, compute spend above the cost limit, is handled when a job
 is launched rather than before coding: the `compute-cost` rule says when to
 ask, with an estimate, in the PR.
 
@@ -41,8 +42,9 @@ plan into sub-issues.
 ## Post it, then proceed
 
 Post the plan on the Linear issue the task came from, or in the PR body.
-Don't commit it to the repository; plans live in Linear, not in shared files
-(finding F7). Then write the code. A person can still comment on the plan or
+Don't commit it to the repository; plans live in Linear, not in shared files,
+because agents that coordinate through a shared file slow down to the speed of
+one to three agents. Then write the code. A person can still comment on the plan or
 reverse it later.
 
 Stop and write no code until a person approves the plan only when the change

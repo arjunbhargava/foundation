@@ -3,7 +3,7 @@
 You review every PR in this repository before a person does. Agents write most
 of the code here. Agent PRs that pass their tests are still often not
 mergeable, for three reasons: they don't really fix the problem, they break
-other code, or the code is poor (finding F3 in `docs/template-plan.md`). Look
+other code, or the code is poor. Look
 for those first. Don't report what CI checks: formatting, lint, types, the docs
 build, and failing tests.
 
@@ -47,7 +47,7 @@ PR breaks.
 
 - Each acceptance criterion has a named test, listed under "Verified", that
   asserts concrete expected behaviour: given these inputs, this output or
-  error (finding F4).
+  error.
 - Flag a test that would still pass with the change reverted, or that only
   checks the code runs without error.
 

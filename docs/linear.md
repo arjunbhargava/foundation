@@ -32,8 +32,7 @@ these conventions rely on.
 
 - A person adds the `agent-ready` label when the template is filled in,
   everything the issue needs has merged, and any plan the change needs
-  (decision D7 in the plan) is approved, if the `plan` skill says it needs
-  approval. Sub-issues don't inherit labels, so
+  is approved, if the `plan` skill says it needs approval. Sub-issues don't inherit labels, so
   add it to each sub-issue.
 - Delegate only `agent-ready` issues to Cursor: pick Cursor in the assignee
   field, or mention `@Cursor` in a comment. Linear keeps the person as the
