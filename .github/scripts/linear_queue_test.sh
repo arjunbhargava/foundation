@@ -18,6 +18,7 @@ main() {
   make_fake_curl
 
   list_cases
+  children_cases
   create_cases
   delegate_cases
   failure_cases
@@ -156,6 +157,62 @@ list_cases() {
   new_case
   respond FindIssueId '{"issue": null}'
   expect_run fails_listing_when_the_parent_does_not_exist 1 "Linear has no issue TEAM-404" list --parent TEAM-404
+}
+
+# Arguments: an issue's identifier, its state's type, its delegate's name or
+# "-", and its label names, comma-separated. Prints the node as ListChildren
+# lists it.
+child_node() {
+  jq -n --arg id "$1" --arg state "$2" --arg delegate "$3" --arg labels "$4" '
+    { identifier: $id, title: "Title of \($id)", url: "https://linear.app/t/issue/\($id)",
+      state: {name: "State \($state)", type: $state},
+      delegate: (if $delegate == "-" then null else {name: $delegate} end),
+      labels: {nodes: ($labels | split(",") | map({name: .}))} }'
+}
+
+# Arguments: the child nodes of one ListChildren page as a JSON array, and
+# "true" if more follow.
+children_page() {
+  jq -n --argjson nodes "$1" --arg more "$2" \
+    '{issue: {children: {pageInfo: {hasNextPage: ($more == "true"), endCursor: "cursor1"}, nodes: $nodes}}}'
+}
+
+children_cases() {
+  new_case
+  respond ListChildren "$(children_page "$(jq -n --argjson a "$(child_node T-1 started Cursor agent-ready,needs-person)" \
+    --argjson b "$(child_node T-2 completed - agent-ready)" '[$a, $b]')" false)"
+  expect_run prints_every_sub_issue_whatever_its_state 0 "" children TEAM-1
+  expect_json prints_every_sub_issue_whatever_its_state "$output" \
+    'map(.identifier) == ["T-1", "T-2"] and .[0].state == {name: "State started", type: "started"}
+     and .[1].state.type == "completed"'
+  expect_json prints_title_url_delegate_and_labels "$output" \
+    '.[0] == {identifier: "T-1", title: "Title of T-1", url: "https://linear.app/t/issue/T-1",
+              state: {name: "State started", type: "started"}, delegate: "Cursor", labels: ["agent-ready", "needs-person"]}
+     and .[1].delegate == null'
+  expect_json asks_linear_for_the_children_of_the_issue "$(jq -s '.[0].variables.id' "$FAKE_LINEAR/requests.log")" '. == "TEAM-1"'
+
+  new_case
+  respond ListChildren "$(children_page '[]' false)"
+  expect_run prints_an_empty_array_for_an_issue_without_sub_issues 0 "[]" children TEAM-2
+  expect_json prints_an_empty_array_for_an_issue_without_sub_issues "$output" '. == []'
+
+  new_case
+  respond ListChildren "$(children_page "$(jq -n --argjson a "$(child_node T-3 started - x)" '[$a]')" true)"
+  children_page "$(jq -n --argjson a "$(child_node T-4 unstarted - y)" '[$a]')" false |
+    jq '{data: .}' > "$FAKE_LINEAR/ListChildren.after-cursor1.json"
+  expect_run prints_sub_issues_from_every_page 0 "" children TEAM-1
+  expect_json prints_sub_issues_from_every_page "$output" 'map(.identifier) == ["T-3", "T-4"]'
+
+  new_case
+  respond ListChildren '{"issue": null}'
+  expect_run fails_naming_the_issue_when_it_does_not_exist 1 "Linear has no issue TEAM-404" children TEAM-404
+
+  new_case
+  jq -n '{errors: [{message: "Entity not found: Issue"}]}' > "$FAKE_LINEAR/ListChildren.json"
+  expect_run names_the_issue_when_linear_reports_entity_not_found 1 "sub-issues of 'TEAM-404'" children TEAM-404
+
+  new_case
+  expect_run fails_without_an_issue_id 1 "children needs an issue id" children
 }
 
 # Fake responses for one team and one project labelled "arjunbhargava/foundation".
