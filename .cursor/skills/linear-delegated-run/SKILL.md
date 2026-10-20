@@ -46,18 +46,21 @@ its own `bcId`, from the `run-info` tool, is excluded from the worker count.
    - Open agent PRs, at most 5. An agent PR is one from a `cursor/` branch:
 
      ```sh
-     gh pr list --state open --json headRefName \
+     gh pr list --state open --limit 1000 --json headRefName \
        --jq '[.[] | select(.headRefName | startswith("cursor/"))] | length'
      ```
 
    - Running workers, at most 10. Call the `cursor-cloud` `list-cloud-agents`
      tool with `statuses: ["RUNNING"]` and `limit: 200`, and count the
-     agents whose name starts with `Worker`, except this run.
+     agents whose name starts with `Worker`, except this run. A parent
+     issue's orchestrator has that name too, as `docs/agent-naming.md`
+     gives every Linear-delegated run the same form, so a worker counts the
+     orchestrator that dispatched it.
 2. **Open PRs on the same files.** List the files you expect to change from
    the issue's acceptance criteria. Then list each open PR's files:
 
    ```sh
-   gh pr list --state open --json number,headRefName,files \
+   gh pr list --state open --limit 1000 --json number,headRefName,files \
      --jq '.[] | {number, headRefName, paths: [.files[].path]}'
    ```
 
@@ -110,9 +113,9 @@ including a small one. Each sub-issue gets its own worker and PR.
    ```
 
    Before each call, run both limit counts from the worker pre-flight, check
-   1, and add the issues you have already delegated in this run to the
-   running-workers count, because a new worker takes a moment to show as
-   running. Delegate nothing while either count is at its limit.
+   1. Count this run in the running-workers count, because each worker you
+   dispatch will count it. Add the issues you have already delegated in this
+   run, because a new worker takes a moment to show as running. Delegate nothing while either count is at its limit.
 4. Report which sub-issues you delegated and which are still waiting, and
    why, in the same way as step 2. To dispatch the waiting ones later, a
    person mentions `@Cursor` in a comment on `ISSUE_ID`, which starts a new
