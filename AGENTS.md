@@ -120,6 +120,10 @@ language the project has: Python, Rust, TypeScript, and C and C++.
 - `docs/orchestration.md`: how an orchestrator agent launches workers, limits
   cost, and hands off to a fresh orchestrator. Before you launch or message
   any other agent, read it and the `orchestrate` skill.
+- `docs/linear-delegation.md`: what a run started by delegating a Linear
+  issue does, how to delegate one, and how agents reach Linear.
+- `docs/agent-naming.md`: the display name each kind of agent gets, and who
+  sets it.
 
 Each language task adds its directory and lists it here.
 
@@ -183,6 +187,5 @@ Each language task adds its directory and lists it here.
   `MISE_INSTALL_PATH=/usr/local/bin/mise bash .cursor/install.sh`.
 - A run started by Linear delegation, which the `cursor-cloud` `run-info`
   tool reports as `source` `linear`, renames itself in its first step with
-  the `cursor-cloud` `rename-chat` tool, as "Delegated workers" in
-  `docs/orchestration.md` says. When a person asks it for another name, it
+  the `cursor-cloud` `rename-chat` tool, as `docs/agent-naming.md` says. When a person asks it for another name, it
   renames itself to that name.

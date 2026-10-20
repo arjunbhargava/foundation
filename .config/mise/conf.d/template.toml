@@ -445,8 +445,8 @@ if [[ $(grep -cx 'Operating guide' <<< "$top_level_entries") -ne 1 ]]; then
   printf 'FAIL: %s: the top level of the Python project'"'"'s sidebar should have "Operating guide" once, and has:\n%s\n' "$name" "$top_level_entries" >&2
   exit 1
 fi
-for page_title in "Agent instructions" "Agent rules and skills" "Auto mode" "Orchestrating long-running agent work" \
-  "Linear conventions" "The setup script" "Pull template updates"; do
+for page_title in "Agent instructions" "Agent rules and skills" "Auto mode" "Orchestrating agents from Cursor" \
+  "Linear conventions" "Delegating Linear issues to agents" "Naming agents" "The setup script" "Pull template updates"; do
   if grep -qx "$page_title" <<< "$top_level_entries"; then
     printf 'FAIL: %s: the top level of the Python project'"'"'s sidebar lists "%s", which belongs under "Operating guide". Put its page in the toctree of docs/operating-guide.md.\n' "$name" "$page_title" >&2
     exit 1
