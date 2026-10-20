@@ -20,7 +20,7 @@ main() {
   copy_repository $name
   printf '[tasks."%s:new_language"]\n' fmt lint test > "$work/$name/.config/mise/conf.d/new_language.toml"
   local lacks=" lacks new_language in"
-  local expected=(".github/workflows/ci.yml$lacks" "docs/api/$lacks" "AGENTS.md$lacks")
+  local expected=(".github/workflows/ci.yml$lacks" ".github/scripts/ci_changes.sh$lacks" "docs/api/$lacks" "AGENTS.md$lacks")
   if [[ -f copier.yml ]]; then
     expected+=("copier.yml$lacks" ".config/mise/conf.d/template.toml$lacks" ".github/workflows/template.yml$lacks" ".github/README.md$lacks")
   fi
@@ -45,7 +45,7 @@ main() {
 # creates and deletes files in docs/api/python/ while the tests run.
 copy_repository() {
   local file
-  for file in .github/scripts/language_listings.sh .config/mise/conf.d/*.toml .github/workflows/*.yml \
+  for file in .github/scripts/language_listings.sh .github/scripts/ci_changes.sh .config/mise/conf.d/*.toml .github/workflows/*.yml \
     docs/build.sh docs/api/*.md AGENTS.md .github/README.md copier.yml; do
     if [[ -f $file ]]; then
       mkdir -p "$work/$1/$(dirname "$file")"

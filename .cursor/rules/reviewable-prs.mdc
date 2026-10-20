@@ -48,11 +48,8 @@ for a PR under 100 changed lines, and at most 300 otherwise.
    (`docs/auto-mode.md`), or a Bugbot finding you dispute. Never a status
    note or an FYI. A PR with anything here gets the `needs-human-review`
    label (`AGENTS.md`); a PR with nothing here needs nothing from the owner.
-   Each decision that outlasts the PR's review is also an item on
-   `docs/open-items.md` (`open-items` skill).
-4. **Follow-ups**: one line each, each also added to `docs/open-items.md` in
-   this PR (`open-items` skill). A
-   breaking change lists a `prune-review` of the affected area.
+4. **Follow-ups**: one line each. A breaking change lists a `prune-review` of
+   the affected area.
 
 Link evidence instead of pasting it: showing that a check fails takes one
 line per check, with its run link. No "why I didn't do X" prose: mention a
