@@ -38,6 +38,11 @@ these conventions rely on.
 - Delegate only `agent-ready` issues to Cursor: pick Cursor in the assignee
   field, or mention `@Cursor` in a comment. Linear keeps the person as the
   assignee and records Cursor as the delegate.
+- The agent names itself from the issue's ID and title, as
+  [Naming agents](orchestration.md#naming-agents) says, so the issue title
+  you write is the agent's name in Cursor's agent list and in
+  `mise run spend`. To name a running agent differently, mention `@Cursor`
+  in a comment asking for the new name.
 - Each delegated issue becomes one agent, one branch, and one PR. The PR
   description includes `Fixes <issue ID>`, for example `Fixes ENG-123`, as
   `.github/pull_request_template.md` asks. Linear links the PR to that issue,
