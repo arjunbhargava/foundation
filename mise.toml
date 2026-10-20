@@ -102,6 +102,10 @@ run = ".github/scripts/mutate_test.sh"
 description = "Check that .github/scripts/lint_workflows.sh fails on a finding from either actionlint or zizmor, and runs both"
 run = ".github/scripts/lint_workflows_test.sh"
 
+[tasks."test:ci-changes-script"]
+description = "Check which CI jobs .github/scripts/ci_changes.sh starts for each kind of changed file, in a scratch git repository"
+run = ".github/scripts/ci_changes_test.sh"
+
 [tasks."test:language-listings-script"]
 description = "Check that .github/scripts/language_listings.sh passes for the repository and names each place that lacks a language, on copies of the files it reads"
 run = ".github/scripts/language_listings_test.sh"
