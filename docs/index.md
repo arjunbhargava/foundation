@@ -6,8 +6,8 @@ any undocumented public symbol or broken reference. The operating guide holds
 the pages that are the same in every project made from the template.
 
 Agent work starts from one of two entrypoints. The owner starts an
-orchestrator by hand in Cursor, as [Orchestrating long-running agent
-work](orchestration.md) says, or delegates an issue in Linear, as [Delegating
+orchestrator by hand in Cursor, as [Orchestrating agents from
+Cursor](orchestration.md) says, or delegates an issue in Linear, as [Delegating
 Linear issues to agents](linear-delegation.md) says.
 
 ```{toctree}

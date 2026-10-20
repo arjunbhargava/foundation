@@ -13,12 +13,16 @@ reference, not here.
   `.cursor/` that Cursor agents follow, and what each requires.
 - [Auto mode](auto-mode.md): when an agent's pull request merges without a
   person's review.
-- [Orchestrating long-running agent work](orchestration.md): how an
-  orchestrator agent launches workers, limits their cost, and hands off.
+- [Orchestrating agents from Cursor](orchestration.md): how an orchestrator
+  that the owner starts in Cursor launches workers, limits their cost, and
+  hands off.
 - [Linear conventions](linear.md): how to file issues so that agents can turn
   each into one pull request.
-- [Delegating Linear issues to agents](linear-delegation.md): how the owner
-  hands an issue to an agent in Linear, and how agents reach Linear.
+- [Delegating Linear issues to agents](linear-delegation.md): what a run
+  started from a Linear issue does, how to delegate one, and how agents reach
+  Linear.
+- [Naming agents](agent-naming.md): the display name each kind of agent gets,
+  and who sets it.
 - [The setup script](install-script.md): what `.cursor/install.sh` installs and
   when it downloads nothing.
 - [Pull template updates](template-updates.md): how a project takes the
@@ -34,6 +38,7 @@ auto-mode
 orchestration
 linear
 linear-delegation
+agent-naming
 install-script
 template-updates
 ```

@@ -1,36 +1,46 @@
 # Delegating Linear issues to agents
 
-The owner starts the work by delegating an `agent-ready` Linear issue to
-Cursor. Cursor, not an orchestrator, launches the worker: one cloud agent per
-delegated issue, which opens one pull request (PR). This page is for the owner
-who delegates and the agents that run delegated issues. When the owner starts
-an orchestrator by hand in Cursor instead, [orchestration](orchestration.md)
-applies, and it also holds what both entrypoints share: the
-[agent naming scheme](orchestration.md#naming-agents), the
-[limits](orchestration.md#cost), and the [handoff](orchestration.md#handoff).
-[Linear conventions](linear.md) says how to file the issue and holds its
-template.
+This page is for whoever delegates a Linear issue to Cursor, and for the agent
+that runs it. Delegating an issue makes Linear start one cloud agent, called a
+delegated run, for that issue. The owner delegates by hand in Linear, or an
+orchestrator delegates with `linear_queue.sh delegate`. When the owner starts
+an orchestrator in Cursor instead, see
+[Orchestrating agents from Cursor](orchestration.md). Both entrypoints use the
+[naming scheme](agent-naming.md) and the limits in
+[Cost](orchestration.md#cost). [Linear conventions](linear.md) says how to
+file an issue and holds its template.
+
+## What a delegated run does
+
+A delegated run is a worker. It does its one issue on one branch, opens one
+pull request (PR), and launches no other agent. No rule yet tells a delegated
+run to act as an orchestrator, so delegate each sub-issue, not its parent:
+a parent issue's run has no instructions for dispatching its sub-issues. [INFRA-70](https://linear.app/tri-replicator/issue/INFRA-70)
+adds a role check for parent issues.
+
+In its first step, a delegated run renames itself from its issue's ID and
+title, as [Naming agents](agent-naming.md) says.
 
 ## Handing an issue to an agent
 
-- A person adds the `agent-ready` label when the template is filled in,
-  everything the issue needs has merged, and any plan the change needs
-  is approved, if the `plan` skill says it needs approval. Sub-issues don't inherit labels, so
-  add it to each sub-issue.
-- Delegate only `agent-ready` issues to Cursor: pick Cursor in the assignee
-  field, or mention `@Cursor` in a comment. Linear keeps the person as the
-  assignee and records Cursor as the delegate.
-- The agent names itself from the issue's ID and title, as
-  [Naming agents](orchestration.md#naming-agents) says, so the issue title
-  you write is the agent's name in Cursor's agent list and in
-  `mise run spend`. To name a running agent differently, mention `@Cursor`
-  in a comment asking for the new name.
-- Each delegated issue becomes one agent, one branch, and one PR. The PR
-  description includes `Fixes <issue ID>`, for example `Fixes ENG-123`, as
-  `.github/pull_request_template.md` asks. Linear links the PR to that issue,
-  or sub-issue, and marks it done when the PR merges.
-- An agent lists a problem outside its issue under Follow-ups instead of
-  fixing it; any issue it files uses the template, without `agent-ready`.
+1. A person adds the `agent-ready` label when the template is filled in,
+   everything the issue needs has merged, and any plan the change needs is
+   approved, if the `plan` skill says it needs approval. Sub-issues don't
+   inherit labels, so add it to each sub-issue.
+2. Delegate only `agent-ready` issues to Cursor: pick Cursor in the assignee
+   field, or mention `@Cursor` in a comment. Linear keeps the person as the
+   assignee and records Cursor as the delegate.
+3. The agent's name comes from the issue's ID and title, so the issue title
+   you write is the agent's name in Cursor's agent list and in
+   `mise run spend`. To name a running agent differently, mention `@Cursor`
+   in a comment asking for the new name.
+4. The agent opens one PR whose description includes `Fixes <issue ID>`, for
+   example `Fixes ENG-123`, as `.github/pull_request_template.md` asks. Linear
+   links the PR to that issue, or sub-issue, and marks it done when the PR
+   merges.
+
+An agent lists a problem outside its issue under Follow-ups instead of fixing
+it; any issue it files uses the template, without `agent-ready`.
 
 ## How agents reach Linear
 

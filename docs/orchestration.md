@@ -1,28 +1,45 @@
-# Orchestrating long-running agent work
+# Orchestrating agents from Cursor
 
-An orchestrator is a Cursor cloud agent that splits a plan into tasks, launches
-one worker agent per task, watches the workers' pull requests (PRs), and
-reports to the owner. The owner starts the orchestrator by hand in Cursor, and
-the orchestrator launches the workers. When the owner instead delegates issues
-in Linear, Cursor launches each worker and no orchestrator is involved: see
-[Delegating Linear issues to agents](linear-delegation.md), which shares this
-page's naming scheme, limits, and handoff. This page is the standing
-instruction set for every orchestrator, and for the owner who starts one. It covers how to launch
-workers so the owner can see them, how to keep spend from growing without
-bound, and how to hand an orchestration to a fresh agent. It doesn't depend
-on any one project: the project's own plan or issue tracker holds the task
-list, and [auto mode](auto-mode.md) decides how PRs merge.
+This page is for the owner who starts an orchestrator by hand in Cursor, and
+for that orchestrator. The owner starts one orchestrator; the orchestrator
+launches one worker per task through the Cursor API, watches each worker's
+pull request (PR), and reports to the owner. When the owner delegates an issue
+in Linear instead, Linear starts the agent and this page's launch steps don't
+apply: see [Delegating Linear issues to agents](linear-delegation.md). Both
+entrypoints use the [naming scheme](agent-naming.md) and the limits in
+[Cost](#cost). The page doesn't depend on any one project: the project's own
+plan or issue tracker holds the task list, and [auto mode](auto-mode.md)
+decides how PRs merge.
 
-## Terms
+## Roles
 
 - **Owner**: the person who merges PRs and sets the limits. Usually on a phone.
-- **Orchestrator**: the cloud agent described above. It writes no feature
-  code.
+- **Orchestrator**: a cloud agent that splits a plan into tasks, launches one
+  worker per task, watches the workers' PRs, and reports to the owner. It
+  writes no feature code.
 - **Worker**: a cloud agent that does one task on one branch and opens one PR.
+  It launches no other agent.
 - **Handoff**: the orchestrator's state written as a prompt, which starts a
   fresh orchestrator so the old one's context stops costing money.
 - **bcId**: a cloud agent's id, such as `bc-489632bd-...`. Its page is
   `https://cursor.com/agents/<bcId>`.
+
+## How the work flows
+
+1. The owner starts an orchestrator in Cursor and gives it a plan or a queue
+   of tasks. The orchestrator renames itself, as
+   [Naming agents](agent-naming.md) says.
+2. For each task the [launch tiers](#launch-tiers) and [limits](#cost)
+   allow, the orchestrator [launches a worker](#launch-workers-through-the-api)
+   with a [worker prompt](#what-a-worker-prompt-contains). For a task that is
+   a Linear issue, it may delegate the issue with `linear_queue.sh delegate`
+   instead, which starts a delegated worker.
+3. Each worker does its task, opens its PR, and reports the PR to the
+   orchestrator.
+4. The orchestrator [checks each PR](#watching-workers-and-reporting-to-the-owner)
+   against its "Done when" and tells the owner which PRs are ready.
+5. After about 5 merges, or when its context is large, the orchestrator
+   [hands off](#handoff) to a fresh orchestrator.
 
 ## Why this design
 
@@ -75,7 +92,7 @@ jq -n --rawfile prompt worker-prompt.md --arg name "$worker_name" '{
   newlines are escaped. `CURSOR_API_KEY` is a cloud agent secret; never print
   it.
 - `name` is the worker's display name in Cursor's agent list, set as in
-  [Naming agents](#naming-agents). Without it, Cursor derives a name from the
+  [Naming agents](agent-naming.md). Without it, Cursor derives a name from the
   prompt.
 - `startingRef` is the branch the worker starts from. A stacked PR starts from
   `main` after the PR below it merges.
@@ -90,43 +107,6 @@ jq -n --rawfile prompt worker-prompt.md --arg name "$worker_name" '{
   sidebar list. The owner has seen them disappear when deselected. Until
   that's solved, the links in the orchestrator's messages are the way to open
   a worker.
-
-### Naming agents
-
-`POST /v1/agents` accepts an optional `name`, a display name of at most 100
-characters. Set it on every launch, so the owner can tell orchestrators and
-workers apart by time and order in Cursor's agent list. `mise run spend`
-shows each run's name in its "Task" column, so the name also labels the spend
-report.
-
-- **Orchestrator**: `Orchestrator <MM/DD HH:MMZ>: <short descriptor>`, for
-  example `Orchestrator 10/15 00:21Z: issue queue`.
-- **Worker**: `Worker <MM/DD HH:MMZ>: <short descriptor>`, for example
-  `Worker 10/15 00:18Z: document agent names`. The descriptor is a few
-  plain words saying what the worker does. It is not the task ID, which stays
-  in the worker's prompt and PR. The name doesn't include its orchestrator's.
-  A relaunched worker, or a worker launched for a follow-up, gets a new launch
-  time.
-- **Date and time** is the agent's UTC launch time to the minute, with the
-  date as `MM/DD` with no year, so names sort by time. A time
-  stamp rather than a counter means nothing has to be remembered through a
-  [handoff](#handoff).
-- **Length**: at most 100 characters in total, the API's limit for `name`.
-- **First orchestrator**: an orchestrator that the owner starts renames itself
-  in its first step with the `cursor-cloud` `rename-chat` tool.
-- **Delegated workers**: Cursor names a run started by Linear delegation
-  with a few words of its own choosing, such as `Ci filter missing files`,
-  and has no setting or `[key=value]` option for the name. So the run
-  renames itself in its first step with `rename-chat`, to
-  `Worker <MM/DD HH:MMZ>: <issue ID> <issue title>`, for example
-  `Worker 10/19 21:04Z: INFRA-61 Narrow the CI Python filter`. The time is
-  the run's `createdAtMs` from `run-info`, and the issue ID and title come
-  from the issue in its prompt. Unlike an orchestrator's worker, the name
-  includes the issue ID, because no orchestrator message links the run to
-  its issue. A title that would take the name past 100 characters is cut
-  to fit.
-
-Agents launched before this scheme keep their old names.
 
 ### Which model
 
@@ -272,7 +252,7 @@ orchestrator, in this order:
 
 The outgoing orchestrator launches the successor through the API with `name`
 set to the successor's own launch time and a descriptor, as in
-[Naming agents](#naming-agents), so no model step is needed. The handoff
+[Naming agents](agent-naming.md), so no model step is needed. The handoff
 prompt says that the successor names each worker with the worker's own launch
 time.
 
