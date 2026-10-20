@@ -9,9 +9,8 @@ description: >
 
 # Add a language
 
-These are the steps Stage 2 of `docs/template-plan.md` took for Python,
-TypeScript, Rust, and C and C++ (tasks T6–T9), as a checklist for a project
-that adds a language later. Everything lands in one PR: the one that adds the
+These are the steps the template took to add Python, TypeScript, Rust, and
+C and C++, as a checklist for a project that adds a language later. Everything lands in one PR: the one that adds the
 first code in the language.
 
 ## Code and checks

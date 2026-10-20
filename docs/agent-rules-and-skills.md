@@ -27,14 +27,13 @@ them:
 | [`decompose`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/decompose/SKILL.md) | Splitting an approved plan into Linear sub-issues, one per PR, for agents to work on in parallel. |
 | [`large-changes`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/large-changes/SKILL.md) | Planning a change likely to exceed 500 changed lines: splitting it into stacked PRs, or justifying one oversize PR. |
 | [`linear-queue`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/linear-queue/SKILL.md) | Filing a follow-up in Linear, listing the issues ready for agents, or delegating an issue to a worker, with `linear_queue.sh`. |
-| [`plan`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/plan/SKILL.md) | Before coding a change that meets decision D7 in the plan: a new module, a public interface or data format change, a new dependency, or compute spend above the cost limit. The agent posts the plan and proceeds, unless the change is hard to reverse. |
+| [`plan`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/plan/SKILL.md) | Before coding a new module, a public interface or data format change, a new dependency, or compute spend above the cost limit. The agent posts the plan and proceeds, unless the change is hard to reverse. |
 | [`prune-review`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/prune-review/SKILL.md) | Finding and removing dead code, speculative abstractions, and stale docs, on request or after a breaking change. |
 | [`source-docs`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/source-docs/SKILL.md) | Writing the first code in the repository, adding a language, or changing the docs build or its gates. |
 | [`testing`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/skills/testing/SKILL.md) | Writing or changing tests, including the checks and tolerances numerical code needs. |
 
 Changes to rules and skills are written or edited by a person, not generated
-by an agent for itself, because only the former have been shown to help
-(finding F2 in [the plan](https://github.com/arjunbhargava/foundation/blob/main/docs/template-plan.md)).
+by an agent for itself, because only the former have been shown to help.
 
 Bugbot, Cursor's review agent, reviews every PR before a person does, using
 the checks in [`.cursor/BUGBOT.md`](https://github.com/arjunbhargava/foundation/blob/main/.cursor/BUGBOT.md).

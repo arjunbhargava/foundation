@@ -147,7 +147,8 @@ Each language task adds its directory and lists it here.
   before you rely on auto mode, Pages, or Bugbot, and tell the person each
   step it prints as `not done` or `can't check`, with its link.
 - Don't change `.cursor/rules/` or `.cursor/skills/` unless the task is about
-  them. People write those files (finding F2 in the plan).
+  them. People write those files, because skills written by people raised agents'
+  success rates and skills an agent wrote for itself did not.
 - The PR body follows the `reviewable-prs` rule.
 - Open each PR ready for review, not as a draft, whatever a tool's default
   is: for example, pass `draft: false` to `ManagePullRequest`. In auto mode a

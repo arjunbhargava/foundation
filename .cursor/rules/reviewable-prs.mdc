@@ -19,8 +19,9 @@ generated code, and vendored files: aim for **300 changed lines**, with
   mechanical change first, then the behaviour change on top.
 - No drive-by edits (formatting, unrelated fixes, dependency bumps). List them
   under Follow-ups instead.
-- A change that meets decision D7 in `docs/template-plan.md` gets a written
-  plan before coding. Read the `plan` skill, which says when a person must
+- A change that adds a new module, changes a public interface or data format,
+  adds a new dependency, or spends compute above the cost limit gets a
+  written plan before coding. Read the `plan` skill, which says when a person must
   approve it first.
 
 When a task looks likely to exceed 500 lines, read the `large-changes` skill
