@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Applies the repository settings that GitHub doesn't copy from a template
-# (T4 in docs/template-plan.md). Safe to rerun.
+# Applies the repository settings that GitHub doesn't copy from a template.
+# Safe to rerun.
 #
-#   1. Merge commits become the only merge method (D6). Both review rulesets
-#      allow only merge commits too, but admins can bypass them.
+#   1. Merge commits become the only merge method, so that the commit history
+#      reads as the review story. Both review rulesets allow only merge
+#      commits too, but admins can bypass them.
 #   2. main-checks.json, template-checks.json if it exists, and one review
 #      ruleset are each created, or updated if a ruleset with the same name
 #      exists. Only the template repository has template-checks.json, which
