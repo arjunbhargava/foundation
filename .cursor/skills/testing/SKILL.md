@@ -77,7 +77,7 @@ the template doesn't have yet, which the language's first `live` test adds:
   `defineConfig({ test: { tags: [{ name: "live", description: "costs money or calls a live service" }] } })`.
   Add `--tags-filter '!live'` to `test:typescript` in
   `.config/mise/conf.d/typescript.toml`, and the new
-  file to the `typescript` output of the `changes` job in `ci.yml`. Vitest
+  file to the `typescript` filter line in `.github/scripts/ci_changes.sh`. Vitest
   combines several `--tags-filter` flags with AND, so the `live` tests run
   through vitest directly, not `mise run`.
 - **C and C++:** add `"filter": { "exclude": { "label": "^live$" } }` to the
