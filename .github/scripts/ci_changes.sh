@@ -40,22 +40,34 @@ changed() {
 }
 
 # The first argument is the language's manifest, which is also one of its
-# files.
+# files. A language's members are the directories below the root that hold a
+# file with the manifest's name, such as crates/example for Cargo.toml, and
+# all their files count too, wherever the project keeps its members. docs/ is
+# not a member: it is Sphinx's own Python project, which the docs job covers.
 language_changed() {
-  if [[ -f $1 ]]; then
-    changed "$@"
-  else
+  local manifest=$1
+  if [[ ! -f $manifest ]]; then
     echo false
+    return
   fi
+
+  local pathspecs=("$@") member_manifest member_directory
+  while IFS= read -r member_manifest; do
+    member_directory=$(dirname "$member_manifest")
+    if [[ $member_directory != docs ]]; then
+      pathspecs+=(":(literal)$member_directory/")
+    fi
+  done < <(git ls-files -- "*/$manifest")
+  changed "${pathspecs[@]}"
 }
 
 echo "install-script=$(changed .cursor/install.sh .cursor/environment.json .config/mise/conf.d/)"
 # The site includes README.md and AGENTS.md as pages.
 echo "docs=$(changed docs/ README.md AGENTS.md)"
 echo "python=$(language_changed pyproject.toml '*.py' '*/pyproject.toml' ':(exclude)docs/pyproject.toml' src/ tests/ '*/src/*' '*/tests/*' ':(exclude)crates/*/src/*' ':(exclude)crates/*/tests/*' ':(exclude)packages/*/src/*' ':(exclude)packages/*/tests/*' ':(exclude)cpp/src/*' ':(exclude)cpp/tests/*' uv.lock .python-version .config/mise/conf.d/python.toml)"
-echo "rust=$(language_changed Cargo.toml crates/ Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
-echo "typescript=$(language_changed package.json packages/ pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json biome.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
-echo "cpp=$(language_changed CMakeLists.txt cpp/ CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
+echo "rust=$(language_changed Cargo.toml '*/Cargo.toml' crates/ Cargo.lock rust-toolchain.toml deny.toml .config/mise/conf.d/rust.toml)"
+echo "typescript=$(language_changed package.json '*/package.json' packages/ pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json 'tsconfig.*.json' biome.json stryker.config.json .dependency-cruiser.cjs .config/mise/conf.d/typescript.toml)"
+echo "cpp=$(language_changed CMakeLists.txt '*/CMakeLists.txt' cpp/ CMakePresets.json .clang-format .clang-tidy Doxyfile .config/mise/conf.d/cpp.toml)"
 echo "rulesets=$(changed .github/rulesets/ .github/scripts/setup_status.sh .github/scripts/setup_status_test.sh)"
 echo "workflows=$(changed .github/workflows/ .github/scripts/lint_workflows.sh .github/scripts/lint_workflows_test.sh)"
 # The files the check reads, which are those that list the languages.
