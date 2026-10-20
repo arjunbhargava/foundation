@@ -4,7 +4,8 @@ Work is planned as Linear issues, and Cursor cloud agents turn each issue into
 one pull request (PR). This page is for people and agents who file or pick up
 issues. The repository owner sets up the Linear and Cursor settings
 these conventions rely on. [Delegating Linear issues to agents](linear-delegation.md)
-says how an issue is handed to an agent.
+says how an issue is handed to an agent, how agents reach Linear, and which
+runs have the Linear MCP.
 
 ## Filing an issue
 
